@@ -30,11 +30,13 @@ export function personalOrder<Item extends { id: string }>(items: Item[], ownOrd
   return [...placed, ...items.filter((item) => !place.has(item.id))]
 }
 
-/** The ids with `moved` taken out and put back just before or after `target`. */
-export function moveId(ids: string[], moved: string, target: string, after: boolean): string[] {
-  const rest = ids.filter((id) => id !== moved)
-  const index = rest.indexOf(target)
-  if (index === -1) return ids
-  rest.splice(after ? index + 1 : index, 0, moved)
-  return rest
+/**
+ * A new order for all the ids, after the ones on screen were rearranged. The ones on screen
+ * (`visibleNow`, in their new order) take the places they had among all of them, and the
+ * rest (hidden ones) stay where they were.
+ */
+export function mergeOrder(all: string[], visibleNow: string[]): string[] {
+  const moved = new Set(visibleNow)
+  let next = 0
+  return all.map((id) => (moved.has(id) ? visibleNow[next++] : id))
 }

@@ -1,5 +1,5 @@
 import { EyeOff, SearchX } from 'lucide-react'
-import { useState, type CSSProperties, type ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { useCategories, useCategoriesIfLoaded } from '@/api/categories'
 import { useGroups, useGroupsIfLoaded } from '@/api/groups'
 import { useBoardLinks, useBoardLinksIfLoaded } from '@/api/links'
@@ -18,11 +18,11 @@ import { isSuperAdmin } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 import { BoardActionsProvider } from './board-actions'
 import './board.css'
-import { buildBoard, countHidden, estimateCardHeight, isFiltering, type BoardFilter, type BoardView } from './board-model'
+import { buildBoard, countHidden, isFiltering, type BoardFilter, type BoardView } from './board-model'
 import { CategorySelect } from './category-select'
-import { GroupCard } from './group-card'
 import { Masonry } from './masonry'
 import { SearchBox } from './search-box'
+import { SortableBoard } from './sortable-board'
 import { useEffectiveBoardPrefs } from './use-board-prefs'
 import { useCategoryFilter } from './use-category-filter'
 
@@ -35,13 +35,13 @@ interface BoardState {
 
 /**
  * The home page of an organization: every group as a card, in a grid of columns, with a search
- * above it. The search is in the address (so it can be shared), the categories are remembered.
+ * above it. The search and the view (the board, or what you hid) are in the address, so a
+ * reload stays where you were. The categories are remembered in the browser.
  */
-export function BoardPage({ query, onQueryChange }: { query: string; onQueryChange: (query: string) => void }) {
+export function BoardPage({ query, onQueryChange, view, onViewChange }: { query: string; onQueryChange: (query: string) => void; view: BoardView; onViewChange: (view: BoardView) => void }) {
   const me = useMe()
   const org = useOrg()
   const [categoryIds, setCategoryIds] = useCategoryFilter(org.id, useCategoriesIfLoaded())
-  const [view, setView] = useState<BoardView>('board')
 
   const filter: BoardFilter = { query, categoryIds }
   const state: BoardState = {
@@ -51,7 +51,7 @@ export function BoardPage({ query, onQueryChange }: { query: string; onQueryChan
       if (next.categoryIds !== categoryIds) setCategoryIds(next.categoryIds)
     },
     view,
-    onViewChange: setView,
+    onViewChange,
   }
   const canReorder = view === 'board' && !isFiltering(filter) && (isSuperAdmin(me) || FEATURES.personalOrder)
 
@@ -130,9 +130,7 @@ function BoardCards({ filter, onFilterChange, view, onViewChange }: BoardState) 
   const prefs = useEffectiveBoardPrefs()
 
   const cards = buildBoard(groups, links, prefs, { filter, view, keepEmpty: isSuperAdmin(me) })
-  const grid = cards.length > 0 && (
-    <Masonry items={cards} getKey={(card) => card.group.id} estimateHeight={estimateCardHeight} renderItem={(card) => <GroupCard card={card} categories={categories} restoring={view === 'hidden'} />} />
-  )
+  const grid = cards.length > 0 && <SortableBoard cards={cards} categories={categories} restoring={view === 'hidden'} />
 
   if (view === 'hidden') {
     return (
@@ -192,7 +190,7 @@ function EmptyBoard() {
 
 function Notice({ icon, title, text, children }: { icon?: ReactNode; title: string; text: string; children?: ReactNode }) {
   return (
-    <div className="mx-auto flex max-w-sm flex-col items-center gap-2 pt-[14vh] text-center">
+    <div className="mx-auto flex min-h-[calc(100dvh-72px-2.5rem)] max-w-sm flex-col items-center justify-center gap-2 pb-[72px] text-center">
       {icon}
       <h2 className="mt-2 text-[20px] font-[650] [font-family:var(--font-rounded)]">{title}</h2>
       <p className="text-quiet m-0 leading-relaxed">{text}</p>

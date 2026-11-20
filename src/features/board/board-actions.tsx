@@ -1,32 +1,21 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useContext, useMemo, type ReactNode } from 'react'
 import { useGroupsIfLoaded, useSetTeamGroupOrder } from '@/api/groups'
 import { useBoardLinksIfLoaded, useSetTeamLinkOrder } from '@/api/links'
 import { useSaveBoardPrefs } from '@/api/prefs'
 import { toastError } from '@/lib/errors'
-import { moveId } from '@/lib/order'
+import { mergeOrder } from '@/lib/order'
 import type { BoardPrefs } from '@/lib/types'
 import { orderedGroups, orderedLinks } from './board-model'
 import { useEffectiveBoardPrefs, useHasOwnOrder } from './use-board-prefs'
-
-/** What is being dragged. A link can only be moved within its own group. */
-export type Dragged = { kind: 'group'; id: string } | { kind: 'link'; id: string; groupId: string }
-
-/** Where the dragged thing would land: just before or after this group or link. */
-export interface DropPlace {
-  id: string
-  after: boolean
-}
 
 interface BoardActions {
   prefs: BoardPrefs
   /** Dragging is off while the board is filtered: a place among some of the links isn't a place among all. */
   canReorder: boolean
-  dragged: Dragged | null
-  dropPlace: DropPlace | null
-  startDrag: (dragged: Dragged) => void
-  setDropPlace: (place: DropPlace | null) => void
-  /** Moves the dragged thing to the drop place, and ends the drag. */
-  finishDrag: (drop: boolean) => void
+  /** Saves a new order of the groups: the ids of the groups on screen, as they now stand. */
+  reorderGroups: (visibleIds: string[]) => void
+  /** Saves a new order of one group's links: the ids of its links on screen, as they now stand. */
+  reorderLinks: (groupId: string, visibleIds: string[]) => void
   setGroupHidden: (groupId: string, hidden: boolean) => void
   setLinkHidden: (linkId: string, hidden: boolean) => void
   /** Go back to the team's order: of the groups, or of one group's links. */
@@ -62,38 +51,21 @@ export function BoardActionsProvider({ canReorder, children }: { canReorder: boo
   const setTeamGroupOrder = useSetTeamGroupOrder()
   const setTeamLinkOrder = useSetTeamLinkOrder()
 
-  const [dragged, setDragged] = useState<Dragged | null>(null)
-  const [dropPlace, setDropPlace] = useState<DropPlace | null>(null)
-
   const actions = useMemo<BoardActions>(() => {
     const save = (changes: Partial<BoardPrefs>) => savePrefs.mutate(changes, { onError: toastError })
-
-    function moveGroup(id: string, place: DropPlace) {
-      const ids = moveId(orderedGroups(groups, prefs).map((group) => group.id), id, place.id, place.after)
-      if (ownOrder) save({ group_order: ids })
-      else setTeamGroupOrder.mutate(ids, { onError: toastError })
-    }
-
-    function moveLink(id: string, groupId: string, place: DropPlace) {
-      const ids = moveId(orderedLinks(links, groupId, prefs).map((link) => link.id), id, place.id, place.after)
-      if (ownOrder) save({ link_order: { ...prefs.link_order, [groupId]: ids } })
-      else setTeamLinkOrder.mutate({ groupId, ids }, { onError: toastError })
-    }
 
     return {
       prefs,
       canReorder,
-      dragged,
-      dropPlace,
-      startDrag: setDragged,
-      setDropPlace: (place) => setDropPlace((current) => (current?.id === place?.id && current?.after === place?.after ? current : place)),
-      finishDrag: (drop) => {
-        if (drop && dragged && dropPlace && dropPlace.id !== dragged.id) {
-          if (dragged.kind === 'group') moveGroup(dragged.id, dropPlace)
-          else moveLink(dragged.id, dragged.groupId, dropPlace)
-        }
-        setDragged(null)
-        setDropPlace(null)
+      reorderGroups: (visibleIds) => {
+        const ids = mergeOrder(orderedGroups(groups, prefs).map((group) => group.id), visibleIds)
+        if (ownOrder) save({ group_order: ids })
+        else setTeamGroupOrder.mutate(ids, { onError: toastError })
+      },
+      reorderLinks: (groupId, visibleIds) => {
+        const ids = mergeOrder(orderedLinks(links, groupId, prefs).map((link) => link.id), visibleIds)
+        if (ownOrder) save({ link_order: { ...prefs.link_order, [groupId]: ids } })
+        else setTeamLinkOrder.mutate({ groupId, ids }, { onError: toastError })
       },
       setGroupHidden: (groupId, hidden) => save({ hidden_groups: toggled(prefs.hidden_groups, groupId, hidden) }),
       setLinkHidden: (linkId, hidden) => save({ hidden_links: toggled(prefs.hidden_links, linkId, hidden) }),
@@ -102,13 +74,7 @@ export function BoardActionsProvider({ canReorder, children }: { canReorder: boo
     }
     // The mutation objects change on every render, their `mutate` functions don't.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ownOrder, groups, links, prefs, canReorder, dragged, dropPlace])
+  }, [ownOrder, groups, links, prefs, canReorder])
 
   return <BoardActionsContext value={actions}>{children}</BoardActionsContext>
-}
-
-/** Whether the pointer is in the lower half of the element under it. */
-export const inLowerHalf = (event: { clientY: number; currentTarget: Element }) => {
-  const box = event.currentTarget.getBoundingClientRect()
-  return event.clientY > box.top + box.height / 2
 }

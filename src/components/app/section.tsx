@@ -45,7 +45,7 @@ export function Section({ skeleton, compact = false, children }: { skeleton: Rea
 
 function SectionError({ error, compact, onRetry }: { error: unknown; compact: boolean; onRetry: () => void }) {
   return (
-    <div role="alert" className={compact ? 'bg-raised border-line flex flex-wrap items-center gap-3 rounded-[14px] border px-4 py-3.5' : 'mx-auto flex max-w-sm flex-col items-center gap-2 pt-[14vh] text-center'}>
+    <div role="alert" className={compact ? 'bg-raised border-line flex flex-wrap items-center gap-3 rounded-[14px] border px-4 py-3.5' : 'mx-auto flex min-h-[calc(100dvh-72px-2.5rem)] max-w-sm flex-col items-center justify-center gap-2 pb-[72px] text-center'}>
       <TriangleAlert className={compact ? 'text-danger size-5 flex-none' : 'text-danger size-9'} strokeWidth={1.6} />
       <div className={compact ? 'min-w-[180px] flex-1' : ''}>
         <div className={compact ? 'font-medium' : 'mt-2 text-[20px] font-[650] [font-family:var(--font-rounded)]'}>This part couldn't be loaded</div>

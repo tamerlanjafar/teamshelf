@@ -205,27 +205,65 @@
     background: var(--c);
 }
 
-/* Reordering by dragging: the thing in your hand fades, and a line shows where it would land. */
-.room[draggable='true'] .room-head {
+/* Reordering by dragging. What you hold is drawn a second time, following the pointer
+   ("lifted"), and its place on the board stays as an empty slot ("placeholder"). */
+
+.room-head.is-handle,
+.tab[aria-roledescription='sortable'] {
+    touch-action: none;
+}
+
+.room-head.is-handle {
     cursor: grab;
 }
 
-.is-dragged {
-    opacity: 0.4;
+.room.is-placeholder,
+.tab.is-placeholder {
+    animation: none;
+    background: color-mix(in srgb, var(--c) 7%, transparent);
+    border-color: color-mix(in srgb, var(--c) 40%, transparent);
+    box-shadow: none;
 }
 
-.room.drop-before {
-    box-shadow: 0 -3px 0 -0.5px var(--c);
+.room.is-placeholder {
+    border-style: dashed;
 }
 
-.room.drop-after {
-    box-shadow: 0 3px 0 -0.5px var(--c);
+.room.is-placeholder > *,
+.tab.is-placeholder > * {
+    visibility: hidden;
 }
 
-.tab.drop-before {
-    box-shadow: 0 -2px 0 var(--c);
+.tab.is-placeholder {
+    outline: 1.5px dashed color-mix(in srgb, var(--c) 45%, transparent);
+    outline-offset: -1.5px;
 }
 
-.tab.drop-after {
-    box-shadow: 0 2px 0 var(--c);
+.room.is-lifted,
+.room-lifted-row {
+    cursor: grabbing;
+    box-shadow:
+        0 2px 6px hsl(var(--shadow) / 0.1),
+        0 18px 40px -12px hsl(var(--shadow) / 0.35);
+}
+
+.room.is-lifted {
+    animation: none;
+    rotate: 1.2deg;
+    border-color: color-mix(in srgb, var(--c) 55%, transparent);
+}
+
+.room.is-lifted .room-head {
+    cursor: grabbing;
+}
+
+/* A link in your hand: a small card of its own. */
+.room-lifted-row {
+    border-radius: 11px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+}
+
+.room-lifted-row .tab {
+    background: transparent;
 }

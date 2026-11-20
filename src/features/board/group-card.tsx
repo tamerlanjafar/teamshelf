@@ -1,5 +1,6 @@
 import { Eye, EyeOff, ListRestart, MoreHorizontal, Palette, Plus, Trash2 } from 'lucide-react'
-import { useState, type CSSProperties } from 'react'
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { useState, type ComponentProps, type CSSProperties, type Ref } from 'react'
 import { useDeleteGroup } from '@/api/groups'
 import { DropdownMenu, DropdownMenuItem, DropdownMenuContent, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { useConfirm } from '@/components/app/confirm-dialog'
@@ -11,47 +12,39 @@ import { toastError } from '@/lib/errors'
 import { isSuperAdmin } from '@/lib/roles'
 import type { Category } from '@/lib/types'
 import { cn } from '@/lib/utils'
-import { inLowerHalf, useBoardActions } from './board-actions'
-import type { BoardCard } from './board-model'
+import { useBoardActions } from './board-actions'
+import type { BoardCard, BoardLink } from './board-model'
 import { GroupDialog } from './group-dialog'
-import { LinkRow } from './link-row'
+import { LinkRow, SortableLinkRow } from './link-row'
 
-/**
- * A group and its links, tinted with the group's color. As tall as what is in it.
- * Drag the card to another place on the board. With `restoring` (the view of what you hid)
- * a hidden group gets a button that brings it back.
- */
-export function GroupCard({ card, categories, restoring }: { card: BoardCard; categories: Category[]; restoring: boolean }) {
+interface GroupCardProps {
+  card: BoardCard
+  categories: Category[]
+  /** In the view of what you hid: a hidden group gets a button that brings it back. */
+  restoring: boolean
+}
+
+/** What dragging adds to a card. */
+interface CardDragProps {
+  cardRef?: Ref<HTMLElement>
+  /** The card's place while it is being dragged: an empty slot on the board. */
+  placeholder?: boolean
+  /** The copy that follows the pointer. Its links are not sortable themselves. */
+  lifted?: boolean
+  /** The card is picked up by its header. */
+  headProps?: ComponentProps<'header'>
+}
+
+/** A group and its links, tinted with the group's color. As tall as what is in it. */
+export function GroupCard({ card, categories, restoring, cardRef, placeholder, lifted, headProps }: GroupCardProps & CardDragProps) {
   const { group, links, hidden } = card
-  const { canReorder, dragged, dropPlace, startDrag, setDropPlace, finishDrag, setGroupHidden } = useBoardActions()
-
-  const accepts = dragged?.kind === 'group' && dragged.id !== group.id
-  const marker = dropPlace?.id === group.id && accepts ? (dropPlace.after ? 'drop-after' : 'drop-before') : null
+  const { setGroupHidden } = useBoardActions()
+  const categoryOf = (item: BoardLink) => categories.find((category) => category.id === item.link.category_id)
+  const Row = lifted ? LinkRow : SortableLinkRow
 
   return (
-    <section
-      className={cn('room', dragged?.id === group.id && 'is-dragged', marker)}
-      style={{ '--c': colorValue(group.color) } as CSSProperties}
-      aria-label={group.name}
-      draggable={canReorder}
-      onDragStart={(event) => {
-        event.dataTransfer.effectAllowed = 'move'
-        event.dataTransfer.setData('text/plain', group.name)
-        startDrag({ kind: 'group', id: group.id })
-      }}
-      onDragOver={(event) => {
-        if (!accepts) return
-        event.preventDefault()
-        setDropPlace({ id: group.id, after: inLowerHalf(event) })
-      }}
-      onDrop={(event) => {
-        if (!accepts) return
-        event.preventDefault()
-        finishDrag(true)
-      }}
-      onDragEnd={() => finishDrag(false)}
-    >
-      <header className="room-head">
+    <section ref={cardRef} className={cn('room', placeholder && 'is-placeholder', lifted && 'is-lifted')} style={{ '--c': colorValue(group.color) } as CSSProperties} aria-label={group.name}>
+      <header className={cn('room-head', headProps && 'is-handle')} {...headProps}>
         <h2 className="room-name">{group.name}</h2>
         {restoring && hidden && <RestoreButton label={`Show ${group.name} again`} onClick={() => setGroupHidden(group.id, false)} />}
         <span className="count" aria-label={`${links.length} ${links.length === 1 ? 'link' : 'links'}`}>
@@ -61,12 +54,22 @@ export function GroupCard({ card, categories, restoring }: { card: BoardCard; ca
       </header>
       <div className="room-body">
         {links.length === 0 && <p className="room-empty">No links yet.</p>}
-        {links.map((item) => (
-          <LinkRow key={item.link.id} item={item} category={categories.find((category) => category.id === item.link.category_id)} restoring={restoring && !hidden} />
-        ))}
+        <SortableContext items={links.map((item) => item.link.id)} strategy={verticalListSortingStrategy}>
+          {links.map((item) => (
+            <Row key={item.link.id} item={item} category={categoryOf(item)} restoring={restoring && !hidden} />
+          ))}
+        </SortableContext>
       </div>
     </section>
   )
+}
+
+/** A group card that can be dragged, by its header, to another place on the board. */
+export function SortableGroupCard(props: GroupCardProps) {
+  const { canReorder } = useBoardActions()
+  const { setNodeRef, attributes, listeners, isDragging } = useSortable({ id: props.card.group.id, data: { type: 'group' }, disabled: !canReorder })
+
+  return <GroupCard {...props} cardRef={setNodeRef} placeholder={isDragging} headProps={canReorder ? { ...attributes, ...listeners, role: undefined, tabIndex: undefined } : undefined} />
 }
 
 /** Hide the group for yourself, go back to the team's order, and for the super admin: edit and delete. */
