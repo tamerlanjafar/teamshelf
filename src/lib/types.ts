@@ -71,6 +71,8 @@ export interface Link {
   proposed_group: string | null
   title: string
   url: string
+  /** The address of the site's icon, found when the link was saved. */
+  icon_url: string | null
   category_id: string | null
   status: LinkStatus
   visibility: Visibility

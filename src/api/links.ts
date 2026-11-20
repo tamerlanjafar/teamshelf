@@ -4,6 +4,7 @@ import { neon } from '@/lib/neon'
 import type { Link, Visibility } from '@/lib/types'
 import { NONE, unwrap } from './db'
 import { findOrCreateGroup, groupsKey } from './groups'
+import { findIcon } from './icons'
 
 const linksKey = (orgId: string) => [orgId, 'links'] as const
 const boardKey = (orgId: string) => [...linksKey(orgId), 'board'] as const
@@ -78,7 +79,8 @@ export interface LinkFields {
   categoryId: string | null
 }
 
-const columns = ({ title, url, categoryId }: LinkFields) => ({ title: title.trim(), url, category_id: categoryId })
+/** The columns a form fills in, with the icon of the page looked up for this address. */
+const columns = async ({ title, url, categoryId }: LinkFields) => ({ title: title.trim(), url, category_id: categoryId, icon_url: await findIcon(url) })
 
 /**
  * Adds a link. With `publishFor` (the super admin) it goes straight to the board.
@@ -90,14 +92,14 @@ export function useAddLink() {
 
     if (!publishFor) {
       const place = 'id' in group ? { group_id: group.id } : { proposed_group: group.name.trim() }
-      await unwrap(neon.from('links').insert({ org_id: orgId, ...columns(fields), ...place }))
+      await unwrap(neon.from('links').insert({ org_id: orgId, ...(await columns(fields)), ...place }))
       return
     }
 
     const group_id = 'id' in group ? group.id : (await findOrCreateGroup(orgId, group.name)).id
     const published = { status: 'approved', visibility: publishFor.visibility, reviewed_at: new Date().toISOString() }
     const created = await unwrap<{ id: string }>(
-      neon.from('links').insert({ org_id: orgId, ...columns(fields), ...published, group_id }).select('id').single(),
+      neon.from('links').insert({ org_id: orgId, ...(await columns(fields)), ...published, group_id }).select('id').single(),
     )
     await setAccess(created.id, publishFor)
   })
@@ -107,7 +109,7 @@ export function useAddLink() {
 export function useUpdateLink() {
   return useLinksMutation(async ({ id, fields, audience }: { id: string; fields: LinkFields; audience: Audience }, orgId) => {
     const group_id = 'id' in fields.group ? fields.group.id : (await findOrCreateGroup(orgId, fields.group.name)).id
-    await unwrap(neon.from('links').update({ ...columns(fields), group_id, proposed_group: null, visibility: audience.visibility }).eq('id', id))
+    await unwrap(neon.from('links').update({ ...(await columns(fields)), group_id, proposed_group: null, visibility: audience.visibility }).eq('id', id))
     await setAccess(id, audience)
   })
 }

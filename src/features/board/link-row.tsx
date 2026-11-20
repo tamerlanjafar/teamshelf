@@ -42,7 +42,7 @@ export function LinkRow({ item, category, restoring, rowRef, style, placeholder,
   return (
     <div ref={rowRef} style={style} className={cn('tab', placeholder && 'is-placeholder', lifted && 'is-lifted')} {...dragProps}>
       <a className="open" href={link.url} target="_blank" rel="noreferrer" draggable={false}>
-        <Favicon url={link.url} title={link.title} />
+        <Favicon url={link.url} iconUrl={link.icon_url} title={link.title} />
         <span className="title">{link.title}</span>
         {link.visibility !== 'everyone' && <Lock className="text-quiet size-3 flex-none" aria-label="Only some people see this" />}
         {category && <CategoryTag category={category} />}

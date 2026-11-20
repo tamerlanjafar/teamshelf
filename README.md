@@ -64,6 +64,7 @@ src/components/app/     shared pieces: top bar, sections, form controls
 src/components/ui/      shadcn components, as installed by its CLI
 src/lib/                colors, ordering, roles, theme, feature flags, the Neon client
 src/routes/             one small file per page
+netlify/                the icon lookup function, and its tests (`node --test netlify/lib/`)
 ```
 
 ### Loading and errors
@@ -98,4 +99,8 @@ Other commands: `pnpm build`, `pnpm lint`, `pnpm db:migrate`.
 
 The layout of the sign-in email is Neon's and can't be edited. Only the app name in it is ours ("Linkboard"). The sender stays "Neon Auth" until you set your own email sender. A different layout means sending the email yourself: a webhook for the `send.magic_link` event, plus an email service and a domain to send from.
 
-Icons next to links are loaded from the linked site itself (`/favicon.ico`), so internal addresses are never sent to an icon service. A link without a loadable icon shows its first letter.
+### Link icons
+
+Icons are loaded from the linked site itself, never through an icon service, so internal addresses stay private. When a link is saved, a small Netlify function (`netlify/functions/icon.mjs`, at `/api/icon`) reads the page and stores the address of the icon it declares. A browser can't do that across sites. The function only answers signed-in people and refuses addresses inside private networks. For pages it can't reach (internal tools), the app tries the usual icon locations itself, and a link without a loadable icon shows its first letter.
+
+`node db/backfill-icons.mjs` looks up icons for links that have none saved.

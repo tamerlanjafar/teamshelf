@@ -25,7 +25,7 @@ export function RequestRow({
     <article className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3.5">
       <div className="flex min-w-[240px] flex-1 flex-col gap-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <Favicon url={link.url} title={link.title} />
+          <Favicon url={link.url} iconUrl={link.icon_url} title={link.title} />
           <span className="font-medium">
             <span className="text-quiet font-normal">{group?.name ?? link.proposed_group} › </span>
             {link.title}
