@@ -68,6 +68,10 @@
 }
 
 .room-body {
+    display: flex;
+    flex-direction: column;
+    /* A little air between the rows, so two highlighted rows never touch. */
+    gap: 3px;
     padding: 0 6px 8px;
 }
 

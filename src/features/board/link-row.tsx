@@ -41,7 +41,7 @@ export function LinkRow({ item, category, restoring, rowRef, style, placeholder,
 
   return (
     <div ref={rowRef} style={style} className={cn('tab', placeholder && 'is-placeholder', lifted && 'is-lifted')} {...dragProps}>
-      <a className="open" href={link.url} target="_blank" rel="noreferrer" title={link.url} draggable={false}>
+      <a className="open" href={link.url} target="_blank" rel="noreferrer" draggable={false}>
         <Favicon url={link.url} title={link.title} />
         <span className="title">{link.title}</span>
         {link.visibility !== 'everyone' && <Lock className="text-quiet size-3 flex-none" aria-label="Only some people see this" />}
@@ -50,7 +50,7 @@ export function LinkRow({ item, category, restoring, rowRef, style, placeholder,
       {restoring && hidden ? (
         // In the view of what you hid, the one thing to do with a link is to bring it back:
         // an eye where the menu usually is, so the name keeps its room.
-        <button type="button" className="room-button shown" aria-label={`Show ${link.title} again`} title="Show again" onClick={() => setLinkHidden(link.id, false)}>
+        <button type="button" className="room-button shown" aria-label={`Show ${link.title} again`} onClick={() => setLinkHidden(link.id, false)}>
           <Eye className="size-4" />
         </button>
       ) : (

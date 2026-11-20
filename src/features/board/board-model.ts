@@ -87,4 +87,4 @@ export function countHidden(groups: Group[], links: Link[], prefs: BoardPrefs): 
 }
 
 /** A rough height for a card, enough to balance the columns before anything is measured. */
-export const estimateCardHeight = (card: BoardCard) => 62 + Math.max(card.links.length, 1) * 34
+export const estimateCardHeight = (card: BoardCard) => 62 + Math.max(card.links.length, 1) * 37
