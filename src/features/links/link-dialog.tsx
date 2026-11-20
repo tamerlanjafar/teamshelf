@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useId, useMemo, useState, type 
 import { toast } from 'sonner'
 import { useGroupsIfLoaded } from '@/api/groups'
 import { useCategoriesIfLoaded } from '@/api/categories'
-import { useAddLink, useLinkAccess, useUpdateLink } from '@/api/links'
+import { useAddLink, useBoardLinksIfLoaded, useLinkAccess, useUpdateLink } from '@/api/links'
 import { useMembersIfLoaded } from '@/api/members'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -10,10 +10,12 @@ import { Input } from '@/components/ui/input'
 import { usePermissions } from '@/features/org/permissions'
 import { toastError } from '@/lib/errors'
 import type { Link } from '@/lib/types'
+import { cn } from '@/lib/utils'
 import { AudiencePicker } from './audience-picker'
 import { CategoryCombobox } from './category-combobox'
 import { GroupCombobox } from './group-combobox'
 import { draftOf, fieldsOf, hasErrors, newDraft, validate, type LinkDraft } from './link-draft'
+import { suggestName } from './name-suggestion.ts'
 
 /** What the dialog was opened for: a new link (optionally in a given group), or changing one. */
 type Request = { kind: 'add'; groupName?: string } | { kind: 'edit'; link: Link }
@@ -71,6 +73,7 @@ function LinkForm({ request, onDone }: { request: Request; onDone: () => void })
   const groups = useGroupsIfLoaded()
   const categories = useCategoriesIfLoaded()
   const members = useMembersIfLoaded()
+  const boardLinks = useBoardLinksIfLoaded()
   const savedAccess = useLinkAccess(editing?.visibility === 'members' ? editing.id : undefined)
 
   const [draft, setDraft] = useState<LinkDraft>(() => (editing ? draftOf(editing, groups) : newDraft(request.kind === 'add' ? request.groupName : '')))
@@ -93,10 +96,18 @@ function LinkForm({ request, onDone }: { request: Request; onDone: () => void })
 
   const change = (changes: Partial<LinkDraft>) => setDraft((current) => ({ ...current, ...changes }))
 
+  // A name that mentions an environment in its own way ("jenkins staging online") gets a
+  // proposal in the usual form, so the link lines up with its siblings on the board.
+  const group = groups.find((candidate) => candidate.name.toLowerCase() === draft.groupName.trim().toLowerCase())
+  const siblings = boardLinks.filter((link) => group && link.group_id === group.id && link.id !== editing?.id).map((link) => link.title)
+  const [keptName, setKeptName] = useState<string | null>(null)
+  const proposal = draft.title.trim() === keptName ? null : suggestName(draft.title, draft.groupName, siblings)
+
   function submit(event: FormEvent) {
     event.preventDefault()
     setAttempted(true)
-    if (hasErrors(errors)) return
+    // With a proposal open, the person first says which name they want.
+    if (hasErrors(errors) || proposal) return
 
     const fields = fieldsOf(draft, groups)
     const audience = { visibility: draft.visibility, memberIds }
@@ -141,6 +152,9 @@ function LinkForm({ request, onDone }: { request: Request; onDone: () => void })
             onChange={(event) => change({ title: event.target.value })}
             className="h-10"
           />
+          {proposal && (
+            <NameProposal proposal={proposal} urgent={attempted} onUse={() => change({ title: proposal })} onKeep={() => setKeptName(draft.title.trim())} />
+          )}
         </FormRow>
         <FormRow id={ids.url} label="Address" error={shown.url}>
           <Input
@@ -181,6 +195,30 @@ function LinkForm({ request, onDone }: { request: Request; onDone: () => void })
         </Button>
       </DialogFooter>
     </form>
+  )
+}
+
+/**
+ * Shown under the name when it mentions an environment but not as "Thing - Environment".
+ * One click takes the proposed name, another keeps what was typed. `urgent`: the person
+ * tried to save without choosing.
+ */
+function NameProposal({ proposal, urgent, onUse, onKeep }: { proposal: string; urgent: boolean; onUse: () => void; onKeep: () => void }) {
+  return (
+    <div className={cn('flex flex-col gap-2 rounded-lg px-3 py-2.5 text-[13px]', urgent ? 'bg-destructive/8 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--destructive)_35%,transparent)]' : 'bg-muted')}>
+      <span className="text-muted-foreground leading-snug">
+        Write the environment after the name, so it lines up with the others on the board:
+        <span className="text-foreground mt-0.5 block font-medium">{proposal}</span>
+      </span>
+      <span className="flex gap-2">
+        <Button type="button" onClick={onUse}>
+          Use this name
+        </Button>
+        <Button type="button" variant="ghost" onClick={onKeep}>
+          Keep mine
+        </Button>
+      </span>
+    </div>
   )
 }
 

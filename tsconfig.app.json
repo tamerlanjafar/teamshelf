@@ -23,5 +23,7 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  // Tests run in Node (`pnpm test`), not in the browser build.
+  "exclude": ["src/**/*.test.ts"]
 }

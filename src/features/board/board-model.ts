@@ -1,5 +1,6 @@
 // Turns groups, links and one person's preferences into what the board draws. Pure functions, no React.
 
+import { compareEnvironments, splitName } from '@/lib/environments'
 import { personalOrder, teamOrder } from '@/lib/order'
 import type { BoardPrefs, Group, Link } from '@/lib/types'
 
@@ -98,15 +99,6 @@ export interface BoardRow {
   links: { item: BoardLink; /** "Staging", "Prod"… or null for a link that has no environment in its name. */ environment: string | null }[]
 }
 
-const SEPARATOR = ' - '
-
-function splitName(title: string): { base: string; environment: string | null } {
-  const at = title.lastIndexOf(SEPARATOR)
-  const base = title.slice(0, at).trim()
-  const environment = title.slice(at + SEPARATOR.length).trim()
-  return at > 0 && base && environment ? { base, environment } : { base: title.trim(), environment: null }
-}
-
 /** "Jenkins Retail" on the Jenkins card reads "Retail". */
 function withoutGroupName(title: string, groupName: string) {
   const prefix = `${groupName.trim().toLowerCase()} `
@@ -124,11 +116,10 @@ export function rowsOf(card: BoardCard): BoardRow[] {
     row.links.push({ item, environment })
     rows.set(key, row)
   }
+  // Within a line the environments always come in the same order, from the safest to production.
+  for (const row of rows.values()) row.links.sort((a, b) => compareEnvironments(a.environment ?? '', b.environment ?? ''))
   return [...rows.values()]
 }
-
-/** Production gets a warning color, so it isn't opened by mistake. */
-export const isProduction = (environment: string) => /^(prod|production|live)$/i.test(environment.trim())
 
 /** The category every link of the card has, if they all have the same one. It is then shown once, on the card. */
 export function sharedCategoryId(card: BoardCard): string | null {
