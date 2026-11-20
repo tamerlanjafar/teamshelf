@@ -1,44 +1,50 @@
 import { ChevronDown } from 'lucide-react'
 import type { CSSProperties } from 'react'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { colorValue } from '@/lib/colors'
 import type { Category } from '@/lib/types'
-
-const ALL = 'all'
 
 const Dot = ({ color }: { color: string }) => <span className="size-2 flex-none rounded-full bg-(--t)" style={{ '--t': color } as CSSProperties} />
 
 /**
- * Narrows the board to one category. One compact button that names the choice and opens the
- * list, so it stays the same size however many categories there are.
+ * Narrows the board to one or more categories. One compact button that names the choice and
+ * opens the list, so it stays the same size however many categories there are. The list stays
+ * open while you tick several.
  */
-export function CategorySelect({ categories, value, onChange }: { categories: Category[]; value: string | null; onChange: (categoryId: string | null) => void }) {
+export function CategorySelect({ categories, value, onChange }: { categories: Category[]; value: string[]; onChange: (categoryIds: string[]) => void }) {
   if (categories.length === 0) return null
-  const selected = categories.find((category) => category.id === value)
+  const selected = categories.filter((category) => value.includes(category.id))
+  const label = selected.length === 0 ? 'All categories' : selected.length === 1 ? selected[0].name : `${selected.length} categories`
+
+  const toggle = (id: string, on: boolean) => onChange(on ? [...value, id] : value.filter((other) => other !== id))
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        aria-label={selected ? `Category: ${selected.name}` : 'Category: all'}
+        aria-label={selected.length ? `Categories: ${selected.map((category) => category.name).join(', ')}` : 'Categories: all'}
         className="bg-surface border-line hover:text-ink data-[popup-open]:border-brand flex h-11 max-w-[220px] flex-none items-center gap-2 rounded-xl border pr-3 pl-3.5 transition-colors"
       >
-        {selected && <Dot color={colorValue(selected.color)} />}
-        <span className={selected ? 'truncate font-medium' : 'text-quiet truncate'}>{selected?.name ?? 'All categories'}</span>
+        {selected.length > 0 && (
+          <span className="flex flex-none -space-x-0.5">
+            {selected.slice(0, 3).map((category) => (
+              <Dot key={category.id} color={colorValue(category.color)} />
+            ))}
+          </span>
+        )}
+        <span className={selected.length ? 'truncate font-medium' : 'text-quiet truncate'}>{label}</span>
         <ChevronDown className="text-quiet size-4 flex-none" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" sideOffset={8} className="max-h-[60vh] min-w-52 rounded-xl">
-        <DropdownMenuRadioGroup value={value ?? ALL} onValueChange={(next) => onChange(next === ALL ? null : (next as string))}>
-          <DropdownMenuRadioItem value={ALL} closeOnClick>
-            All categories
-          </DropdownMenuRadioItem>
-          <DropdownMenuSeparator />
-          {categories.map((category) => (
-            <DropdownMenuRadioItem key={category.id} value={category.id} closeOnClick>
-              <Dot color={colorValue(category.color)} />
-              {category.name}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
+        {categories.map((category) => (
+          <DropdownMenuCheckboxItem key={category.id} checked={value.includes(category.id)} onCheckedChange={(checked) => toggle(category.id, checked)}>
+            <Dot color={colorValue(category.color)} />
+            {category.name}
+          </DropdownMenuCheckboxItem>
+        ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem disabled={selected.length === 0} onClick={() => onChange([])}>
+          Show all categories
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

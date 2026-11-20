@@ -35,20 +35,20 @@ interface BoardState {
 
 /**
  * The home page of an organization: every group as a card, in a grid of columns, with a search
- * above it. The search is in the address (so it can be shared), the category is remembered.
+ * above it. The search is in the address (so it can be shared), the categories are remembered.
  */
 export function BoardPage({ query, onQueryChange }: { query: string; onQueryChange: (query: string) => void }) {
   const me = useMe()
   const org = useOrg()
-  const [categoryId, setCategoryId] = useCategoryFilter(org.id, useCategoriesIfLoaded())
+  const [categoryIds, setCategoryIds] = useCategoryFilter(org.id, useCategoriesIfLoaded())
   const [view, setView] = useState<BoardView>('board')
 
-  const filter: BoardFilter = { query, categoryId }
+  const filter: BoardFilter = { query, categoryIds }
   const state: BoardState = {
     filter,
     onFilterChange: (next) => {
       if (next.query !== query) onQueryChange(next.query)
-      if (next.categoryId !== categoryId) setCategoryId(next.categoryId)
+      if (next.categoryIds !== categoryIds) setCategoryIds(next.categoryIds)
     },
     view,
     onViewChange: setView,
@@ -76,7 +76,7 @@ function BoardBar({ filter, onFilterChange, view, onViewChange }: BoardState) {
 
   const cards = buildBoard(groups, links, prefs, { filter, view, keepEmpty: false })
   const found = cards.reduce((sum, card) => sum + card.links.length, 0)
-  const usedCategories = categories.filter((category) => category.id === filter.categoryId || links.some((link) => link.category_id === category.id))
+  const usedCategories = categories.filter((category) => filter.categoryIds.includes(category.id) || links.some((link) => link.category_id === category.id))
   const hiddenCount = countHidden(groups, links, prefs)
 
   /** Enter in the search opens the link when only one is left. */
@@ -87,7 +87,7 @@ function BoardBar({ filter, onFilterChange, view, onViewChange }: BoardState) {
   return (
     <TopBar>
       <SearchBox value={filter.query} resultCount={filter.query.trim() ? found : null} onChange={(query) => onFilterChange({ ...filter, query })} onEnter={openOnlyMatch} />
-      <CategorySelect categories={usedCategories} value={filter.categoryId} onChange={(categoryId) => onFilterChange({ ...filter, categoryId })} />
+      <CategorySelect categories={usedCategories} value={filter.categoryIds} onChange={(next) => onFilterChange({ ...filter, categoryIds: next })} />
       <HiddenToggle count={hiddenCount} active={view === 'hidden'} onToggle={() => onViewChange(view === 'hidden' ? 'board' : 'hidden')} />
     </TopBar>
   )
@@ -156,7 +156,7 @@ function BoardCards({ filter, onFilterChange, view, onViewChange }: BoardState) 
   if (isFiltering(filter)) {
     return (
       <Notice icon={<SearchX className="text-quiet size-9" strokeWidth={1.5} />} title="No link matches" text="Try fewer words, or another category.">
-        <Button variant="outline" size="lg" onClick={() => onFilterChange({ query: '', categoryId: null })}>
+        <Button variant="outline" size="lg" onClick={() => onFilterChange({ query: '', categoryIds: [] })}>
           Show everything
         </Button>
       </Notice>

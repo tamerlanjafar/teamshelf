@@ -21,8 +21,8 @@ export interface BoardCard {
 export interface BoardFilter {
   /** Words that must all appear in a link's group, name or address. */
   query: string
-  /** Show only links of this category. */
-  categoryId: string | null
+  /** Show only links of these categories. None: links of every category, and those without one. */
+  categoryIds: string[]
 }
 
 /**
@@ -31,10 +31,10 @@ export interface BoardFilter {
  */
 export type BoardView = 'board' | 'hidden'
 
-export const isFiltering = (filter: BoardFilter) => Boolean(filter.query.trim() || filter.categoryId)
+export const isFiltering = (filter: BoardFilter) => Boolean(filter.query.trim() || filter.categoryIds.length)
 
 function matches(link: Link, group: Group, filter: BoardFilter) {
-  if (filter.categoryId && link.category_id !== filter.categoryId) return false
+  if (filter.categoryIds.length && !filter.categoryIds.includes(link.category_id ?? '')) return false
   const words = filter.query.toLowerCase().split(/\s+/).filter(Boolean)
   if (words.length === 0) return true
   const text = `${group.name} ${link.title} ${link.url}`.toLowerCase()
