@@ -1,49 +1,5 @@
-/* The small parts of a link that are also used outside the board: its icon and its category.
+/* The small parts of a link that are also used outside the board: its icon.
    Inside a card they pick up the card's color (--c). */
-
-/* A link's category: a dot in the category's color (--t) and its name. */
-
-.tag {
-    --t: #737885;
-    flex: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    max-width: 124px;
-    height: 20px;
-    padding: 0 7px 0 6px;
-    font: 550 11px/1 var(--font-rounded);
-    letter-spacing: 0.01em;
-    color: color-mix(in srgb, var(--t) 45%, var(--quiet));
-    background: color-mix(in srgb, var(--t) 9%, var(--surface));
-    border-radius: 999px;
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--t) 16%, transparent);
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-}
-
-.tag::before {
-    content: '';
-    flex: none;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--t);
-}
-
-/* On a card's header the category is plain text with its dot, not a pill. */
-.tag.is-plain {
-    max-width: 150px;
-    height: auto;
-    padding: 0;
-    font-size: 12.5px;
-    font-weight: 600;
-    /* The dot carries the category's color. The name is dark, so it reads on any card color. */
-    color: color-mix(in srgb, var(--ink) 78%, transparent);
-    background: transparent;
-    box-shadow: none;
-}
 
 .favicon {
     position: relative;
@@ -73,4 +29,25 @@
     font: 700 10px/1 var(--font-rounded);
     color: #ffffff;
     background: color-mix(in srgb, var(--c, var(--quiet)) 80%, var(--ink));
+}
+
+/* A file's icon: the kind of file, drawn in the card's color. */
+.favicon.file-icon {
+    display: grid;
+    place-items: center;
+    color: color-mix(in srgb, var(--c, var(--quiet)) 75%, var(--ink));
+    overflow: visible;
+}
+
+.favicon.file-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* How big a file is, after its name. */
+.file-size {
+    flex: none;
+    font: 500 12px/22px var(--font-rounded);
+    font-variant-numeric: tabular-nums;
+    color: var(--quiet);
 }

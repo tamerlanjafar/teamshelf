@@ -1,10 +1,10 @@
 import { Check, CheckCheck, Pencil } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { toast } from 'sonner'
-import { useCategories } from '@/api/categories'
 import { useGroups } from '@/api/groups'
 import { useApproveLink, useApproveLinks, useDeleteLink, useRequests } from '@/api/links'
 import { useMembers } from '@/api/members'
+import { useSpaces } from '@/api/spaces'
 import { PageSheet, SheetGroup } from '@/components/app/page-sheet'
 import { ListSkeleton, Section } from '@/components/app/section'
 import { TopBar } from '@/components/app/top-bar'
@@ -18,16 +18,14 @@ import { RejectButton } from './reject-button'
 import { RequestRow, StatusPill } from './request-row'
 
 /**
- * Suggested links that are not on the board. Reviewers (the super admin, and the managers of
- * categories for their own categories) approve or reject here. Everyone follows their own.
+ * Suggested links that are not on a board yet. Each space's admins approve or reject the ones
+ * for their space here. Everyone follows their own.
  */
 export function RequestsPage() {
-  const { superAdmin, reviewer } = usePermissions()
-  const lead = superAdmin
-    ? 'Links people suggested. Approved ones go to the board for everyone.'
-    : reviewer
-      ? 'Links people suggested in the categories you manage, and your own suggestions elsewhere.'
-      : 'Links you suggested that are not on the board yet.'
+  const { reviewer } = usePermissions()
+  const lead = reviewer
+    ? 'Links and files people suggested in the spaces you run, and your own suggestions elsewhere. Approved ones go on the space’s board.'
+    : 'Links and files you suggested that are not on a board yet. An admin of the space reviews them.'
 
   return (
     <>
@@ -45,7 +43,7 @@ function Requests() {
   const { reviewer, canManage } = usePermissions()
   const requests = useRequests()
   const groups = useGroups()
-  const categories = useCategories()
+  const spaces = useSpaces()
   const members = useMembers()
 
   const waiting = requests.filter((link) => link.status === 'pending')
@@ -56,7 +54,7 @@ function Requests() {
       key={link.id}
       link={link}
       group={groups.find((group) => group.id === link.group_id)}
-      category={categories.find((category) => category.id === link.category_id)}
+      space={spaces.find((space) => space.id === link.space_id)}
       author={members.find((member) => member.id === link.created_by)}
       status={status}
     >

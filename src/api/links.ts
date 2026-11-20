@@ -2,14 +2,15 @@ import { queryOptions, useMutation, useQuery, useQueryClient, useSuspenseQuery }
 import { useOrg } from '@/features/org/org-context'
 import { neon } from '@/lib/neon'
 import type { Link, Visibility } from '@/lib/types'
-import { NONE, unwrap } from './db'
+import { isUniqueViolation, NONE, unwrap } from './db'
+import { fileAddress, type StoredFile } from './files'
 import { findOrCreateGroup, groupsKey } from './groups'
 import { findIcon } from './icons'
 
 const linksKey = (orgId: string) => [orgId, 'links'] as const
 const boardKey = (orgId: string) => [...linksKey(orgId), 'board'] as const
 
-/** The links on the board. Row-level security leaves out the ones this person may not see. */
+/** The links on the boards of every space. Row-level security leaves out the ones this person may not see. */
 export const boardLinksQuery = (orgId: string) =>
   queryOptions({
     queryKey: boardKey(orgId),
@@ -21,10 +22,7 @@ export const useBoardLinks = () => useSuspenseQuery(boardLinksQuery(useOrg().id)
 
 export const useBoardLinksIfLoaded = (): Link[] => useQuery(boardLinksQuery(useOrg().id)).data ?? NONE
 
-/**
- * Suggestions that are waiting or were rejected: your own, plus the ones you review
- * (all of them for the super admin, those of their categories for a category's manager).
- */
+/** Suggestions that are waiting or were rejected: your own, plus those of the spaces you are an admin of. */
 export const requestsQuery = (orgId: string) =>
   queryOptions({
     queryKey: [...linksKey(orgId), 'requests'],
@@ -72,49 +70,68 @@ async function setAccess(linkId: string, { visibility, memberIds }: Audience) {
 
 /** What the link form collects, for a new link and for an edited one. */
 export interface LinkFields {
+  spaceId: string
   /** An existing group, or the name of one that doesn't exist yet. */
   group: { id: string } | { name: string }
   title: string
-  url: string
-  categoryId: string | null
+  /** A web address. Left out for a file. */
+  url?: string
+  /** A file that was just uploaded. Only for a new file: a file's contents don't change. */
+  file?: StoredFile
 }
 
-/** The columns a form fills in, with the icon of the page looked up for this address. */
-const columns = async ({ title, url, categoryId }: LinkFields) => ({ title: title.trim(), url, category_id: categoryId, icon_url: await findIcon(url) })
+/** The columns a form fills in. A web address gets the icon its page declares. */
+async function columns({ title, url, file }: LinkFields) {
+  if (file) return { title: title.trim(), kind: 'file', url: fileAddress(file.key), file_key: file.key, file_name: file.name, file_size: file.size, file_type: file.type }
+  return { title: title.trim(), ...(url ? { url, icon_url: await findIcon(url) } : {}) }
+}
+
+/** The database refuses a second link with the same name in a group. */
+async function saving<Result>(run: () => Promise<Result>, title: string): Promise<Result> {
+  try {
+    return await run()
+  } catch (error) {
+    if (isUniqueViolation(error)) throw new Error(`This group already has a link called ${title.trim()}.`)
+    throw error
+  }
+}
 
 /**
- * Adds a link. With `publishFor` (the super admin) it goes straight to the board.
- * Without it the link waits for review, and a new group is only created on approval.
+ * Adds a link or a file. With `publishFor` (an admin of the space) it goes straight to the board.
+ * Without it, it waits for review, and a new group is only created on approval.
  */
 export function useAddLink() {
-  return useLinksMutation(async ({ fields, publishFor }: { fields: LinkFields; publishFor?: Audience }, orgId) => {
-    const { group } = fields
+  return useLinksMutation(({ fields, publishFor }: { fields: LinkFields; publishFor?: Audience }, orgId) =>
+    saving(async () => {
+      const { group, spaceId } = fields
+      const base = { org_id: orgId, space_id: spaceId, ...(await columns(fields)) }
 
-    if (!publishFor) {
-      const place = 'id' in group ? { group_id: group.id } : { proposed_group: group.name.trim() }
-      await unwrap(neon.from('links').insert({ org_id: orgId, ...(await columns(fields)), ...place }))
-      return
-    }
+      if (!publishFor) {
+        const place = 'id' in group ? { group_id: group.id } : { proposed_group: group.name.trim() }
+        await unwrap(neon.from('links').insert({ ...base, ...place }))
+        return
+      }
 
-    const group_id = 'id' in group ? group.id : (await findOrCreateGroup(orgId, group.name)).id
-    const published = { status: 'approved', visibility: publishFor.visibility, reviewed_at: new Date().toISOString() }
-    const created = await unwrap<{ id: string }>(
-      neon.from('links').insert({ org_id: orgId, ...(await columns(fields)), ...published, group_id }).select('id').single(),
-    )
-    await setAccess(created.id, publishFor)
-  })
+      const group_id = 'id' in group ? group.id : (await findOrCreateGroup(orgId, spaceId, group.name)).id
+      const published = { status: 'approved', visibility: publishFor.visibility, reviewed_at: new Date().toISOString() }
+      const created = await unwrap<{ id: string }>(neon.from('links').insert({ ...base, ...published, group_id }).select('id').single())
+      await setAccess(created.id, publishFor)
+    }, fields.title),
+  )
 }
 
-/** Super admin only. */
+/** The space's admins. */
 export function useUpdateLink() {
-  return useLinksMutation(async ({ id, fields, audience }: { id: string; fields: LinkFields; audience: Audience }, orgId) => {
-    const group_id = 'id' in fields.group ? fields.group.id : (await findOrCreateGroup(orgId, fields.group.name)).id
-    await unwrap(neon.from('links').update({ ...(await columns(fields)), group_id, proposed_group: null, visibility: audience.visibility }).eq('id', id))
-    await setAccess(id, audience)
-  })
+  return useLinksMutation(({ id, fields, audience }: { id: string; fields: LinkFields; audience: Audience }, orgId) =>
+    saving(async () => {
+      const group_id = 'id' in fields.group ? fields.group.id : (await findOrCreateGroup(orgId, fields.spaceId, fields.group.name)).id
+      await unwrap(neon.from('links').update({ ...(await columns({ ...fields, file: undefined })), group_id, proposed_group: null, visibility: audience.visibility }).eq('id', id))
+      await setAccess(id, audience)
+    }, fields.title),
+  )
 }
 
-/** Puts a suggestion on the board, creating the group it asked for if needed. Super admin only. */
+/** Puts a suggestion on the board, creating the group it asked for if needed. The space's admins. */
 export function useApproveLink() {
   return useLinksMutation((link: Link, orgId) => approve(link, orgId))
 }
@@ -127,28 +144,28 @@ export function useApproveLinks() {
 }
 
 async function approve(link: Link, orgId: string) {
-  const group_id = link.group_id ?? (await findOrCreateGroup(orgId, link.proposed_group!)).id
-  await unwrap(
+  const group_id = link.group_id ?? (await findOrCreateGroup(orgId, link.space_id, link.proposed_group!)).id
+  await saving(() => unwrap(
     neon
       .from('links')
       .update({ status: 'approved', group_id, proposed_group: null, reviewed_at: new Date().toISOString(), review_note: '' })
       .eq('id', link.id),
-  )
+  ), link.title)
 }
 
-/** Super admin only. The reason is shown to the person who suggested the link. */
+/** The space's admins. The reason is shown to the person who suggested the link. */
 export function useRejectLink() {
   return useLinksMutation(({ id, reason }: { id: string; reason: string }) =>
     unwrap(neon.from('links').update({ status: 'rejected', reviewed_at: new Date().toISOString(), review_note: reason.trim() }).eq('id', id)),
   )
 }
 
-/** The super admin deletes any link. Everyone else can remove their own suggestions. */
+/** The space's admins delete any of its links. Everyone else can remove their own suggestions. */
 export function useDeleteLink() {
   return useLinksMutation((id: string) => unwrap(neon.from('links').delete().eq('id', id)))
 }
 
-/** The team's order of one group's links, for everyone who hasn't made their own. Admins and the super admin. */
+/** The order of one group's links, for everyone who hasn't made their own. The space's admins. */
 export function useSetTeamLinkOrder() {
   const org = useOrg()
   const queryClient = useQueryClient()

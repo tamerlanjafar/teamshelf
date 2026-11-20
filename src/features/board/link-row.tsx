@@ -1,8 +1,9 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Copy, Eye, EyeOff, Lock, MoreHorizontal, MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import { Copy, Download, Eye, EyeOff, Lock, MoreHorizontal, MoreVertical, Pencil, Trash2 } from 'lucide-react'
 import type { ComponentProps, CSSProperties, ReactNode, Ref } from 'react'
 import { toast } from 'sonner'
+import { formatBytes, openFile } from '@/api/files'
 import { useDeleteLink } from '@/api/links'
 import { useConfirm } from '@/components/app/confirm-dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -15,6 +16,7 @@ import { useBoardActions } from './board-actions'
 import { isProduction } from '@/lib/environments'
 import type { BoardRow } from './board-model'
 import { Favicon } from './favicon'
+import { FileIcon } from './file-icon'
 
 interface LinkRowProps {
   row: BoardRow
@@ -41,14 +43,33 @@ const Restricted = () => <Lock className="text-quiet size-3 flex-none" aria-labe
  * environments: its name, and a small link per environment, each with its own menu.
  */
 export function LinkRow({ row, restoring, rowRef, style, placeholder, lifted, dragProps }: LinkRowProps & RowDragProps) {
-  const { setLinksHidden } = useBoardActions()
+  const { setLinksHidden, recordOpen } = useBoardActions()
+  // A click, a middle click or a cmd-click: each opens the link, so each counts as opened lately.
+  const opened = (id: string) => ({ onClick: () => recordOpen(id), onAuxClick: (event: { button: number }) => event.button === 1 && recordOpen(id) })
   const [first] = row.links
   const hidden = row.links.filter(({ item }) => item.hidden).map(({ item }) => item.link.id)
 
   return (
     <div ref={rowRef} style={style} className={cn('tab', placeholder && 'is-placeholder', lifted && 'is-lifted')} {...dragProps}>
-      {first.environment === null ? (
-        <a className="open" href={first.item.link.url} target="_blank" rel="noreferrer" draggable={false}>
+      {first.item.link.kind === 'file' ? (
+        <a
+          className="open"
+          href={first.item.link.url}
+          draggable={false}
+          onClick={(event) => {
+            // The file's address needs the person's sign-in, which a plain link doesn't carry.
+            event.preventDefault()
+            recordOpen(first.item.link.id)
+            openFile(first.item.link).catch(toastError)
+          }}
+        >
+          <FileIcon type={first.item.link.file_type} name={first.item.link.file_name} />
+          <span className="title">{row.title}</span>
+          {first.item.link.visibility !== 'everyone' && <Restricted />}
+          {first.item.link.file_size !== null && <span className="file-size">{formatBytes(first.item.link.file_size)}</span>}
+        </a>
+      ) : first.environment === null ? (
+        <a className="open" href={first.item.link.url} target="_blank" rel="noreferrer" draggable={false} {...opened(first.item.link.id)}>
           <Favicon url={first.item.link.url} iconUrl={first.item.link.icon_url} title={row.title} />
           <span className="title">{row.title}</span>
           {first.item.link.visibility !== 'everyone' && <Restricted />}
@@ -60,7 +81,15 @@ export function LinkRow({ row, restoring, rowRef, style, placeholder, lifted, dr
           <span className="envs">
             {row.links.map(({ item, environment }) => (
               <span key={item.link.id} className="env-item">
-                <a className={cn('env', isProduction(environment!) && 'is-production')} href={item.link.url} target="_blank" rel="noreferrer" draggable={false} aria-label={`${row.title}, ${environment}`}>
+                <a
+                  className={cn('env', isProduction(environment!) && 'is-production')}
+                  href={item.link.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  draggable={false}
+                  aria-label={`${row.title}, ${environment}`}
+                  {...opened(item.link.id)}
+                >
                   {environment}
                   {item.link.visibility !== 'everyone' && <Restricted />}
                 </a>
@@ -114,7 +143,7 @@ export function SortableLinkRow(props: LinkRowProps) {
   )
 }
 
-/** The menu of one link: copy the address, hide it for yourself, and for whoever manages it: edit and delete. */
+/** The menu of one link: copy the address (or download the file), hide it for yourself, and for the space's admins: edit and delete. */
 function LinkMenu({ link, hidden, label, className, children }: { link: Link; hidden: boolean; label: string; className: string; children: ReactNode }) {
   const { canManage } = usePermissions()
   const { setLinksHidden } = useBoardActions()
@@ -134,10 +163,17 @@ function LinkMenu({ link, hidden, label, className, children }: { link: Link; hi
         {children}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-44 rounded-xl">
-        <DropdownMenuItem onClick={copy}>
-          <Copy />
-          Copy address
-        </DropdownMenuItem>
+        {link.kind === 'file' ? (
+          <DropdownMenuItem onClick={() => openFile(link, true).catch(toastError)}>
+            <Download />
+            Download
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem onClick={copy}>
+            <Copy />
+            Copy address
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem onClick={() => setLinksHidden([link.id], !hidden)}>
           {hidden ? <Eye /> : <EyeOff />}
           {hidden ? 'Show again' : 'Hide for me'}
@@ -154,8 +190,8 @@ function LinkMenu({ link, hidden, label, className, children }: { link: Link; hi
               onClick={() =>
                 confirm({
                   title: `Delete ${link.title}?`,
-                  description: 'The link is removed from the board for everyone.',
-                  confirmLabel: 'Delete link',
+                  description: link.kind === 'file' ? 'The file is removed from the board and from storage, for everyone.' : 'The link is removed from the board for everyone.',
+                  confirmLabel: link.kind === 'file' ? 'Delete file' : 'Delete link',
                   onConfirm: () => deleteLink.mutate(link.id, { onError: toastError }),
                 })
               }

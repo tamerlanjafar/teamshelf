@@ -7,7 +7,7 @@ import { ColorPicker } from '@/components/app/color-picker'
 import { toastError } from '@/lib/errors'
 import type { Group } from '@/lib/types'
 
-/** Rename a group and choose its color. Super admin only. */
+/** Rename a group and choose its color. The space's admins. */
 export function GroupDialog({ group, open, onOpenChange }: { group: Group; open: boolean; onOpenChange: (open: boolean) => void }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

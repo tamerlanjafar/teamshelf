@@ -38,7 +38,7 @@ export function OrgsPage() {
         <ul className="border-border divide-border m-0 list-none divide-y overflow-hidden rounded-xl border p-0 text-left">
           {orgs.map((org) => (
             <li key={org.id}>
-              <Link to="/$org" params={{ org: org.slug }} search={{}} className={ROW}>
+              <Link to="/$org" params={{ org: org.slug }} className={ROW}>
                 <OrgBadge name={org.name} />
                 <OrgName name={org.name} detail={`/${org.slug}`} />
                 <ChevronRight className="text-muted-foreground size-4 flex-none transition-transform group-hover:translate-x-0.5" />
@@ -83,7 +83,7 @@ function JoinableOrg({ org }: { org: OrgSummary }) {
   // hangs on the request itself, not on this row still being on the page.
   const joinAndOpen = () =>
     join.mutateAsync(org.slug).then(
-      () => navigate({ to: '/$org', params: { org: org.slug }, search: {} }),
+      () => navigate({ to: '/$org', params: { org: org.slug } }),
       () => {}, // The row shows the error.
     )
 
@@ -122,6 +122,6 @@ function OrgBadge({ name }: { name: string }) {
  */
 export function HomeRedirect() {
   const { orgs, joinable } = useMyOrgs()
-  if (orgs.length === 1 && joinable.length === 0) return <Navigate to="/$org" params={{ org: orgs[0].slug }} search={{}} replace />
+  if (orgs.length === 1 && joinable.length === 0) return <Navigate to="/$org" params={{ org: orgs[0].slug }} replace />
   return <Navigate to="/organizations" replace />
 }

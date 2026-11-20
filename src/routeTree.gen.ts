@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OrgRouteImport } from './routes/$org'
+import { Route as FileRouteImport } from './routes/file'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as NewRouteImport } from './routes/new'
 import { Route as OrganizationsRouteImport } from './routes/organizations'
@@ -18,6 +19,8 @@ import { Route as OrgIndexRouteImport } from './routes/$org/index'
 import { Route as OrgRequestsRouteImport } from './routes/$org/requests'
 import { Route as OrgSettingsRouteImport } from './routes/$org/settings'
 import { Route as OrgTeamRouteImport } from './routes/$org/team'
+import { Route as OrgSpaceIndexRouteImport } from './routes/$org/$space.index'
+import { Route as OrgSpaceSettingsRouteImport } from './routes/$org/$space.settings'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -27,6 +30,11 @@ const IndexRoute = IndexRouteImport.update({
 const OrgRoute = OrgRouteImport.update({
   id: '/$org',
   path: '/$org',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FileRoute = FileRouteImport.update({
+  id: '/file',
+  path: '/file',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -64,10 +72,21 @@ const OrgTeamRoute = OrgTeamRouteImport.update({
   path: '/team',
   getParentRoute: () => OrgRoute,
 } as any)
+const OrgSpaceIndexRoute = OrgSpaceIndexRouteImport.update({
+  id: '/$space/',
+  path: '/$space/',
+  getParentRoute: () => OrgRoute,
+} as any)
+const OrgSpaceSettingsRoute = OrgSpaceSettingsRouteImport.update({
+  id: '/$space/settings',
+  path: '/$space/settings',
+  getParentRoute: () => OrgRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$org': typeof OrgRouteWithChildren
+  '/file': typeof FileRoute
   '/login': typeof LoginRoute
   '/new': typeof NewRoute
   '/organizations': typeof OrganizationsRoute
@@ -75,9 +94,12 @@ export interface FileRoutesByFullPath {
   '/$org/settings': typeof OrgSettingsRoute
   '/$org/team': typeof OrgTeamRoute
   '/$org/': typeof OrgIndexRoute
+  '/$org/$space/settings': typeof OrgSpaceSettingsRoute
+  '/$org/$space/': typeof OrgSpaceIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/file': typeof FileRoute
   '/login': typeof LoginRoute
   '/new': typeof NewRoute
   '/organizations': typeof OrganizationsRoute
@@ -85,11 +107,14 @@ export interface FileRoutesByTo {
   '/$org/settings': typeof OrgSettingsRoute
   '/$org/team': typeof OrgTeamRoute
   '/$org': typeof OrgIndexRoute
+  '/$org/$space/settings': typeof OrgSpaceSettingsRoute
+  '/$org/$space': typeof OrgSpaceIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$org': typeof OrgRouteWithChildren
+  '/file': typeof FileRoute
   '/login': typeof LoginRoute
   '/new': typeof NewRoute
   '/organizations': typeof OrganizationsRoute
@@ -97,12 +122,15 @@ export interface FileRoutesById {
   '/$org/settings': typeof OrgSettingsRoute
   '/$org/team': typeof OrgTeamRoute
   '/$org/': typeof OrgIndexRoute
+  '/$org/$space/settings': typeof OrgSpaceSettingsRoute
+  '/$org/$space/': typeof OrgSpaceIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/$org'
+    | '/file'
     | '/login'
     | '/new'
     | '/organizations'
@@ -110,9 +138,12 @@ export interface FileRouteTypes {
     | '/$org/settings'
     | '/$org/team'
     | '/$org/'
+    | '/$org/$space/settings'
+    | '/$org/$space/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/file'
     | '/login'
     | '/new'
     | '/organizations'
@@ -120,10 +151,13 @@ export interface FileRouteTypes {
     | '/$org/settings'
     | '/$org/team'
     | '/$org'
+    | '/$org/$space/settings'
+    | '/$org/$space'
   id:
     | '__root__'
     | '/'
     | '/$org'
+    | '/file'
     | '/login'
     | '/new'
     | '/organizations'
@@ -131,11 +165,14 @@ export interface FileRouteTypes {
     | '/$org/settings'
     | '/$org/team'
     | '/$org/'
+    | '/$org/$space/settings'
+    | '/$org/$space/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   OrgRoute: typeof OrgRouteWithChildren
+  FileRoute: typeof FileRoute
   LoginRoute: typeof LoginRoute
   NewRoute: typeof NewRoute
   OrganizationsRoute: typeof OrganizationsRoute
@@ -155,6 +192,13 @@ declare module '@tanstack/react-router' {
       path: '/$org'
       fullPath: '/$org'
       preLoaderRoute: typeof OrgRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/file': {
+      id: '/file'
+      path: '/file'
+      fullPath: '/file'
+      preLoaderRoute: typeof FileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -206,6 +250,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrgTeamRouteImport
       parentRoute: typeof OrgRoute
     }
+    '/$org/$space/': {
+      id: '/$org/$space/'
+      path: '/$space'
+      fullPath: '/$org/$space/'
+      preLoaderRoute: typeof OrgSpaceIndexRouteImport
+      parentRoute: typeof OrgRoute
+    }
+    '/$org/$space/settings': {
+      id: '/$org/$space/settings'
+      path: '/$space/settings'
+      fullPath: '/$org/$space/settings'
+      preLoaderRoute: typeof OrgSpaceSettingsRouteImport
+      parentRoute: typeof OrgRoute
+    }
   }
 }
 
@@ -214,6 +272,8 @@ interface OrgRouteChildren {
   OrgSettingsRoute: typeof OrgSettingsRoute
   OrgTeamRoute: typeof OrgTeamRoute
   OrgIndexRoute: typeof OrgIndexRoute
+  OrgSpaceSettingsRoute: typeof OrgSpaceSettingsRoute
+  OrgSpaceIndexRoute: typeof OrgSpaceIndexRoute
 }
 
 const OrgRouteChildren: OrgRouteChildren = {
@@ -221,6 +281,8 @@ const OrgRouteChildren: OrgRouteChildren = {
   OrgSettingsRoute: OrgSettingsRoute,
   OrgTeamRoute: OrgTeamRoute,
   OrgIndexRoute: OrgIndexRoute,
+  OrgSpaceSettingsRoute: OrgSpaceSettingsRoute,
+  OrgSpaceIndexRoute: OrgSpaceIndexRoute,
 }
 
 const OrgRouteWithChildren = OrgRoute._addFileChildren(OrgRouteChildren)
@@ -228,6 +290,7 @@ const OrgRouteWithChildren = OrgRoute._addFileChildren(OrgRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   OrgRoute: OrgRouteWithChildren,
+  FileRoute: FileRoute,
   LoginRoute: LoginRoute,
   NewRoute: NewRoute,
   OrganizationsRoute: OrganizationsRoute,

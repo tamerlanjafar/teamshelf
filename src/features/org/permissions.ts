@@ -1,32 +1,33 @@
-import { useCategoryManagersIfLoaded } from '@/api/categories'
+import { useSpaceMembersIfLoaded } from '@/api/spaces'
 import { isAdmin, isSuperAdmin } from '@/lib/roles'
-import type { Link } from '@/lib/types'
+import type { Link, SpaceRole } from '@/lib/types'
 import { useMe } from './org-context'
 
 /**
  * What the signed-in person may do in the open organization. The database enforces all of it.
  * This only decides which buttons to show.
  *
- * Besides the role, a person can manage categories. In those they act like the super admin
- * for links: add straight to the board, edit, delete, and review suggestions.
+ * Inside a space, its admins do everything: add links straight to the board, edit, delete,
+ * review suggestions, manage groups, members and the space's settings. The organization's
+ * super admin is an admin of every space. The organization's admins create spaces.
  */
 export function usePermissions() {
   const me = useMe()
-  const managers = useCategoryManagersIfLoaded()
-  const managedCategoryIds = managers.filter((row) => row.member_id === me.id).map((row) => row.category_id)
-
+  const rows = useSpaceMembersIfLoaded()
   const superAdmin = isSuperAdmin(me)
-  const manages = (categoryId: string | null) => categoryId !== null && managedCategoryIds.includes(categoryId)
+
+  const roleIn = (spaceId: string | undefined | null): SpaceRole | null => rows.find((row) => row.space_id === spaceId && row.member_id === me.id)?.role ?? null
+  const isSpaceAdmin = (spaceId: string | undefined | null) => Boolean(spaceId) && (superAdmin || roleIn(spaceId) === 'admin')
 
   return {
     superAdmin,
+    /** An admin of the organization: manages its people, creates spaces. */
     admin: isAdmin(me),
-    managedCategoryIds,
-    /** Reviews suggestions, of everything or of some categories. */
-    reviewer: superAdmin || managedCategoryIds.length > 0,
-    /** A link added in this category goes straight to the board, instead of waiting for review. */
-    canPublishIn: (categoryId: string | null) => superAdmin || manages(categoryId),
-    /** Edit, delete, approve or reject this link. Links restricted to some people are the super admin's. */
-    canManage: (link: Link) => superAdmin || (manages(link.category_id) && link.visibility === 'everyone'),
+    roleIn,
+    isSpaceAdmin,
+    /** Reviews suggestions in at least one space. */
+    reviewer: superAdmin || rows.some((row) => row.member_id === me.id && row.role === 'admin'),
+    /** Edit, delete, approve or reject this link. */
+    canManage: (link: Link) => isSpaceAdmin(link.space_id),
   }
 }

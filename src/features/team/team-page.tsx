@@ -17,7 +17,7 @@ export function TeamPage() {
       <TopBar />
       <PageSheet
         title="Team"
-        lead={`${whoJoins} Members see links and suggest new ones. Admins also manage this page. Someone who manages a category adds, edits and reviews the links in it.`}
+        lead={`${whoJoins} Members see the spaces open to the organization and suggest links. Admins also manage this page and create spaces. Each space has its own admins, who choose its people in the space's settings.`}
       >
         <InviteForm />
         <Section compact skeleton={<ListSkeleton rows={4} />}>

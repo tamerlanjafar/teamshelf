@@ -20,10 +20,8 @@ export interface BoardCard {
 }
 
 export interface BoardFilter {
-  /** Words that must all appear in a link's group, name or address. */
+  /** Words that must all appear in a link's group, name, address or file name. */
   query: string
-  /** Show only links of these categories. None: links of every category, and those without one. */
-  categoryIds: string[]
 }
 
 /**
@@ -32,13 +30,12 @@ export interface BoardFilter {
  */
 export type BoardView = 'board' | 'hidden'
 
-export const isFiltering = (filter: BoardFilter) => Boolean(filter.query.trim() || filter.categoryIds.length)
+export const isFiltering = (filter: BoardFilter) => Boolean(filter.query.trim())
 
 function matches(link: Link, group: Group, filter: BoardFilter) {
-  if (filter.categoryIds.length && !filter.categoryIds.includes(link.category_id ?? '')) return false
   const words = filter.query.toLowerCase().split(/\s+/).filter(Boolean)
   if (words.length === 0) return true
-  const text = `${group.name} ${link.title} ${link.url}`.toLowerCase()
+  const text = `${group.name} ${link.title} ${link.kind === 'file' ? (link.file_name ?? '') : link.url}`.toLowerCase()
   return words.every((word) => text.includes(word))
 }
 
@@ -99,12 +96,15 @@ export interface BoardRow {
   links: { item: BoardLink; /** "Staging", "Prod"… or null for a link that has no environment in its name. */ environment: string | null }[]
 }
 
-/** The lines of a card, in the order of its links: a line sits where its first link is. */
-export function rowsOf(card: BoardCard): BoardRow[] {
+/**
+ * The lines of a card, in the order of its links: a line sits where its first link is.
+ * Within a line, environments follow the order of the space's list.
+ */
+export function rowsOf(card: BoardCard, environmentOrder: string[] = []): BoardRow[] {
   const rows = new Map<string, BoardRow>()
   for (const item of card.links) {
-    const { base, environment } = splitName(item.link.title)
-    // A link without an environment is always a line of its own.
+    const { base, environment } = item.link.kind === 'file' ? { base: item.link.title, environment: null } : splitName(item.link.title)
+    // A link without an environment, and a file, is always a line of its own.
     const title = withoutGroupName(base, card.group.name)
     const key = environment ? `env:${title.toLowerCase()}` : `link:${item.link.id}`
     const row = rows.get(key) ?? { id: item.link.id, title, links: [] }
@@ -112,7 +112,7 @@ export function rowsOf(card: BoardCard): BoardRow[] {
     rows.set(key, row)
   }
   // Within a line the environments always come in the same order, from the safest to production.
-  for (const row of rows.values()) row.links.sort((a, b) => compareEnvironments(a.environment ?? '', b.environment ?? ''))
+  for (const row of rows.values()) row.links.sort((a, b) => compareEnvironments(a.environment ?? '', b.environment ?? '', environmentOrder))
   return [...rows.values()]
 }
 
@@ -123,5 +123,5 @@ export function countHidden(groups: Group[], links: Link[], prefs: BoardPrefs): 
   return prefs.hidden_groups.filter((id) => groupIds.has(id)).length + prefs.hidden_links.filter((id) => linkIds.has(id)).length
 }
 
-/** A rough height for a card, enough to balance the columns before anything is measured. */
-export const estimateCardHeight = (card: BoardCard) => 62 + Math.max(rowsOf(card).length, 1) * 37
+/** A rough height for a card, enough to balance the columns before anything is measured. Long cards stop at about 16 lines and scroll (see board.css). */
+export const estimateCardHeight = (card: BoardCard) => 62 + Math.min(Math.max(rowsOf(card).length, 1), 16) * 37

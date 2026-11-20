@@ -10,7 +10,7 @@ import { toastError } from '@/lib/errors'
 import { displayName, ROLE_LABELS } from '@/lib/roles'
 import { timeAgo } from '@/lib/time'
 import type { Member } from '@/lib/types'
-import { ManagedCategories } from './managed-categories'
+import { MemberSpaces } from './member-spaces'
 import { INVITE_ROLES, type InviteRole } from './roles'
 
 /** A person on the team, with their role. The super admin and your own row can't be changed here. */
@@ -22,7 +22,7 @@ export function MemberRow({ member }: { member: Member }) {
   return (
     <div className="flex flex-wrap items-start gap-x-3 gap-y-2 px-4 py-3">
       <Avatar member={member} />
-      <div className="min-w-[160px] flex-1">
+      <div className="min-w-0 flex-1 basis-[160px]">
         <div className="truncate font-medium">
           {displayName(member)}
           {member.id === me.id && <span className="text-quiet font-normal"> (you)</span>}
@@ -31,7 +31,7 @@ export function MemberRow({ member }: { member: Member }) {
           {member.email}
           {!member.user_id && ` · invited ${timeAgo(member.invited_at)}`}
         </div>
-        {member.role === 'super_admin' ? <div className="text-quiet mt-1 text-[12.5px]">Manages every category</div> : <ManagedCategories member={member} />}
+        {member.role === 'super_admin' ? <div className="text-quiet mt-1 text-[12.5px]">Admin of every space</div> : <MemberSpaces member={member} />}
       </div>
       {locked ? (
         <span className="text-quiet px-1 text-[13px]">{ROLE_LABELS[member.role]}</span>

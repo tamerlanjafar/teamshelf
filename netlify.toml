@@ -17,6 +17,14 @@
   # Netlify) is still scanned.
   SECRETS_SCAN_OMIT_KEYS = "VITE_NEON_AUTH_URL,VITE_NEON_DATA_API_URL"
 
+# The site moved to linkboard.dev. The Netlify address sends every page there, for good (301),
+# keeping the path and query. `force` makes it apply even to files that exist.
+[[redirects]]
+  from = "https://linkboardapp.netlify.app/*"
+  to = "https://linkboard.dev/:splat"
+  status = 301
+  force = true
+
 # Every address is handled by the app itself (/caspiantech, /login, …), so they all get index.html.
 [[redirects]]
   from = "/*"

@@ -27,7 +27,7 @@ export function CreateOrgPage() {
     event.preventDefault()
     setAttempted(true)
     if (!name.trim() || problem) return
-    createOrg.mutate({ name, slug }, { onSuccess: (org) => navigate({ to: '/$org', params: { org: org.slug }, search: {} }) })
+    createOrg.mutate({ name, slug }, { onSuccess: (org) => navigate({ to: '/$org', params: { org: org.slug } }) })
   }
 
   if (!canCreate) {

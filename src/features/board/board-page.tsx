@@ -1,7 +1,6 @@
-import { EyeOff, SearchX } from 'lucide-react'
-import type { CSSProperties, ReactNode } from 'react'
-import { useCategories, useCategoriesIfLoaded } from '@/api/categories'
-import { useGroups, useGroupsIfLoaded } from '@/api/groups'
+import { EyeOff, FolderPlus, SearchX } from 'lucide-react'
+import { useState, type CSSProperties, type ReactNode } from 'react'
+import { groupsOf, useGroups, useGroupsIfLoaded } from '@/api/groups'
 import { useBoardLinks, useBoardLinksIfLoaded } from '@/api/links'
 import { useBoardPrefs } from '@/api/prefs'
 import { BrandMark } from '@/components/app/brand'
@@ -10,21 +9,21 @@ import { TopBar } from '@/components/app/top-bar'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useLinkDialog } from '@/features/links/link-dialog'
-import { useMe, useOrg } from '@/features/org/org-context'
 import { usePermissions } from '@/features/org/permissions'
+import { useCorrectSpaceAddress, useCurrentSpace, useCurrentSpaceIfLoaded } from '@/features/spaces/current-space'
+import { NewGroupDialog } from '@/features/spaces/new-group-dialog'
+import { SpaceLogo } from '@/features/spaces/space-logo'
 import { COLORS } from '@/lib/colors'
 import { FEATURES } from '@/lib/features'
-import { isSuperAdmin } from '@/lib/roles'
+import type { Link, Space } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { BoardActionsProvider } from './board-actions'
 import './board.css'
 import { buildBoard, countHidden, isFiltering, type BoardFilter, type BoardView } from './board-model'
-import { CategorySelect } from './category-select'
 import { Masonry } from './masonry'
-import { SearchBox } from './search-box'
+import { QuickFind } from '@/features/search/quick-find'
 import { SortableBoard } from './sortable-board'
 import { useEffectiveBoardPrefs } from './use-board-prefs'
-import { useCategoryFilter } from './use-category-filter'
 
 interface BoardState {
   filter: BoardFilter
@@ -34,31 +33,28 @@ interface BoardState {
 }
 
 /**
- * The home page of an organization: every group as a card, in a grid of columns, with a search
- * above it. The search and the view (the board, or what you hid) are in the address, so a
- * reload stays where you were. The categories are remembered in the browser.
+ * The home page of an organization: the open space's groups as cards, in a grid of columns,
+ * with a search above it. The space, the search and the view (the board, or what you hid) are
+ * in the address, so a reload stays where you were.
  */
-export function BoardPage({ query, onQueryChange, view, onViewChange }: { query: string; onQueryChange: (query: string) => void; view: BoardView; onViewChange: (view: BoardView) => void }) {
-  const me = useMe()
-  const org = useOrg()
-  const [categoryIds, setCategoryIds] = useCategoryFilter(org.id, useCategoriesIfLoaded())
+export function BoardPage({ view, onViewChange }: { view: BoardView; onViewChange: (view: BoardView) => void }) {
+  const space = useCurrentSpaceIfLoaded()
+  const { isSpaceAdmin } = usePermissions()
 
-  const filter: BoardFilter = { query, categoryIds }
+  // The board shows everything: the search at the top finds and opens a link instead of filtering.
+  const filter: BoardFilter = { query: '' }
   const state: BoardState = {
     filter,
-    onFilterChange: (next) => {
-      if (next.query !== query) onQueryChange(next.query)
-      if (next.categoryIds !== categoryIds) setCategoryIds(next.categoryIds)
-    },
+    onFilterChange: () => {},
     view,
     onViewChange,
   }
-  const canReorder = view === 'board' && !isFiltering(filter) && (isSuperAdmin(me) || FEATURES.personalOrder)
+  const canReorder = view === 'board' && !isFiltering(filter) && (isSpaceAdmin(space?.id) || FEATURES.personalOrder)
 
   return (
-    <BoardActionsProvider canReorder={canReorder}>
+    <BoardActionsProvider space={space} canReorder={canReorder}>
       <BoardBar {...state} />
-      <main className="px-5 pb-10">
+      <main className="px-4 pb-10 sm:px-5">
         <Section skeleton={<BoardSkeleton />}>
           <BoardCards {...state} />
         </Section>
@@ -67,27 +63,20 @@ export function BoardPage({ query, onQueryChange, view, onViewChange }: { query:
   )
 }
 
+/** The links of one space. */
+const linksOf = (links: Link[], space: Space | null) => links.filter((link) => link.space_id === space?.id)
+
 /** The top bar with the board's controls. It is always there, and fills in as the data arrives. */
-function BoardBar({ filter, onFilterChange, view, onViewChange }: BoardState) {
-  const groups = useGroupsIfLoaded()
-  const links = useBoardLinksIfLoaded()
-  const categories = useCategoriesIfLoaded()
+function BoardBar({ view, onViewChange }: BoardState) {
+  const space = useCurrentSpaceIfLoaded()
+  const groups = groupsOf(useGroupsIfLoaded(), space?.id)
+  const links = linksOf(useBoardLinksIfLoaded(), space)
   const prefs = useEffectiveBoardPrefs()
-
-  const cards = buildBoard(groups, links, prefs, { filter, view, keepEmpty: false })
-  const found = cards.reduce((sum, card) => sum + card.links.length, 0)
-  const usedCategories = categories.filter((category) => filter.categoryIds.includes(category.id) || links.some((link) => link.category_id === category.id))
   const hiddenCount = countHidden(groups, links, prefs)
-
-  /** Enter in the search opens the link when only one is left. */
-  function openOnlyMatch() {
-    if (found === 1) window.open(cards.find((card) => card.links.length)!.links[0].link.url, '_blank', 'noreferrer')
-  }
 
   return (
     <TopBar>
-      <SearchBox value={filter.query} resultCount={filter.query.trim() ? found : null} onChange={(query) => onFilterChange({ ...filter, query })} onEnter={openOnlyMatch} />
-      <CategorySelect categories={usedCategories} value={filter.categoryIds} onChange={(next) => onFilterChange({ ...filter, categoryIds: next })} />
+      <QuickFind />
       <HiddenToggle count={hiddenCount} active={view === 'hidden'} onToggle={() => onViewChange(view === 'hidden' ? 'board' : 'hidden')} />
     </TopBar>
   )
@@ -106,7 +95,7 @@ function HiddenToggle({ count, active, onToggle }: { count: number; active: bool
             aria-label={`Hidden by you: ${count}`}
             onClick={onToggle}
             className={cn(
-              'bg-surface border-line flex h-11 flex-none items-center gap-2 rounded-xl border px-3.5 tabular-nums transition-colors',
+              'bg-surface border-line flex h-10 flex-none items-center gap-2 rounded-xl border px-3.5 tabular-nums transition-colors',
               active ? 'border-brand text-brand bg-[color-mix(in_srgb,var(--brand)_8%,var(--surface))]' : 'text-quiet hover:text-ink',
             )}
           />
@@ -120,17 +109,21 @@ function HiddenToggle({ count, active, onToggle }: { count: number; active: bool
   )
 }
 
-/** The cards. Suspends until the groups, the links and this person's preferences are all loaded. */
+/** The cards. Suspends until the spaces, groups, links and this person's preferences are all loaded. */
 function BoardCards({ filter, onFilterChange, view, onViewChange }: BoardState) {
-  const me = useMe()
-  const groups = useGroups()
-  const links = useBoardLinks()
-  const categories = useCategories()
+  const space = useCurrentSpace()
+  useCorrectSpaceAddress(space)
+  const { isSpaceAdmin } = usePermissions()
+  const groups = groupsOf(useGroups(), space?.id)
+  const links = linksOf(useBoardLinks(), space)
   useBoardPrefs()
   const prefs = useEffectiveBoardPrefs()
 
-  const cards = buildBoard(groups, links, prefs, { filter, view, keepEmpty: isSuperAdmin(me) })
-  const grid = cards.length > 0 && <SortableBoard cards={cards} categories={categories} restoring={view === 'hidden'} />
+  if (!space) return <NoSpace />
+
+  const admin = isSpaceAdmin(space.id)
+  const cards = buildBoard(groups, links, prefs, { filter, view, keepEmpty: admin })
+  const grid = cards.length > 0 && <SortableBoard cards={cards} restoring={view === 'hidden'} footer={admin && view === 'board' && !isFiltering(filter) ? <NewGroupCard space={space} /> : undefined} />
 
   if (view === 'hidden') {
     return (
@@ -145,7 +138,7 @@ function BoardCards({ filter, onFilterChange, view, onViewChange }: BoardState) 
             Back to the board
           </Button>
         </div>
-        {grid || <p className="text-quiet m-0 px-1 py-6 text-center">{isFiltering(filter) ? 'Nothing you hid matches the search or category.' : 'Nothing is hidden any more.'}</p>}
+        {grid || <p className="text-quiet m-0 px-1 py-6 text-center">{isFiltering(filter) ? 'Nothing you hid matches the search.' : 'Nothing is hidden any more.'}</p>}
       </>
     )
   }
@@ -153,8 +146,8 @@ function BoardCards({ filter, onFilterChange, view, onViewChange }: BoardState) 
   if (grid) return grid
   if (isFiltering(filter)) {
     return (
-      <Notice icon={<SearchX className="text-quiet size-9" strokeWidth={1.5} />} title="No link matches" text="Try fewer words, or another category.">
-        <Button variant="outline" size="lg" onClick={() => onFilterChange({ query: '', categoryIds: [] })}>
+      <Notice icon={<SearchX className="text-quiet size-9" strokeWidth={1.5} />} title="No link matches" text={`Nothing in ${space.name} has all of these words. Try fewer, or another space.`}>
+        <Button variant="outline" size="lg" onClick={() => onFilterChange({ query: '' })}>
           Show everything
         </Button>
       </Notice>
@@ -169,28 +162,75 @@ function BoardCards({ filter, onFilterChange, view, onViewChange }: BoardState) 
       </Notice>
     )
   }
-  return <EmptyBoard />
+  return <EmptySpace space={space} admin={admin} />
 }
 
-function EmptyBoard() {
-  const { reviewer } = usePermissions()
+function EmptySpace({ space, admin }: { space: Space; admin: boolean }) {
   const { addLink } = useLinkDialog()
+  const [creating, setCreating] = useState(false)
+  return (
+    <Notice
+      icon={<SpaceLogo space={space} className="size-11 rounded-[12px]" />}
+      title={`Nothing in ${space.name} yet`}
+      text={
+        admin
+          ? 'Start with a group, like “Figma” or “Dashboards”, then add links and files to it.'
+          : `Suggest the first link or file. It appears here once an admin of ${space.name} approves it.`
+      }
+    >
+      {admin ? (
+        <div className="flex flex-wrap justify-center gap-2">
+          <Button size="lg" onClick={() => setCreating(true)}>
+            <FolderPlus />
+            New group
+          </Button>
+          <Button size="lg" variant="outline" onClick={() => addLink()}>
+            Add a link
+          </Button>
+          <NewGroupDialog space={space} open={creating} onOpenChange={setCreating} />
+        </div>
+      ) : (
+        <Button size="lg" onClick={() => addLink()}>
+          Suggest a link
+        </Button>
+      )}
+    </Notice>
+  )
+}
+
+/** For someone who sees no space at all: every space is private and they are in none. */
+function NoSpace() {
+  const { admin } = usePermissions()
   return (
     <Notice
       icon={<BrandMark className="size-10" />}
-      title="No links yet"
-      text={reviewer ? 'Add the first one. Links that share a group sit on one card.' : 'Suggest the first one. It appears here once it has been reviewed.'}
-    >
-      <Button size="lg" onClick={() => addLink()}>
-        {reviewer ? 'Add a link' : 'Suggest a link'}
-      </Button>
-    </Notice>
+      title="No spaces for you yet"
+      text={admin ? 'Create the first space from the menu at the top, for a team like Development or Design.' : 'Every space here is private. Ask a space’s admin to add you.'}
+    />
+  )
+}
+
+/** The last card on an admin's board: starts a new group in the space. */
+function NewGroupCard({ space }: { space: Space }) {
+  const [creating, setCreating] = useState(false)
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setCreating(true)}
+        className="border-line text-quiet hover:text-ink hover:border-brand/50 flex min-h-[88px] w-full items-center justify-center gap-2 rounded-[18px] border border-dashed text-[14.5px] font-medium transition-colors"
+      >
+        <FolderPlus className="size-[18px]" />
+        New group
+      </button>
+      <NewGroupDialog space={space} open={creating} onOpenChange={setCreating} />
+    </>
   )
 }
 
 function Notice({ icon, title, text, children }: { icon?: ReactNode; title: string; text: string; children?: ReactNode }) {
   return (
-    <div className="mx-auto flex min-h-[calc(100dvh-72px-2.5rem)] max-w-sm flex-col items-center justify-center gap-2 pb-[72px] text-center">
+    <div className="mx-auto flex min-h-[calc(100dvh-140px-2.5rem)] max-w-sm flex-col items-center justify-center gap-2 pb-[72px] text-center lg:min-h-[calc(100dvh-72px-2.5rem)]">
       {icon}
       <h2 className="mt-2 text-[20px] font-[650] [font-family:var(--font-rounded)]">{title}</h2>
       <p className="text-quiet m-0 leading-relaxed">{text}</p>
