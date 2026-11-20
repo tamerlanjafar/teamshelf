@@ -1,4 +1,4 @@
-import { Eye, EyeOff, ListRestart, MoreHorizontal, Palette, Plus, Trash2 } from 'lucide-react'
+import { ArrowDownAZ, Eye, EyeOff, ListRestart, MoreHorizontal, Palette, Plus, Trash2 } from 'lucide-react'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useState, type ComponentProps, type CSSProperties, type Ref } from 'react'
 import { useDeleteGroup } from '@/api/groups'
@@ -88,7 +88,7 @@ function GroupMenu({ card }: { card: BoardCard }) {
   const { group, hidden, ownLinkOrder } = card
   const me = useMe()
   const { reviewer } = usePermissions()
-  const { setGroupHidden, useTeamLinkOrder: resetLinkOrder } = useBoardActions()
+  const { setGroupHidden, sortLinksByName, useTeamLinkOrder: resetLinkOrder } = useBoardActions()
   const { addLink } = useLinkDialog()
   const confirm = useConfirm()
   const deleteGroup = useDeleteGroup()
@@ -118,6 +118,12 @@ function GroupMenu({ card }: { card: BoardCard }) {
           {isSuperAdmin(me) && (
             <>
               <DropdownMenuSeparator />
+              {card.links.length > 1 && (
+                <DropdownMenuItem onClick={() => sortLinksByName(group.id)}>
+                  <ArrowDownAZ />
+                  Sort links A to Z
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={() => setEditing(true)}>
                 <Palette />
                 Name and color…

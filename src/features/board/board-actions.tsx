@@ -16,6 +16,8 @@ interface BoardActions {
   reorderGroups: (visibleIds: string[]) => void
   /** Saves a new order of one group's links: the ids of its links on screen, as they now stand. */
   reorderLinks: (groupId: string, visibleIds: string[]) => void
+  /** Puts one group's links in alphabetical order, for the whole team. Only the super admin may. */
+  sortLinksByName: (groupId: string) => void
   setGroupHidden: (groupId: string, hidden: boolean) => void
   /** Hides links for this person, or brings them back. Several at once for a line with more than one. */
   setLinksHidden: (linkIds: string[], hidden: boolean) => void
@@ -67,6 +69,10 @@ export function BoardActionsProvider({ canReorder, children }: { canReorder: boo
         const ids = mergeOrder(orderedLinks(links, groupId, prefs).map((link) => link.id), visibleIds)
         if (ownOrder) save({ link_order: { ...prefs.link_order, [groupId]: ids } })
         else setTeamLinkOrder.mutate({ groupId, ids }, { onError: toastError })
+      },
+      sortLinksByName: (groupId) => {
+        const sorted = links.filter((link) => link.group_id === groupId).sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base', numeric: true }))
+        setTeamLinkOrder.mutate({ groupId, ids: sorted.map((link) => link.id) }, { onError: toastError })
       },
       setGroupHidden: (groupId, hidden) => save({ hidden_groups: toggled(prefs.hidden_groups, groupId, hidden) }),
       setLinksHidden: (linkIds, hidden) => save({ hidden_links: hidden ? [...new Set([...prefs.hidden_links, ...linkIds])] : prefs.hidden_links.filter((id) => !linkIds.includes(id)) }),
