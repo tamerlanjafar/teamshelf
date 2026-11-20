@@ -1,0 +1,8 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "typescript", "oxc"],
+  "ignorePatterns": ["src/components/animate-ui/**", "src/hooks/use-controlled-state.tsx", "src/hooks/use-data-state.tsx", "src/lib/get-strict-context.tsx", "src/routeTree.gen.ts"],
+  "rules": {
+    "react/rules-of-hooks": "error"
+  }
+}

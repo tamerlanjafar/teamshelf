@@ -1,0 +1,223 @@
+/* The cards, as in the Workroom Tabs launcher: each group ("room") is tinted with its own color,
+   set as --c on the card. Here a card is as tall as its links, and the board stacks them in columns. */
+
+.room {
+    --c: #737885;
+    display: flex;
+    flex-direction: column;
+    border-radius: 18px;
+    /* Lit with its color from the top, fading into the surface. */
+    background: linear-gradient(to bottom, color-mix(in srgb, var(--c) var(--wash), var(--surface)), color-mix(in srgb, var(--c) var(--wash-low), var(--surface)) 110px);
+    border: 1px solid color-mix(in srgb, var(--c) 16%, var(--line));
+    box-shadow: 0 1px 2px hsl(var(--shadow) / 0.05);
+    transition:
+        border-color 0.15s,
+        box-shadow 0.15s;
+}
+
+/* A card fades in when it first appears. */
+@media (prefers-reduced-motion: no-preference) {
+    .room {
+        animation: room-in 0.2s ease-out backwards;
+    }
+}
+
+@keyframes room-in {
+    from {
+        opacity: 0;
+        translate: 0 6px;
+    }
+}
+
+.room:hover,
+.room:focus-within {
+    border-color: color-mix(in srgb, var(--c) 42%, transparent);
+    box-shadow:
+        0 1px 2px hsl(var(--shadow) / 0.05),
+        0 10px 24px -14px color-mix(in srgb, var(--c) 55%, transparent);
+}
+
+.room-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 10px 10px 16px;
+    min-height: 54px;
+}
+
+.room-name {
+    flex: 1;
+    margin: 0;
+    min-width: 0;
+    font: 650 18px/1.2 var(--font-rounded);
+    letter-spacing: -0.01em;
+    color: color-mix(in srgb, var(--c) 58%, var(--ink));
+    overflow-wrap: anywhere;
+}
+
+.count {
+    flex: none;
+    min-width: 26px;
+    padding: 3px 8px;
+    text-align: center;
+    font: 600 12px/1.2 var(--font-rounded);
+    font-variant-numeric: tabular-nums;
+    color: color-mix(in srgb, var(--c) 50%, var(--ink));
+    background: color-mix(in srgb, var(--c) 18%, transparent);
+    border-radius: 999px;
+}
+
+.room-body {
+    padding: 0 6px 8px;
+}
+
+.room-empty {
+    margin: 0;
+    padding: 4px 10px 8px;
+    color: var(--quiet);
+}
+
+/* A small square button inside a card: the "more" button of the card and of a row. */
+.room-button {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    color: var(--quiet);
+}
+
+.room-button:hover,
+.room-button[data-popup-open] {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--c) 24%, transparent);
+}
+
+/* One row: a link. */
+
+.tab {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    min-height: 34px;
+    padding-right: 4px;
+    border-radius: 9px;
+}
+
+.tab:hover,
+.tab:focus-within {
+    background: color-mix(in srgb, var(--c) 14%, transparent);
+}
+
+.tab .open {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 6px 4px 6px 10px;
+    border-radius: 9px;
+}
+
+/* A long name wraps onto more lines instead of being cut off. */
+.tab .title {
+    flex: 1;
+    min-width: 0;
+    line-height: 22px;
+    overflow-wrap: anywhere;
+}
+
+/* The buttons of a row stay level with the first line of the name too. */
+.tab > .room-button {
+    margin-top: 4px;
+}
+
+.tab > .restore {
+    margin-top: 5px;
+}
+
+/* The icon and the category stay level with the first line of the name. */
+.tab .open > .favicon {
+    margin-top: 3px;
+}
+
+.tab .open > .tag {
+    margin-top: 1px;
+}
+
+.tab .open > svg {
+    margin-top: 5px;
+}
+
+/* The "more" button of a row shows when the row is in use, and never moves the chips. */
+.tab .room-button {
+    opacity: 0;
+}
+
+.tab:hover .room-button,
+.tab:focus-within .room-button,
+.tab .room-button[data-popup-open] {
+    opacity: 1;
+}
+
+@media (hover: none) {
+    .tab .room-button {
+        opacity: 1;
+    }
+}
+
+/* A card that is still loading: its shape, with bars where the text will be. */
+.room.skeleton {
+    animation: none;
+    pointer-events: none;
+}
+
+.room.skeleton .skeleton-bar {
+    background: color-mix(in srgb, var(--c) 28%, transparent);
+}
+
+/* In the view of what you hid: the button that brings a group or a link back. */
+.restore {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 24px;
+    padding: 0 9px 0 7px;
+    font: 600 12px/1 var(--font-rounded);
+    color: color-mix(in srgb, var(--c) 55%, var(--ink));
+    background: color-mix(in srgb, var(--c) 16%, transparent);
+    border-radius: 999px;
+}
+
+.restore:hover {
+    color: #ffffff;
+    background: var(--c);
+}
+
+/* Reordering by dragging: the thing in your hand fades, and a line shows where it would land. */
+.room[draggable='true'] .room-head {
+    cursor: grab;
+}
+
+.is-dragged {
+    opacity: 0.4;
+}
+
+.room.drop-before {
+    box-shadow: 0 -3px 0 -0.5px var(--c);
+}
+
+.room.drop-after {
+    box-shadow: 0 3px 0 -0.5px var(--c);
+}
+
+.tab.drop-before {
+    box-shadow: 0 -2px 0 var(--c);
+}
+
+.tab.drop-after {
+    box-shadow: 0 2px 0 var(--c);
+}

@@ -1,0 +1,206 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+/* The theme is always written on <html data-theme>, see lib/theme.ts. */
+@custom-variant dark (&:is([data-theme='dark'] *));
+
+/* Linkboard's palette. A cool, quiet page, white surfaces, an indigo brand color, and one
+   color per group that tints its card. Started from the Workroom Tabs launcher. */
+:root {
+    color-scheme: light;
+    --page: #f2f3f7;
+    --surface: #ffffff;
+    --ink: #13151d;
+    --quiet: #636a7c; /* secondary text */
+    --line: rgba(19, 21, 29, 0.09);
+    --brand: #4b50e6;
+    --on-brand: #ffffff;
+    --raised: #ffffff; /* a row in a list, a menu */
+    --well: #eff0f5; /* a control sunk into a row */
+    --chip: #ffffff; /* the chosen one of several choices */
+    --danger: #d5352f;
+    --wash: 11%; /* how much of its color the top of a card takes */
+    --wash-low: 4%; /* and the rest of it */
+    --glow: 9%; /* the colored light at the top of the page */
+    --shadow: 220 30% 20%; /* the color of shadows, as HSL parts */
+    --font-rounded: ui-rounded, 'SF Pro Rounded', system-ui, sans-serif;
+}
+
+:root[data-theme='dark'] {
+    color-scheme: dark;
+    --page: #0d0e13;
+    --surface: #16181f;
+    --ink: #eceef4;
+    --quiet: #8d93a4;
+    --line: rgba(236, 238, 244, 0.09);
+    --brand: #8a90ff;
+    --on-brand: #0d0e13;
+    --raised: #1c1e27;
+    --well: #101116;
+    --chip: #343848;
+    --danger: #ff6b66;
+    --wash: 17%;
+    --wash-low: 7%;
+    --glow: 13%;
+    --shadow: 230 40% 2%;
+}
+
+/* The names the shadcn components expect, mapped onto the palette above. */
+:root {
+    --radius: 0.75rem;
+    --background: var(--surface);
+    --foreground: var(--ink);
+    --card: var(--surface);
+    --card-foreground: var(--ink);
+    --popover: var(--raised);
+    --popover-foreground: var(--ink);
+    --primary: var(--brand);
+    --primary-foreground: var(--on-brand);
+    --secondary: var(--well);
+    --secondary-foreground: var(--ink);
+    --muted: var(--well);
+    --muted-foreground: var(--quiet);
+    --accent: color-mix(in srgb, var(--ink) 7%, transparent);
+    --accent-foreground: var(--ink);
+    --destructive: var(--danger);
+    --border: var(--line);
+    --input: var(--line);
+    --ring: var(--brand);
+}
+
+@theme inline {
+    --font-sans: system-ui, -apple-system, sans-serif;
+    --font-rounded: var(--font-rounded);
+    --color-page: var(--page);
+    --color-surface: var(--surface);
+    --color-ink: var(--ink);
+    --color-quiet: var(--quiet);
+    --color-line: var(--line);
+    --color-brand: var(--brand);
+    --color-on-brand: var(--on-brand);
+    --color-raised: var(--raised);
+    --color-well: var(--well);
+    --color-chip: var(--chip);
+    --color-danger: var(--danger);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --color-foreground: var(--foreground);
+    --color-background: var(--background);
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    html {
+        @apply font-sans;
+    }
+
+    body {
+        margin: 0;
+        min-height: 100dvh;
+        color: var(--ink);
+        font-size: 14px;
+        line-height: 1.35;
+        -webkit-font-smoothing: antialiased;
+        /* Two soft lights at the top of the page, over the page color. */
+        background:
+            radial-gradient(900px 420px at 12% -8%, color-mix(in srgb, var(--brand) var(--glow), transparent), transparent 70%),
+            radial-gradient(800px 380px at 92% -10%, color-mix(in srgb, #f55494 calc(var(--glow) * 0.7), transparent), transparent 70%),
+            var(--page);
+        background-attachment: fixed;
+    }
+
+    button {
+        cursor: pointer;
+    }
+
+    :focus-visible {
+        outline: 2px solid var(--brand);
+        outline-offset: 2px;
+    }
+
+    /* A field shows that it has the focus with its border, not with a ring around it. */
+    input:focus-visible,
+    textarea:focus-visible {
+        outline: none;
+    }
+
+    kbd {
+        display: inline-grid;
+        place-items: center;
+        min-width: 22px;
+        height: 22px;
+        padding: 0 6px;
+        font: 500 12px/1 var(--font-rounded);
+        color: var(--quiet);
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+    }
+}
+
+/* A gray bar that stands in for text or an icon while it loads. */
+.skeleton-bar {
+    display: block;
+    flex: none;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--ink) 9%, transparent);
+    animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+    50% {
+        opacity: 0.45;
+    }
+}
+
+/* The splash screen: the three cards of the mark light up one after another. */
+.splash-mark .card {
+    animation: splash-card 1.2s ease-in-out infinite;
+}
+
+.splash-mark .card:nth-of-type(3) {
+    animation-delay: 0.18s;
+}
+
+.splash-mark .card:nth-of-type(4) {
+    animation-delay: 0.36s;
+}
+
+@keyframes splash-card {
+    0%,
+    100% {
+        opacity: 0.3;
+    }
+    40% {
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .skeleton-bar,
+    .splash-mark .card {
+        animation: none;
+    }
+}

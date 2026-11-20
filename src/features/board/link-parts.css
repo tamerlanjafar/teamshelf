@@ -1,0 +1,63 @@
+/* The small parts of a link that are also used outside the board: its icon and its category.
+   Inside a card they pick up the card's color (--c). */
+
+/* A link's category: a dot in the category's color (--t) and its name. */
+
+.tag {
+    --t: #737885;
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    max-width: 124px;
+    height: 20px;
+    padding: 0 7px 0 6px;
+    font: 550 11px/1 var(--font-rounded);
+    letter-spacing: 0.01em;
+    color: color-mix(in srgb, var(--t) 45%, var(--quiet));
+    background: color-mix(in srgb, var(--t) 9%, var(--surface));
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--t) 16%, transparent);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.tag::before {
+    content: '';
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--t);
+}
+
+.favicon {
+    position: relative;
+    flex: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.favicon img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* The image stays invisible over the letter until it has loaded. */
+.favicon.letter img {
+    opacity: 0;
+}
+
+/* Shown while the icon loads, and when a site has none we can load. */
+.favicon.letter {
+    display: grid;
+    place-items: center;
+    font: 700 10px/1 var(--font-rounded);
+    color: #ffffff;
+    background: color-mix(in srgb, var(--c, var(--quiet)) 80%, var(--ink));
+}
