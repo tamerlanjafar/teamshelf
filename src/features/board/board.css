@@ -30,7 +30,7 @@
 }
 
 .room:hover,
-.room:focus-within {
+.room:has(:focus-visible) {
     border-color: color-mix(in srgb, var(--c) 42%, transparent);
     box-shadow:
         0 1px 2px hsl(var(--shadow) / 0.05),
@@ -98,7 +98,10 @@
     background: color-mix(in srgb, var(--c) 24%, transparent);
 }
 
-/* One row: a link. */
+/* One row: a link.
+   Rows and their buttons react to the pointer, and to focus from the keyboard (:focus-visible).
+   Not to any focus: a menu hands focus back to its button when it closes, and the row would
+   stay lit although the pointer has left. */
 
 .tab {
     position: relative;
@@ -111,7 +114,7 @@
 }
 
 .tab:hover,
-.tab:focus-within {
+.tab:has(:focus-visible) {
     background: color-mix(in srgb, var(--c) 14%, transparent);
 }
 
@@ -213,7 +216,7 @@
 }
 
 .tab:hover .env-more,
-.tab:focus-within .env-more,
+.tab:has(:focus-visible) .env-more,
 .tab .env-more[data-popup-open] {
     opacity: 1;
 }
@@ -232,7 +235,7 @@
 
 /* Only a line that is one link lights up as a whole: on the others, the links are what you click. */
 .tab:has(.envs):hover,
-.tab:has(.envs):focus-within {
+.tab:has(.envs):has(:focus-visible) {
     background: transparent;
 }
 
@@ -242,7 +245,7 @@
 }
 
 .tab:hover .room-button,
-.tab:focus-within .room-button,
+.tab:has(:focus-visible) .room-button,
 .tab .room-button[data-popup-open],
 .tab .room-button.shown {
     opacity: 1;
