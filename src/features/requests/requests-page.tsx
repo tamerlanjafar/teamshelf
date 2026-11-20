@@ -1,8 +1,9 @@
-import { Check } from 'lucide-react'
+import { Check, CheckCheck, Pencil } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { toast } from 'sonner'
 import { useCategories } from '@/api/categories'
 import { useGroups } from '@/api/groups'
-import { useApproveLink, useDeleteLink, useRequests } from '@/api/links'
+import { useApproveLink, useApproveLinks, useDeleteLink, useRequests } from '@/api/links'
 import { useMembers } from '@/api/members'
 import { PageSheet, SheetGroup } from '@/components/app/page-sheet'
 import { ListSkeleton, Section } from '@/components/app/section'
@@ -12,6 +13,7 @@ import { useLinkDialog } from '@/features/links/link-dialog'
 import { usePermissions } from '@/features/org/permissions'
 import { toastError } from '@/lib/errors'
 import type { Link } from '@/lib/types'
+import { IconButton } from './icon-button'
 import { RejectButton } from './reject-button'
 import { RequestRow, StatusPill } from './request-row'
 
@@ -73,7 +75,7 @@ function Requests() {
   return (
     <>
       {waiting.length > 0 && (
-        <SheetGroup title="Waiting for review" count={waiting.length}>
+        <SheetGroup title="Waiting for review" count={waiting.length} action={<ApproveAll links={waiting.filter(canManage)} />}>
           {waiting.map((link) => row(link, canManage(link) ? <ReviewActions link={link} /> : <RemoveButton link={link} label="Withdraw" />))}
         </SheetGroup>
       )}
@@ -86,16 +88,17 @@ function Requests() {
   )
 }
 
+/** Reject and edit are quiet icons, approve is the one button: it is what happens to most suggestions. */
 function ReviewActions({ link }: { link: Link }) {
   const { editLink } = useLinkDialog()
   const approveLink = useApproveLink()
   return (
     <>
       <RejectButton link={link} />
-      <Button variant="outline" onClick={() => editLink(link)}>
-        Edit
-      </Button>
-      <Button disabled={approveLink.isPending} onClick={() => approveLink.mutate(link, { onError: toastError })}>
+      <IconButton label="Edit before approving" onClick={() => editLink(link)}>
+        <Pencil />
+      </IconButton>
+      <Button size="lg" className="ml-1.5" disabled={approveLink.isPending} onClick={() => approveLink.mutate(link, { onError: toastError })}>
         <Check />
         Approve
       </Button>
@@ -103,10 +106,26 @@ function ReviewActions({ link }: { link: Link }) {
   )
 }
 
+/** Approves everything this person may review, when there is more than one. */
+function ApproveAll({ links }: { links: Link[] }) {
+  const approveLinks = useApproveLinks()
+  if (links.length < 2) return null
+  return (
+    <Button
+      variant="outline"
+      disabled={approveLinks.isPending}
+      onClick={() => approveLinks.mutate(links, { onSuccess: () => toast.success(`${links.length} links approved.`), onError: toastError })}
+    >
+      <CheckCheck />
+      {approveLinks.isPending ? 'Approving…' : `Approve all ${links.length}`}
+    </Button>
+  )
+}
+
 function RemoveButton({ link, label }: { link: Link; label: string }) {
   const deleteLink = useDeleteLink()
   return (
-    <Button variant="outline" disabled={deleteLink.isPending} onClick={() => deleteLink.mutate(link.id, { onError: toastError })}>
+    <Button variant="outline" size="lg" disabled={deleteLink.isPending} onClick={() => deleteLink.mutate(link.id, { onError: toastError })}>
       {label}
     </Button>
   )

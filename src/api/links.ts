@@ -116,15 +116,24 @@ export function useUpdateLink() {
 
 /** Puts a suggestion on the board, creating the group it asked for if needed. Super admin only. */
 export function useApproveLink() {
-  return useLinksMutation(async (link: Link, orgId) => {
-    const group_id = link.group_id ?? (await findOrCreateGroup(orgId, link.proposed_group!)).id
-    await unwrap(
-      neon
-        .from('links')
-        .update({ status: 'approved', group_id, proposed_group: null, reviewed_at: new Date().toISOString(), review_note: '' })
-        .eq('id', link.id),
-    )
+  return useLinksMutation((link: Link, orgId) => approve(link, orgId))
+}
+
+/** Approves several suggestions, one after another, so two that ask for the same new group share it. */
+export function useApproveLinks() {
+  return useLinksMutation(async (links: Link[], orgId) => {
+    for (const link of links) await approve(link, orgId)
   })
+}
+
+async function approve(link: Link, orgId: string) {
+  const group_id = link.group_id ?? (await findOrCreateGroup(orgId, link.proposed_group!)).id
+  await unwrap(
+    neon
+      .from('links')
+      .update({ status: 'approved', group_id, proposed_group: null, reviewed_at: new Date().toISOString(), review_note: '' })
+      .eq('id', link.id),
+  )
 }
 
 /** Super admin only. The reason is shown to the person who suggested the link. */
