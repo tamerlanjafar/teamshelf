@@ -9,19 +9,16 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { useLinkDialog } from '@/features/links/link-dialog'
 import { usePermissions } from '@/features/org/permissions'
 import { toastError } from '@/lib/errors'
-import type { Category, Link } from '@/lib/types'
+import type { Link } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useBoardActions } from './board-actions'
 import { isProduction } from '@/lib/environments'
 import type { BoardRow } from './board-model'
-import { CategoryTag } from './category-tag'
 import { Favicon } from './favicon'
 
 interface LinkRowProps {
   row: BoardRow
   groupId: string
-  /** The categories to name on this line. Empty when the card names its one category itself. */
-  categories: Category[]
   /** In the view of what you hid: the line gets an eye button that brings its links back. */
   restoring: boolean
 }
@@ -43,11 +40,10 @@ const Restricted = () => <Lock className="text-quiet size-3 flex-none" aria-labe
  * One line of a card. A single link: the whole line opens it. One thing in several
  * environments: its name, and a small link per environment, each with its own menu.
  */
-export function LinkRow({ row, categories, restoring, rowRef, style, placeholder, lifted, dragProps }: LinkRowProps & RowDragProps) {
+export function LinkRow({ row, restoring, rowRef, style, placeholder, lifted, dragProps }: LinkRowProps & RowDragProps) {
   const { setLinksHidden } = useBoardActions()
   const [first] = row.links
   const hidden = row.links.filter(({ item }) => item.hidden).map(({ item }) => item.link.id)
-  const tags = categories.map((category) => <CategoryTag key={category.id} category={category} />)
 
   return (
     <div ref={rowRef} style={style} className={cn('tab', placeholder && 'is-placeholder', lifted && 'is-lifted')} {...dragProps}>
@@ -56,13 +52,11 @@ export function LinkRow({ row, categories, restoring, rowRef, style, placeholder
           <Favicon url={first.item.link.url} iconUrl={first.item.link.icon_url} title={row.title} />
           <span className="title">{row.title}</span>
           {first.item.link.visibility !== 'everyone' && <Restricted />}
-          {tags}
         </a>
       ) : (
         <div className="open">
           <Favicon url={first.item.link.url} iconUrl={first.item.link.icon_url} title={row.title} />
           <span className="title">{row.title}</span>
-          {tags}
           <span className="envs">
             {row.links.map(({ item, environment }) => (
               <span key={item.link.id} className="env-item">

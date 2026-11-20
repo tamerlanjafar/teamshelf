@@ -13,7 +13,7 @@ import { isSuperAdmin } from '@/lib/roles'
 import type { Category } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useBoardActions } from './board-actions'
-import { rowsOf, sharedCategoryId, type BoardCard, type BoardRow } from './board-model'
+import { rowsOf, type BoardCard } from './board-model'
 import { CategoryTag } from './category-tag'
 import { GroupDialog } from './group-dialog'
 import { LinkRow, SortableLinkRow } from './link-row'
@@ -43,17 +43,21 @@ export function GroupCard({ card, categories, restoring, cardRef, placeholder, l
   const rows = rowsOf(card)
   const Row = lifted ? LinkRow : SortableLinkRow
 
-  // A card whose links all have one category names it once, at the top. On a card with
-  // several, each line names its own.
-  const shared = categories.find((category) => category.id === sharedCategoryId(card))
-  const categoriesOf = (row: BoardRow) => (shared ? [] : categories.filter((category) => row.links.some(({ item }) => item.link.category_id === category.id)))
+  // The categories of the card's links are named once, at the top, never on the lines.
+  const used = categories.filter((category) => card.links.some((item) => item.link.category_id === category.id))
 
   return (
     <section ref={cardRef} className={cn('room', placeholder && 'is-placeholder', lifted && 'is-lifted')} style={{ '--c': colorValue(group.color) } as CSSProperties} aria-label={group.name}>
       <header className={cn('room-head', headProps && 'is-handle')} {...headProps}>
         <h2 className="room-name">{group.name}</h2>
         {restoring && hidden && <RestoreButton label={`Show ${group.name} again`} onClick={() => setGroupHidden(group.id, false)} />}
-        {shared && <CategoryTag category={shared} plain />}
+        {used.length > 0 && (
+          <span className="room-categories">
+            {used.map((category) => (
+              <CategoryTag key={category.id} category={category} plain />
+            ))}
+          </span>
+        )}
         <span className="count" aria-label={`${rows.length} ${rows.length === 1 ? 'link' : 'links'}`}>
           {rows.length}
         </span>
@@ -63,7 +67,7 @@ export function GroupCard({ card, categories, restoring, cardRef, placeholder, l
         {rows.length === 0 && <p className="room-empty">No links yet.</p>}
         <SortableContext items={rows.map((row) => row.id)} strategy={verticalListSortingStrategy}>
           {rows.map((row) => (
-            <Row key={row.id} row={row} groupId={group.id} categories={categoriesOf(row)} restoring={restoring && !hidden} />
+            <Row key={row.id} row={row} groupId={group.id} restoring={restoring && !hidden} />
           ))}
         </SortableContext>
       </div>

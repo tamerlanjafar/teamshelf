@@ -121,13 +121,6 @@ export function rowsOf(card: BoardCard): BoardRow[] {
   return [...rows.values()]
 }
 
-/** The category every link of the card has, if they all have the same one. It is then shown once, on the card. */
-export function sharedCategoryId(card: BoardCard): string | null {
-  const ids = new Set(card.links.map((item) => item.link.category_id))
-  const [only] = ids
-  return ids.size === 1 && only ? only : null
-}
-
 /** How many groups and links the person hid, counting only ones that still exist. */
 export function countHidden(groups: Group[], links: Link[], prefs: BoardPrefs): number {
   const groupIds = new Set(groups.map((group) => group.id))

@@ -151,7 +151,7 @@ export function SortableBoard({ cards, categories, restoring }: { cards: BoardCa
         {heldCard && <GroupCard card={heldCard} categories={categories} restoring={restoring} lifted />}
         {heldRow && (
           <div className="room-lifted-row" style={{ '--c': colorValue(heldRowCard!.group.color) } as CSSProperties}>
-            <LinkRow row={heldRow} groupId={heldRowCard!.group.id} categories={[]} restoring={false} lifted />
+            <LinkRow row={heldRow} groupId={heldRowCard!.group.id} restoring={false} lifted />
           </div>
         )}
       </DragOverlay>
