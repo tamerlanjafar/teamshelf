@@ -8,8 +8,8 @@ const Dot = ({ color }: { color: string }) => <span className="size-2 flex-none 
 
 /**
  * Narrows the board to one or more categories. One compact button that names the choice and
- * opens the list, so it stays the same size however many categories there are. The list stays
- * open while you tick several.
+ * opens the list. It has a fixed width, so the bar doesn't shift as the choice changes (a long
+ * name is cut off with an ellipsis). The list stays open while you tick several.
  */
 export function CategorySelect({ categories, value, onChange }: { categories: Category[]; value: string[]; onChange: (categoryIds: string[]) => void }) {
   if (categories.length === 0) return null
@@ -22,7 +22,7 @@ export function CategorySelect({ categories, value, onChange }: { categories: Ca
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label={selected.length ? `Categories: ${selected.map((category) => category.name).join(', ')}` : 'Categories: all'}
-        className="bg-surface border-line hover:text-ink data-[popup-open]:border-brand flex h-11 max-w-[220px] flex-none items-center gap-2 rounded-xl border pr-3 pl-3.5 transition-colors"
+        className="bg-surface border-line hover:text-ink data-[popup-open]:border-brand flex h-11 w-[176px] flex-none items-center gap-2 rounded-xl border pr-3 pl-3.5 text-left transition-colors"
       >
         {selected.length > 0 && (
           <span className="flex flex-none -space-x-0.5">
@@ -31,10 +31,10 @@ export function CategorySelect({ categories, value, onChange }: { categories: Ca
             ))}
           </span>
         )}
-        <span className={selected.length ? 'truncate font-medium' : 'text-quiet truncate'}>{label}</span>
+        <span className={selected.length ? 'min-w-0 flex-1 truncate font-medium' : 'text-quiet min-w-0 flex-1 truncate'}>{label}</span>
         <ChevronDown className="text-quiet size-4 flex-none" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" sideOffset={8} className="max-h-[60vh] min-w-52 rounded-xl">
+      <DropdownMenuContent align="end" sideOffset={8} className="max-h-[60vh] min-w-[176px] rounded-xl">
         {categories.map((category) => (
           <DropdownMenuCheckboxItem key={category.id} checked={value.includes(category.id)} onCheckedChange={(checked) => toggle(category.id, checked)}>
             <Dot color={colorValue(category.color)} />

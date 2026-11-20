@@ -1,3 +1,5 @@
+# Which dependencies may run their install scripts. pnpm refuses to install until each one
+# that has such a script is listed here, allowed or not.
 allowBuilds:
   core-js: false
-  esbuild: set this to true or false
+  esbuild: true
