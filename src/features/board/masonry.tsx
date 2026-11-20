@@ -14,7 +14,7 @@ interface MasonryProps<Item> {
  * A Pinterest-style grid: as many equal columns as fit, and each item goes into the column
  * that is shortest so far, so items keep their own height and their reading order.
  */
-export function Masonry<Item>({ items, getKey, estimateHeight, renderItem, minColumnWidth = 300, gap = 10 }: MasonryProps<Item>) {
+export function Masonry<Item>({ items, getKey, estimateHeight, renderItem, minColumnWidth = 340, gap = 10 }: MasonryProps<Item>) {
   const container = useRef<HTMLDivElement>(null)
   const [columnCount, setColumnCount] = useState(0)
 

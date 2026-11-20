@@ -130,7 +130,14 @@
     flex: 1;
     min-width: 0;
     line-height: 22px;
-    overflow-wrap: anywhere;
+    /* Wrap between words. Only a single word longer than the line is broken. */
+    overflow-wrap: break-word;
+}
+
+/* Beside environment links the name keeps room for a word or two. When it can't,
+   the links go below it instead of squeezing the name letter by letter. */
+.tab .open:has(.envs) .title {
+    flex: 1 1 88px;
 }
 
 /* The buttons of a row stay level with the first line of the name too. */
@@ -149,6 +156,53 @@
 
 .tab .open > svg {
     margin-top: 5px;
+}
+
+/* One thing in several environments: a small link per environment, after the name.
+   When they don't fit beside the name, they go on a line of their own below it. */
+.tab .open:has(.envs) {
+    flex-wrap: wrap;
+    row-gap: 2px;
+}
+
+.tab .envs {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    margin-left: auto;
+}
+
+.tab .env {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 8px;
+    font: 600 12.5px/22px var(--font-rounded);
+    color: var(--brand);
+    text-underline-offset: 3px;
+}
+
+.tab .env + .env {
+    box-shadow: -1px 0 0 var(--line);
+}
+
+.tab .env:last-child {
+    padding-right: 2px;
+}
+
+.tab .env:hover,
+.tab .env:focus-visible {
+    text-decoration: underline;
+}
+
+.tab .env.is-production {
+    color: var(--danger);
+}
+
+/* Only a line that is one link lights up as a whole: on the others, the links are what you click. */
+.tab:has(.envs):hover,
+.tab:has(.envs):focus-within {
+    background: transparent;
 }
 
 /* The "more" button of a row shows when the row is in use, and never moves the chips. */

@@ -7,6 +7,7 @@ One page with every service and tool of a team: Jenkins, Grafana, back offices, 
 - **Joining.** An organization can name email domains whose people join on their own. Admins can invite anyone else, at any domain.
 - **Roles and category managers.** See [Who can do what](#who-can-do-what).
 - **Suggestions.** Anyone can suggest a link. It waits until someone who manages it approves or rejects it.
+- **Environments on one line.** Links named alike up to the last " - " ("Online WEB - Staging", "Online WEB - Prod") share a line on the card: the name once, and a small link per environment, with Prod in red. Nothing is set up for this; it is read from the names.
 - **Categories.** Each organization has its own list ("Frontend", "Backend", "Infrastructure"…). A link can have one, and the board can be narrowed to one.
 - **Restricted links.** A link can be visible to everyone, to admins only, or to chosen people.
 - **Your own view.** Hide groups and links you don't need. Only you are affected, and "Your view" brings them back.

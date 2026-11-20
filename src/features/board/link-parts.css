@@ -32,6 +32,16 @@
     background: var(--t);
 }
 
+/* On a card's header the category is plain text with its dot, not a pill. */
+.tag.is-plain {
+    max-width: 150px;
+    height: auto;
+    padding: 0;
+    font-size: 12px;
+    background: transparent;
+    box-shadow: none;
+}
+
 .favicon {
     position: relative;
     flex: none;

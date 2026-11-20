@@ -85,6 +85,58 @@ export function buildBoard(groups: Group[], links: Link[], prefs: BoardPrefs, { 
     .filter((card) => card.links.length > 0 || (view === 'hidden' ? card.hidden : keepEmpty && !filtering))
 }
 
+/**
+ * One line of a card. Links whose names differ only after the last " - " are one thing in
+ * several environments ("Online WEB - Staging", "Online WEB - Prod"), and share a line:
+ * the name once, and a small link per environment.
+ */
+export interface BoardRow {
+  /** Stable while the row's links stay the same: the id of its first link. */
+  id: string
+  /** The name without the environment, and without the group's own name in front. */
+  title: string
+  links: { item: BoardLink; /** "Staging", "Prod"… or null for a link that has no environment in its name. */ environment: string | null }[]
+}
+
+const SEPARATOR = ' - '
+
+function splitName(title: string): { base: string; environment: string | null } {
+  const at = title.lastIndexOf(SEPARATOR)
+  const base = title.slice(0, at).trim()
+  const environment = title.slice(at + SEPARATOR.length).trim()
+  return at > 0 && base && environment ? { base, environment } : { base: title.trim(), environment: null }
+}
+
+/** "Jenkins Retail" on the Jenkins card reads "Retail". */
+function withoutGroupName(title: string, groupName: string) {
+  const prefix = `${groupName.trim().toLowerCase()} `
+  return title.toLowerCase().startsWith(prefix) && title.length > prefix.length ? title.slice(prefix.length).trim() : title
+}
+
+/** The lines of a card, in the order of its links: a line sits where its first link is. */
+export function rowsOf(card: BoardCard): BoardRow[] {
+  const rows = new Map<string, BoardRow>()
+  for (const item of card.links) {
+    const { base, environment } = splitName(item.link.title)
+    // A link without an environment is always a line of its own.
+    const key = environment ? `env:${base.toLowerCase()}` : `link:${item.link.id}`
+    const row = rows.get(key) ?? { id: item.link.id, title: withoutGroupName(base, card.group.name), links: [] }
+    row.links.push({ item, environment })
+    rows.set(key, row)
+  }
+  return [...rows.values()]
+}
+
+/** Production gets a warning color, so it isn't opened by mistake. */
+export const isProduction = (environment: string) => /^(prod|production|live)$/i.test(environment.trim())
+
+/** The category every link of the card has, if they all have the same one. It is then shown once, on the card. */
+export function sharedCategoryId(card: BoardCard): string | null {
+  const ids = new Set(card.links.map((item) => item.link.category_id))
+  const [only] = ids
+  return ids.size === 1 && only ? only : null
+}
+
 /** How many groups and links the person hid, counting only ones that still exist. */
 export function countHidden(groups: Group[], links: Link[], prefs: BoardPrefs): number {
   const groupIds = new Set(groups.map((group) => group.id))
@@ -93,4 +145,4 @@ export function countHidden(groups: Group[], links: Link[], prefs: BoardPrefs): 
 }
 
 /** A rough height for a card, enough to balance the columns before anything is measured. */
-export const estimateCardHeight = (card: BoardCard) => 62 + Math.max(card.links.length, 1) * 37
+export const estimateCardHeight = (card: BoardCard) => 62 + Math.max(rowsOf(card).length, 1) * 37

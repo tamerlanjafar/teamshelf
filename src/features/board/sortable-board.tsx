@@ -17,7 +17,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { colorValue } from '@/lib/colors'
 import type { Category } from '@/lib/types'
 import { useBoardActions } from './board-actions'
-import { estimateCardHeight, type BoardCard } from './board-model'
+import { estimateCardHeight, rowsOf, type BoardCard } from './board-model'
 import { GroupCard, SortableGroupCard } from './group-card'
 import { LinkRow } from './link-row'
 import { Masonry } from './masonry'
@@ -117,10 +117,17 @@ export function SortableBoard({ cards, categories, restoring }: { cards: BoardCa
       else reorderGroups(groupIds)
     }
     if (held?.type === 'link' && over && over.id !== active.id) {
-      const ids = savedLinkIds(held.groupId)
-      const next = arrayMove(ids, ids.indexOf(String(active.id)), ids.indexOf(String(over.id)))
-      setLinkOrder({ scope: held.groupId, ids: next })
-      reorderLinks(held.groupId, next)
+      // A line can hold several links (one per environment). The lines change places, and
+      // the links of a line stay together, in their order.
+      const card = shown.find((candidate) => candidate.group.id === held.groupId)
+      const rows = card ? rowsOf(card) : []
+      const from = rows.findIndex((row) => row.id === active.id)
+      const to = rows.findIndex((row) => row.id === over.id)
+      if (from !== -1 && to !== -1) {
+        const next = arrayMove(rows, from, to).flatMap((row) => row.links.map(({ item }) => item.link.id))
+        setLinkOrder({ scope: held.groupId, ids: next })
+        reorderLinks(held.groupId, next)
+      }
     }
     setHeld(null)
   }
@@ -131,8 +138,8 @@ export function SortableBoard({ cards, categories, restoring }: { cards: BoardCa
   }
 
   const heldCard = held?.type === 'group' ? shown.find((card) => card.group.id === held.id) : undefined
-  const heldLinkCard = held?.type === 'link' ? shown.find((card) => card.group.id === held.groupId) : undefined
-  const heldLink = heldLinkCard?.links.find((item) => item.link.id === held?.id)
+  const heldRowCard = held?.type === 'link' ? shown.find((card) => card.group.id === held.groupId) : undefined
+  const heldRow = heldRowCard && rowsOf(heldRowCard).find((row) => row.id === held?.id)
 
   return (
     <DndContext sensors={sensors} collisionDetection={sameKind} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd} onDragCancel={onDragCancel}>
@@ -142,9 +149,9 @@ export function SortableBoard({ cards, categories, restoring }: { cards: BoardCa
       </SortableContext>
       <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(0.2, 0, 0, 1)' }}>
         {heldCard && <GroupCard card={heldCard} categories={categories} restoring={restoring} lifted />}
-        {heldLink && (
-          <div className="room-lifted-row" style={{ '--c': colorValue(heldLinkCard!.group.color) } as CSSProperties}>
-            <LinkRow item={heldLink} category={categories.find((category) => category.id === heldLink.link.category_id)} restoring={false} lifted />
+        {heldRow && (
+          <div className="room-lifted-row" style={{ '--c': colorValue(heldRowCard!.group.color) } as CSSProperties}>
+            <LinkRow row={heldRow} groupId={heldRowCard!.group.id} categories={[]} restoring={false} lifted />
           </div>
         )}
       </DragOverlay>

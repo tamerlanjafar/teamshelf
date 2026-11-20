@@ -13,7 +13,8 @@ import { isSuperAdmin } from '@/lib/roles'
 import type { Category } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useBoardActions } from './board-actions'
-import type { BoardCard, BoardLink } from './board-model'
+import { rowsOf, sharedCategoryId, type BoardCard, type BoardRow } from './board-model'
+import { CategoryTag } from './category-tag'
 import { GroupDialog } from './group-dialog'
 import { LinkRow, SortableLinkRow } from './link-row'
 
@@ -37,26 +38,32 @@ interface CardDragProps {
 
 /** A group and its links, tinted with the group's color. As tall as what is in it. */
 export function GroupCard({ card, categories, restoring, cardRef, placeholder, lifted, headProps }: GroupCardProps & CardDragProps) {
-  const { group, links, hidden } = card
+  const { group, hidden } = card
   const { setGroupHidden } = useBoardActions()
-  const categoryOf = (item: BoardLink) => categories.find((category) => category.id === item.link.category_id)
+  const rows = rowsOf(card)
   const Row = lifted ? LinkRow : SortableLinkRow
+
+  // A card whose links all have one category names it once, at the top. On a card with
+  // several, each line names its own.
+  const shared = categories.find((category) => category.id === sharedCategoryId(card))
+  const categoriesOf = (row: BoardRow) => (shared ? [] : categories.filter((category) => row.links.some(({ item }) => item.link.category_id === category.id)))
 
   return (
     <section ref={cardRef} className={cn('room', placeholder && 'is-placeholder', lifted && 'is-lifted')} style={{ '--c': colorValue(group.color) } as CSSProperties} aria-label={group.name}>
       <header className={cn('room-head', headProps && 'is-handle')} {...headProps}>
         <h2 className="room-name">{group.name}</h2>
         {restoring && hidden && <RestoreButton label={`Show ${group.name} again`} onClick={() => setGroupHidden(group.id, false)} />}
-        <span className="count" aria-label={`${links.length} ${links.length === 1 ? 'link' : 'links'}`}>
-          {links.length}
+        {shared && <CategoryTag category={shared} plain />}
+        <span className="count" aria-label={`${rows.length} ${rows.length === 1 ? 'link' : 'links'}`}>
+          {rows.length}
         </span>
         <GroupMenu card={card} />
       </header>
       <div className="room-body">
-        {links.length === 0 && <p className="room-empty">No links yet.</p>}
-        <SortableContext items={links.map((item) => item.link.id)} strategy={verticalListSortingStrategy}>
-          {links.map((item) => (
-            <Row key={item.link.id} item={item} category={categoryOf(item)} restoring={restoring && !hidden} />
+        {rows.length === 0 && <p className="room-empty">No links yet.</p>}
+        <SortableContext items={rows.map((row) => row.id)} strategy={verticalListSortingStrategy}>
+          {rows.map((row) => (
+            <Row key={row.id} row={row} groupId={group.id} categories={categoriesOf(row)} restoring={restoring && !hidden} />
           ))}
         </SortableContext>
       </div>

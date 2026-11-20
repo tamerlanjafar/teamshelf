@@ -17,7 +17,8 @@ interface BoardActions {
   /** Saves a new order of one group's links: the ids of its links on screen, as they now stand. */
   reorderLinks: (groupId: string, visibleIds: string[]) => void
   setGroupHidden: (groupId: string, hidden: boolean) => void
-  setLinkHidden: (linkId: string, hidden: boolean) => void
+  /** Hides links for this person, or brings them back. Several at once for a line with more than one. */
+  setLinksHidden: (linkIds: string[], hidden: boolean) => void
   /** Go back to the team's order: of the groups, or of one group's links. */
   useTeamGroupOrder: () => void
   useTeamLinkOrder: (groupId: string) => void
@@ -68,7 +69,7 @@ export function BoardActionsProvider({ canReorder, children }: { canReorder: boo
         else setTeamLinkOrder.mutate({ groupId, ids }, { onError: toastError })
       },
       setGroupHidden: (groupId, hidden) => save({ hidden_groups: toggled(prefs.hidden_groups, groupId, hidden) }),
-      setLinkHidden: (linkId, hidden) => save({ hidden_links: toggled(prefs.hidden_links, linkId, hidden) }),
+      setLinksHidden: (linkIds, hidden) => save({ hidden_links: hidden ? [...new Set([...prefs.hidden_links, ...linkIds])] : prefs.hidden_links.filter((id) => !linkIds.includes(id)) }),
       useTeamGroupOrder: () => save({ group_order: [] }),
       useTeamLinkOrder: (groupId) => save({ link_order: without(prefs.link_order, groupId) }),
     }
