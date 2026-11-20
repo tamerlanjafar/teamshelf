@@ -9,13 +9,16 @@ interface Placed {
   position: number | null
 }
 
-/** The team's order: by position, then the ones without a position, by name. */
-export function teamOrder<Item extends Placed>(items: Item[], nameOf: (item: Item) => string): Item[] {
+/**
+ * The team's order: the items an admin has placed, by their position, and after them the ones
+ * nobody has placed yet, in the order `compareUnplaced` gives.
+ */
+export function teamOrder<Item extends Placed>(items: Item[], compareUnplaced: (a: Item, b: Item) => number): Item[] {
   return [...items].sort((a, b) => {
     if (a.position !== null && b.position !== null) return a.position - b.position
     if (a.position !== null) return -1
     if (b.position !== null) return 1
-    return nameOf(a).localeCompare(nameOf(b))
+    return compareUnplaced(a, b)
   })
 }
 

@@ -43,13 +43,19 @@ function matches(link: Link, group: Group, filter: BoardFilter) {
 
 /** Every group in the order this person sees: their own if they made one, otherwise the team's. */
 export function orderedGroups(groups: Group[], prefs: BoardPrefs): Group[] {
-  return personalOrder(teamOrder(groups, (group) => group.name), prefs.group_order)
+  return personalOrder(teamOrder(groups, (a, b) => a.name.localeCompare(b.name)), prefs.group_order)
 }
+
+/** When a link reached the board: when it was approved, or added directly. */
+const arrivedAt = (link: Link) => link.reviewed_at ?? link.created_at
+
+/** Oldest first, so a new link goes to the end of its group. */
+const byArrival = (a: Link, b: Link) => arrivedAt(a).localeCompare(arrivedAt(b)) || a.title.localeCompare(b.title)
 
 /** Every link of a group in the order this person sees. */
 export function orderedLinks(links: Link[], groupId: string, prefs: BoardPrefs): Link[] {
   const ofGroup = links.filter((link) => link.group_id === groupId)
-  return personalOrder(teamOrder(ofGroup, (link) => link.title), prefs.link_order[groupId])
+  return personalOrder(teamOrder(ofGroup, byArrival), prefs.link_order[groupId])
 }
 
 export interface BoardOptions {
