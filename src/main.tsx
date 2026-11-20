@@ -3,6 +3,7 @@ import { createRouter, RouterProvider } from '@tanstack/react-router'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
+import { watchAppVersion } from './lib/app-version'
 import './lib/theme'
 import { routeTree } from './routeTree.gen'
 
@@ -20,6 +21,8 @@ declare module '@tanstack/react-router' {
     router: typeof router
   }
 }
+
+watchAppVersion()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
