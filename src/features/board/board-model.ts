@@ -1,6 +1,6 @@
 // Turns groups, links and one person's preferences into what the board draws. Pure functions, no React.
 
-import { compareEnvironments, splitName } from '@/lib/environments'
+import { compareEnvironments, splitName, withoutGroupName } from '@/lib/environments'
 import { personalOrder, teamOrder } from '@/lib/order'
 import type { BoardPrefs, Group, Link } from '@/lib/types'
 
@@ -99,20 +99,15 @@ export interface BoardRow {
   links: { item: BoardLink; /** "Staging", "Prod"… or null for a link that has no environment in its name. */ environment: string | null }[]
 }
 
-/** "Jenkins Retail" on the Jenkins card reads "Retail". */
-function withoutGroupName(title: string, groupName: string) {
-  const prefix = `${groupName.trim().toLowerCase()} `
-  return title.toLowerCase().startsWith(prefix) && title.length > prefix.length ? title.slice(prefix.length).trim() : title
-}
-
 /** The lines of a card, in the order of its links: a line sits where its first link is. */
 export function rowsOf(card: BoardCard): BoardRow[] {
   const rows = new Map<string, BoardRow>()
   for (const item of card.links) {
     const { base, environment } = splitName(item.link.title)
     // A link without an environment is always a line of its own.
-    const key = environment ? `env:${base.toLowerCase()}` : `link:${item.link.id}`
-    const row = rows.get(key) ?? { id: item.link.id, title: withoutGroupName(base, card.group.name), links: [] }
+    const title = withoutGroupName(base, card.group.name)
+    const key = environment ? `env:${title.toLowerCase()}` : `link:${item.link.id}`
+    const row = rows.get(key) ?? { id: item.link.id, title, links: [] }
     row.links.push({ item, environment })
     rows.set(key, row)
   }

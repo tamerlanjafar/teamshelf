@@ -97,8 +97,9 @@ function LinkForm({ request, onDone }: { request: Request; onDone: () => void })
 
   const change = (changes: Partial<LinkDraft>) => setDraft((current) => ({ ...current, ...changes }))
 
-  // A name that mentions an environment in its own way ("jenkins staging online") gets a
-  // proposal in the usual form, so the link lines up with its siblings on the board.
+  // A name that repeats its group ("Jenkins Online" in Jenkins) or mentions an environment in
+  // its own way ("online staging") gets a proposal in the usual form ("Online - Staging"), so
+  // the link lines up with its siblings on the board.
   const group = groups.find((candidate) => candidate.name.toLowerCase() === draft.groupName.trim().toLowerCase())
   const siblings = boardLinks.filter((link) => group && link.group_id === group.id && link.id !== editing?.id).map((link) => link.title)
   const [keptName, setKeptName] = useState<string | null>(null)
@@ -200,7 +201,8 @@ function LinkForm({ request, onDone }: { request: Request; onDone: () => void })
 }
 
 /**
- * Shown under the name when it mentions an environment but not as "Thing - Environment".
+ * Shown under the name when it isn't in the usual form: it starts with the group's name, or
+ * mentions an environment but not as "Thing - Environment".
  * One click takes the proposed name, another keeps what was typed. `urgent`: the person
  * tried to save without choosing.
  */
