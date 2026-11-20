@@ -11,6 +11,11 @@
   # on your own machine.
   VITE_NEON_AUTH_URL = "https://ep-still-term-bapw7e1f.neonauth.c-8.eu-central-1.aws.neon.tech/neondb/auth"
   VITE_NEON_DATA_API_URL = "https://ep-still-term-bapw7e1f.apirest.c-8.eu-central-1.aws.neon.tech/neondb/rest/v1"
+  # Netlify's secret scanner fails a build when a value marked as secret shows up in the repo
+  # or in the built files. These two are public and are meant to be in the built files, so the
+  # scanner is told to leave them alone. Everything else (DATABASE_URL, if it is ever set in
+  # Netlify) is still scanned.
+  SECRETS_SCAN_OMIT_KEYS = "VITE_NEON_AUTH_URL,VITE_NEON_DATA_API_URL"
 
 # Every address is handled by the app itself (/caspiantech, /login, …), so they all get index.html.
 [[redirects]]
