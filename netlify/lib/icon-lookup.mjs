@@ -47,7 +47,7 @@ async function fetchPublic(address, accept) {
     const response = await fetch(url, {
       redirect: 'manual',
       signal: AbortSignal.timeout(TIMEOUT_MS),
-      headers: { accept, 'user-agent': 'Mozilla/5.0 (compatible; Linkboard icon lookup)' },
+      headers: { accept, 'user-agent': 'Mozilla/5.0 (compatible; Teamshelf icon lookup)' },
     })
     const next = response.headers.get('location')
     if (response.status >= 300 && response.status < 400 && next) {

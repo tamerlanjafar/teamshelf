@@ -8,7 +8,7 @@ const OPTIONS: { value: ThemeChoice; label: string; hint: string }[] = [
   { value: 'dark', label: 'Dark', hint: 'Always dark' },
 ]
 
-/** How Linkboard looks in this browser: three small pictures of the board, one chosen. */
+/** How Teamshelf looks in this browser: three small pictures of the board, one chosen. */
 export function ThemePicker() {
   const theme = useTheme()
   return (

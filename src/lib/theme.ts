@@ -5,7 +5,7 @@ import { useSyncExternalStore } from 'react'
 
 export type ThemeChoice = 'system' | 'light' | 'dark'
 
-const KEY = 'linkboard-theme'
+const KEY = 'teamshelf-theme'
 const systemDark = window.matchMedia('(prefers-color-scheme: dark)')
 const listeners = new Set<() => void>()
 

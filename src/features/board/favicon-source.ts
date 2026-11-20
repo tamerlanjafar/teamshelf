@@ -27,7 +27,7 @@ export function iconCandidates(url: string): string[] {
 
 // What was found is remembered in this browser, so the misses aren't asked for on every visit.
 
-const KEY = 'linkboard-icons'
+const KEY = 'teamshelf-icons'
 const NONE = ''
 const KEEP_FOR = 7 * 24 * 60 * 60 * 1000
 

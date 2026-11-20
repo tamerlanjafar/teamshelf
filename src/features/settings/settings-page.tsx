@@ -6,7 +6,7 @@ import { OrgForm } from './org-form'
 import { ThemePicker } from './theme-picker'
 
 /**
- * Settings. Everyone has their own (how Linkboard looks). The super admin also finds the
+ * Settings. Everyone has their own (how Teamshelf looks). The super admin also finds the
  * organization's settings here: its name and who can join. Each space has its own settings.
  */
 export function SettingsPage() {

@@ -218,15 +218,15 @@ create trigger links_trash_file after delete or update of file_key on public.lin
 
 revoke all on function app.trash_file() from public, authenticated;
 
--- The daily cleanup (netlify/functions/file-cleanup.mjs) connects as "linkboard_files", which
+-- The daily cleanup (netlify/functions/file-cleanup.mjs) connects as "teamshelf_files", which
 -- can only read and clear this list. The role is made in Neon's console (it has a password,
 -- which doesn't belong in this file); where it doesn't exist, this step is left out.
 do $$
 begin
-    if exists (select 1 from pg_roles where rolname = 'linkboard_files') then
-        grant usage on schema public to linkboard_files;
-        grant select, delete on public.file_trash to linkboard_files;
-        create policy file_trash_cleanup on public.file_trash for all to linkboard_files using (true);
+    if exists (select 1 from pg_roles where rolname = 'teamshelf_files') then
+        grant usage on schema public to teamshelf_files;
+        grant select, delete on public.file_trash to teamshelf_files;
+        create policy file_trash_cleanup on public.file_trash for all to teamshelf_files using (true);
     end if;
 end
 $$;

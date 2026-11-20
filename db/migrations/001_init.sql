@@ -1,4 +1,4 @@
--- Linkboard schema.
+-- Teamshelf schema.
 --
 -- The browser talks to this database directly through the Neon Data API, as the Postgres role
 -- "authenticated". So every rule about who may see or change what lives here, in row-level
@@ -7,7 +7,7 @@
 -- Roles: one super admin (reviews links, edits everything), admins (manage the team),
 -- members (see links, suggest new ones).
 
--- People who may use Linkboard. A row is the invitation: it exists before the person signs in,
+-- People who may use Teamshelf. A row is the invitation: it exists before the person signs in,
 -- and is tied to their account (user_id) the first time they do.
 create table public.members (
     id uuid primary key default gen_random_uuid(),

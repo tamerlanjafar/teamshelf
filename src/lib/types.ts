@@ -80,7 +80,7 @@ export type LinkStatus = 'pending' | 'approved' | 'rejected'
 /** everyone: everyone who sees the space. admins: the space's admins. members: only the chosen people. */
 export type Visibility = 'everyone' | 'admins' | 'members'
 
-/** A web address, or a file kept by Linkboard. */
+/** A web address, or a file kept by Teamshelf. */
 export type LinkKind = 'link' | 'file'
 
 export interface Link {

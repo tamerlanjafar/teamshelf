@@ -15,6 +15,6 @@ export const slugFrom = (name: string) =>
 export function slugProblem(slug: string): string | undefined {
   if (slug.length < 2) return 'Use at least 2 characters.'
   if (!/^[a-z0-9]([a-z0-9-]{0,38}[a-z0-9])?$/.test(slug)) return 'Use lower-case letters, numbers and dashes, starting and ending with a letter or number.'
-  if (RESERVED.includes(slug)) return 'That address is used by Linkboard itself.'
+  if (RESERVED.includes(slug)) return 'That address is used by Teamshelf itself.'
   return undefined
 }

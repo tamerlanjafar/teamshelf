@@ -11,7 +11,7 @@
 
 create table public.orgs (
     id uuid primary key default gen_random_uuid(),
-    -- The address: linkboard/<slug>/
+    -- The address: teamshelf.app/<slug>/
     slug text not null unique check (
         slug ~ '^[a-z0-9]([a-z0-9-]{0,38}[a-z0-9])?$'
         and length(slug) >= 2

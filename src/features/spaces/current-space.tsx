@@ -8,7 +8,7 @@ import type { Space } from '@/lib/types'
 // the same one. On pages without one (/caspiantech/team), it is the space you had open last in
 // this browser, or else the first one.
 
-const rememberedKey = (orgId: string) => `linkboard:space:${orgId}`
+const rememberedKey = (orgId: string) => `teamshelf:space:${orgId}`
 
 function remembered(orgId: string): string | null {
   try {

@@ -5,7 +5,7 @@
 import { neon } from '@/lib/neon'
 import type { Link } from '@/lib/types'
 
-/** The largest file Linkboard takes. Keep in step with netlify/functions/files.mjs and the database. */
+/** The largest file Teamshelf takes. Keep in step with netlify/functions/files.mjs and the database. */
 export const MAX_FILE_BYTES = 25 * 1024 * 1024
 
 export interface StoredFile {

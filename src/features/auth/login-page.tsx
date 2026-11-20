@@ -32,7 +32,7 @@ export function LoginPage({ linkError, returnPath }: { linkError?: string; retur
   const error = invalid ? 'Enter a valid email address.' : send.isError ? errorMessage(send.error) : linkError ? 'That link has expired. Sign in again to get a new one.' : undefined
 
   return (
-    <AuthCard title="Welcome to Linkboard" description="Sign in to your account">
+    <AuthCard title="Welcome to Teamshelf" description="Sign in to your account">
       <form onSubmit={submit} noValidate>
         <FieldGroup className="gap-6">
           <Field className="gap-1.5" data-invalid={Boolean(error)}>

@@ -9,7 +9,7 @@ import { defineConfig, type Plugin } from 'vite'
  * the same address with the same lookup, without the sign-in check (it only listens locally).
  */
 const iconLookup = (): Plugin => ({
-  name: 'linkboard-icon-lookup',
+  name: 'teamshelf-icon-lookup',
   configureServer(server) {
     server.middlewares.use('/api/icon', async (request, response) => {
       const { findIcon } = await import('./netlify/lib/icon-lookup.mjs')
@@ -25,7 +25,7 @@ const iconLookup = (): Plugin => ({
 const appVersion = Date.now().toString(36)
 
 const appVersionFile = (): Plugin => ({
-  name: 'linkboard-app-version-file',
+  name: 'teamshelf-app-version-file',
   apply: 'build',
   generateBundle() {
     this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ version: appVersion }) })
@@ -37,7 +37,7 @@ const appVersionFile = (): Plugin => ({
  * Netlify gives the site's address as URL when it builds. Elsewhere the tags stay relative.
  */
 const siteAddress = (): Plugin => ({
-  name: 'linkboard-site-address',
+  name: 'teamshelf-site-address',
   transformIndexHtml: (html) => html.replaceAll('%SITE_URL%', (process.env.URL ?? '').replace(/\/$/, '')),
 })
 

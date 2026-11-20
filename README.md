@@ -1,34 +1,33 @@
-# Linkboard
+# Teamshelf
 
-One page with every service and tool of a team: Jenkins, Grafana, back offices, docs. Each group of links is a card, as tall as its links, in a Pinterest-style grid.
+Your team's links and files, in one place, at [teamshelf.app](https://teamshelf.app). An organization is split into spaces, one per team (Development, Design, Data…). In each space, groups of links and files are cards in a Pinterest-style grid.
 
-- **Organizations.** Only accounts listed in the database can create one (see [Who can create organizations](#who-can-create-organizations)). Everything of an organization lives under its address, `/<org>/`. One sign-in covers all the organizations a person is in, and the menu at the top left switches between them.
+- **Organizations.** Only accounts listed in the database can create one (see [Who can create organizations](#who-can-create-organizations)). Everything of an organization lives under its address, `/<org>/`, and a space's board under `/<org>/<space>`. One sign-in covers every organization a person is in.
 - **Sign-in by email link.** No passwords.
 - **Joining.** An organization can name email domains whose people join on their own. Admins can invite anyone else, at any domain.
-- **Roles and category managers.** See [Who can do what](#who-can-do-what).
-- **Suggestions.** Anyone can suggest a link. It waits until someone who manages it approves or rejects it.
-- **Environments on one line.** Links named alike up to the last " - " ("Online WEB - Staging", "Online WEB - Prod") share a line on the card: the name once, and a small link per environment, with Prod in red. Nothing is set up for this; it is read from the names.
-- **Categories.** Each organization has its own list ("Frontend", "Backend", "Infrastructure"…). A link can have one, and the board can be narrowed to one.
-- **Restricted links.** A link can be visible to everyone, to admins only, or to chosen people.
-- **Your own view.** Hide groups and links you don't need. Only you are affected, and "Your view" brings them back.
-- **Order.** The super admin drags groups and links into the order everyone sees.
+- **Spaces.** Each has its own admins, members, logo, color and environments. A space is open to the whole organization, or private to its members.
+- **Suggestions.** Anyone who sees a space can suggest a link or a file. It waits until an admin of that space approves or rejects it.
+- **Strict names.** Link names follow fixed rules (“Thing - Environment”, no group name in front…), checked in the form and again in the database.
+- **Environments on one line.** Links named alike up to the last " - " ("Online WEB - Staging", "Online WEB - Prod") share a line on the card, with Prod in red. Each space lists the environments its links may name.
+- **Files.** Uploaded to Cloudflare R2, up to 25 MB each, opened through short-lived signed addresses.
+- **Restricted links.** A link can be visible to everyone who sees the space, to its admins only, or to chosen people.
+- **Your own view.** Hide groups and links you don't need. Only you are affected.
+- **Layout.** A space's admins drag cards to any column and place, and that is the layout everyone sees.
+- **Search.** The search at the top shows the links you opened lately and finds any link of the space (“/” or ⌘K).
 
 ## Who can do what
 
-Roles are per organization.
+Roles are per organization, plus a role in each space.
 
-| | Member | Admin | Super admin |
-| --- | --- | --- | --- |
-| See links (that they are allowed to see), hide them for themselves | ✓ | ✓ | all |
-| Suggest a link | ✓ | ✓ | added right away |
-| See "admins only" links | | ✓ | ✓ |
-| Invite and remove people, change roles (member ↔ admin), choose category managers | | ✓ | ✓ |
-| Review suggestions, edit and delete links | in categories they manage | in categories they manage | ✓ |
-| Restrict a link, edit groups and categories, organization settings, the order of the board | | | ✓ |
+| | Member | Admin of the organization | Admin of a space | Super admin |
+| --- | --- | --- | --- | --- |
+| See the spaces open to the organization, suggest links in them | ✓ | ✓ | ✓ | ✓ |
+| See a private space | if in it | if in it | ✓ | ✓ |
+| Add links straight away, review suggestions, edit and delete links, manage groups, the layout, the space's people, settings and visibility | | | in that space | every space |
+| Invite and remove people, change roles (member ↔ admin), create spaces | | ✓ | | ✓ |
+| Organization settings | | | | ✓ |
 
-**Category managers.** Besides their role, a person can manage any number of categories (set on the Team page). In those categories they add links straight to the board, edit and delete links, and review what others suggest. They can't touch links of other categories, links without a category, or links the super admin restricted.
-
-The super admin is whoever created the organization. Nobody can change or remove them in the app, and there is exactly one.
+The super admin is whoever created the organization. Nobody can change or remove them in the app, and there is exactly one. They are an admin of every space.
 
 Someone removed from an organization can't rejoin through an allowed domain. Inviting them again lets them back in.
 
@@ -54,18 +53,20 @@ Stack: React, TypeScript, Vite, TanStack Router and Query, Tailwind, shadcn comp
 ```
 db/migrations/          the schema and all access rules
 src/api/                reading and writing data (TanStack Query)
-src/features/board/     the board: grid, cards, rows, search, hiding, reordering
-src/features/links/     the add / suggest / edit dialog
+src/features/board/     the board: columns, cards, rows, hiding, dragging
+src/features/links/     the add / suggest / edit dialog, the name rules
+src/features/search/    the search and its recent links
+src/features/spaces/    spaces: switcher, settings, logos
 src/features/requests/  the review queue
-src/features/team/      members, roles, category managers
-src/features/settings/  organization settings and categories
+src/features/team/      members and roles
+src/features/settings/  organization settings
 src/features/org/       opening, joining and creating organizations, permissions
 src/features/auth/      sign-in and the screens before you are in
 src/components/app/     shared pieces: top bar, sections, form controls
 src/components/ui/      shadcn components, as installed by its CLI
 src/lib/                colors, ordering, roles, theme, feature flags, the Neon client
 src/routes/             one small file per page
-netlify/                the icon lookup function, and its tests (`node --test netlify/lib/`)
+netlify/                server functions: icon lookup, file upload and download, file cleanup
 ```
 
 ### Loading and errors
@@ -78,13 +79,13 @@ When the app opens, the splash screen stays until everything the organization's 
 
 `src/lib/features.ts`. Off unless set in `.env`:
 
-- `VITE_PERSONAL_ORDER=true`: everyone can drag groups and links into an order of their own. The super admin's order stays the default: it applies to the groups, and inside each group, that a person hasn't rearranged themselves.
+- `VITE_PERSONAL_ORDER=true`: everyone can arrange a space's board and its links for themselves. The space's layout stays the default for everyone who hasn't.
 
 ## Run it
 
 ```bash
 pnpm install
-cp .env.example .env    # fill in the three values
+cp .env.example .env    # fill in the values
 pnpm dev                # http://localhost:3011
 ```
 
@@ -95,10 +96,10 @@ Other commands: `pnpm build`, `pnpm lint`, `pnpm db:migrate`.
 ## Before the team uses it
 
 1. **Host it.** The repo is set up for Netlify (`netlify.toml`): connect the repository there and it builds and serves the site, with the two public Neon addresses already set. Any other static host works too: `pnpm build` gives the site in `dist/`, and every path must be sent to `index.html`.
-2. **Trust the address.** In the Neon Console, under Auth → Configuration → Domains, add the site's address (for example `https://your-site.netlify.app`), and turn "Allow localhost" off once you no longer develop against this database. Sign-in links only return to trusted addresses.
+2. **Trust the address.** In the Neon Console, under Auth → Configuration → Domains, add the site's address (`https://teamshelf.app`), and turn "Allow localhost" off once you no longer develop against this database. Sign-in links only return to trusted addresses.
 3. **Use your own email sender.** Sign-in emails now come from Neon's shared sender, which is for development. Set an SMTP provider under Auth → Configuration → Email.
 
-The layout of the sign-in email is Neon's and can't be edited. Only the app name in it is ours ("Linkboard"). The sender stays "Neon Auth" until you set your own email sender. A different layout means sending the email yourself: a webhook for the `send.magic_link` event, plus an email service and a domain to send from.
+The layout of the sign-in email is Neon's and can't be edited. Only the app name in it is ours ("Teamshelf"). The sender stays "Neon Auth" until you set your own email sender. A different layout means sending the email yourself: a webhook for the `send.magic_link` event, plus an email service and a domain to send from.
 
 ### Link icons
 

@@ -23,7 +23,7 @@ export function OrgsPage() {
 
   return (
     <AuthCard
-      title={nothing ? 'Welcome to Linkboard' : 'Choose an organization'}
+      title={nothing ? 'Welcome to Teamshelf' : 'Choose an organization'}
       description={
         nothing ? (
           <>
