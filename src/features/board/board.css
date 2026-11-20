@@ -134,10 +134,6 @@
     margin-top: 4px;
 }
 
-.tab > .restore {
-    margin-top: 5px;
-}
-
 /* The icon and the category stay level with the first line of the name. */
 .tab .open > .favicon {
     margin-top: 3px;
@@ -158,8 +154,20 @@
 
 .tab:hover .room-button,
 .tab:focus-within .room-button,
-.tab .room-button[data-popup-open] {
+.tab .room-button[data-popup-open],
+.tab .room-button.shown {
     opacity: 1;
+}
+
+/* The eye that brings a hidden link back is always there, in the row's color. */
+.tab .room-button.shown {
+    color: color-mix(in srgb, var(--c) 55%, var(--ink));
+    background: color-mix(in srgb, var(--c) 16%, transparent);
+}
+
+.tab .room-button.shown:hover {
+    color: #ffffff;
+    background: var(--c);
 }
 
 @media (hover: none) {

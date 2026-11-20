@@ -12,11 +12,10 @@ import { inLowerHalf, useBoardActions } from './board-actions'
 import type { BoardLink } from './board-model'
 import { CategoryTag } from './category-tag'
 import { Favicon } from './favicon'
-import { RestoreButton } from './group-card'
 
 /**
  * One link on a card. The whole line opens it. Drag it to another place in its group.
- * With `restoring` (the view of what you hid) a hidden link gets a button that brings it back.
+ * With `restoring` (the view of what you hid) a hidden link gets an eye button that brings it back.
  */
 export function LinkRow({ item, category, restoring }: { item: BoardLink; category: Category | undefined; restoring: boolean }) {
   const { link, hidden } = item
@@ -57,8 +56,15 @@ export function LinkRow({ item, category, restoring }: { item: BoardLink; catego
         {link.visibility !== 'everyone' && <Lock className="text-quiet size-3 flex-none" aria-label="Only some people see this" />}
         {category && <CategoryTag category={category} />}
       </a>
-      {restoring && hidden && <RestoreButton label={`Show ${link.title} again`} onClick={() => setLinkHidden(link.id, false)} />}
-      <RowMenu link={link} hidden={hidden} />
+      {restoring && hidden ? (
+        // In the view of what you hid, the one thing to do with a link is to bring it back:
+        // an eye where the menu usually is, so the name keeps its room.
+        <button type="button" className="room-button shown" aria-label={`Show ${link.title} again`} title="Show again" onClick={() => setLinkHidden(link.id, false)}>
+          <Eye className="size-4" />
+        </button>
+      ) : (
+        <RowMenu link={link} hidden={hidden} />
+      )}
     </div>
   )
 }
