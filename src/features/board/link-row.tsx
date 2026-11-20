@@ -1,11 +1,11 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Copy, Eye, EyeOff, Lock, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
-import type { ComponentProps, CSSProperties, Ref } from 'react'
+import { Copy, Eye, EyeOff, Lock, MoreHorizontal, MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import type { ComponentProps, CSSProperties, ReactNode, Ref } from 'react'
 import { toast } from 'sonner'
 import { useDeleteLink } from '@/api/links'
 import { useConfirm } from '@/components/app/confirm-dialog'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { useLinkDialog } from '@/features/links/link-dialog'
 import { usePermissions } from '@/features/org/permissions'
 import { toastError } from '@/lib/errors'
@@ -40,7 +40,7 @@ const Restricted = () => <Lock className="text-quiet size-3 flex-none" aria-labe
 
 /**
  * One line of a card. A single link: the whole line opens it. One thing in several
- * environments: its name, and a small link per environment.
+ * environments: its name, and a small link per environment, each with its own menu.
  */
 export function LinkRow({ row, categories, restoring, rowRef, style, placeholder, lifted, dragProps }: LinkRowProps & RowDragProps) {
   const { setLinksHidden } = useBoardActions()
@@ -64,10 +64,17 @@ export function LinkRow({ row, categories, restoring, rowRef, style, placeholder
           {tags}
           <span className="envs">
             {row.links.map(({ item, environment }) => (
-              <a key={item.link.id} className={cn('env', isProduction(environment!) && 'is-production')} href={item.link.url} target="_blank" rel="noreferrer" draggable={false} aria-label={`${row.title}, ${environment}`}>
-                {environment}
-                {item.link.visibility !== 'everyone' && <Restricted />}
-              </a>
+              <span key={item.link.id} className="env-item">
+                <a className={cn('env', isProduction(environment!) && 'is-production')} href={item.link.url} target="_blank" rel="noreferrer" draggable={false} aria-label={`${row.title}, ${environment}`}>
+                  {environment}
+                  {item.link.visibility !== 'everyone' && <Restricted />}
+                </a>
+                {!(restoring && item.hidden) && (
+                  <LinkMenu link={item.link} hidden={item.hidden} label={`More for ${row.title}, ${environment}`} className="env-more">
+                    <MoreVertical className="size-3.5" />
+                  </LinkMenu>
+                )}
+              </span>
             ))}
           </span>
         </div>
@@ -79,7 +86,12 @@ export function LinkRow({ row, categories, restoring, rowRef, style, placeholder
           <Eye className="size-4" />
         </button>
       ) : (
-        <RowMenu row={row} />
+        // A line with several environments has a menu on each of them instead.
+        first.environment === null && (
+          <LinkMenu link={first.item.link} hidden={first.item.hidden} label={`More for ${row.title}`} className="room-button">
+            <MoreHorizontal className="size-4" />
+          </LinkMenu>
+        )
       )}
     </div>
   )
@@ -107,34 +119,8 @@ export function SortableLinkRow(props: LinkRowProps) {
   )
 }
 
-/** What can be done with the line: for a single link directly, for several environments one menu each. */
-function RowMenu({ row }: { row: BoardRow }) {
-  const [first] = row.links
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger className="room-button" aria-label={`More for ${row.title}`}>
-        <MoreHorizontal className="size-4" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-44 rounded-xl">
-        {first.environment === null ? (
-          <LinkActions link={first.item.link} hidden={first.item.hidden} />
-        ) : (
-          row.links.map(({ item, environment }) => (
-            <DropdownMenuSub key={item.link.id}>
-              <DropdownMenuSubTrigger>{environment}</DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="min-w-44 rounded-xl">
-                <LinkActions link={item.link} hidden={item.hidden} />
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-          ))
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  )
-}
-
-/** Copy the address, hide the link for yourself, and for whoever manages the link: edit and delete. */
-function LinkActions({ link, hidden }: { link: Link; hidden: boolean }) {
+/** The menu of one link: copy the address, hide it for yourself, and for whoever manages it: edit and delete. */
+function LinkMenu({ link, hidden, label, className, children }: { link: Link; hidden: boolean; label: string; className: string; children: ReactNode }) {
   const { canManage } = usePermissions()
   const { setLinksHidden } = useBoardActions()
   const { editLink } = useLinkDialog()
@@ -148,38 +134,43 @@ function LinkActions({ link, hidden }: { link: Link; hidden: boolean }) {
     )
 
   return (
-    <>
-      <DropdownMenuItem onClick={copy}>
-        <Copy />
-        Copy address
-      </DropdownMenuItem>
-      <DropdownMenuItem onClick={() => setLinksHidden([link.id], !hidden)}>
-        {hidden ? <Eye /> : <EyeOff />}
-        {hidden ? 'Show again' : 'Hide for me'}
-      </DropdownMenuItem>
-      {canManage(link) && (
-        <>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => editLink(link)}>
-            <Pencil />
-            Edit…
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            variant="destructive"
-            onClick={() =>
-              confirm({
-                title: `Delete ${link.title}?`,
-                description: 'The link is removed from the board for everyone.',
-                confirmLabel: 'Delete link',
-                onConfirm: () => deleteLink.mutate(link.id, { onError: toastError }),
-              })
-            }
-          >
-            <Trash2 />
-            Delete…
-          </DropdownMenuItem>
-        </>
-      )}
-    </>
+    <DropdownMenu>
+      <DropdownMenuTrigger className={className} aria-label={label}>
+        {children}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-44 rounded-xl">
+        <DropdownMenuItem onClick={copy}>
+          <Copy />
+          Copy address
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setLinksHidden([link.id], !hidden)}>
+          {hidden ? <Eye /> : <EyeOff />}
+          {hidden ? 'Show again' : 'Hide for me'}
+        </DropdownMenuItem>
+        {canManage(link) && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => editLink(link)}>
+              <Pencil />
+              Edit…
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() =>
+                confirm({
+                  title: `Delete ${link.title}?`,
+                  description: 'The link is removed from the board for everyone.',
+                  confirmLabel: 'Delete link',
+                  onConfirm: () => deleteLink.mutate(link.id, { onError: toastError }),
+                })
+              }
+            >
+              <Trash2 />
+              Delete…
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

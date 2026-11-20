@@ -172,22 +172,24 @@
     margin-left: auto;
 }
 
+/* One environment: its link, and a small menu button that shows when the line is in use. */
+.tab .env-item {
+    display: inline-flex;
+    align-items: center;
+    padding-left: 8px;
+}
+
+.tab .env-item + .env-item {
+    box-shadow: -1px 0 0 var(--line);
+}
+
 .tab .env {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 0 8px;
     font: 600 12.5px/22px var(--font-rounded);
     color: var(--brand);
     text-underline-offset: 3px;
-}
-
-.tab .env + .env {
-    box-shadow: -1px 0 0 var(--line);
-}
-
-.tab .env:last-child {
-    padding-right: 2px;
 }
 
 .tab .env:hover,
@@ -197,6 +199,35 @@
 
 .tab .env.is-production {
     color: var(--danger);
+}
+
+.tab .env-more {
+    display: grid;
+    place-items: center;
+    width: 18px;
+    height: 22px;
+    margin: 0 2px;
+    border-radius: 5px;
+    color: var(--quiet);
+    opacity: 0;
+}
+
+.tab:hover .env-more,
+.tab:focus-within .env-more,
+.tab .env-more[data-popup-open] {
+    opacity: 1;
+}
+
+.tab .env-more:hover,
+.tab .env-more[data-popup-open] {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--c) 24%, transparent);
+}
+
+@media (hover: none) {
+    .tab .env-more {
+        opacity: 1;
+    }
 }
 
 /* Only a line that is one link lights up as a whole: on the others, the links are what you click. */
