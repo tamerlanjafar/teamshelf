@@ -1,3 +1,4 @@
+import { Sparkles } from 'lucide-react'
 import { createContext, useCallback, useContext, useId, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { toast } from 'sonner'
 import { useGroupsIfLoaded } from '@/api/groups'
@@ -205,19 +206,23 @@ function LinkForm({ request, onDone }: { request: Request; onDone: () => void })
  */
 function NameProposal({ proposal, urgent, onUse, onKeep }: { proposal: string; urgent: boolean; onUse: () => void; onKeep: () => void }) {
   return (
-    <div className={cn('flex flex-col gap-2 rounded-lg px-3 py-2.5 text-[13px]', urgent ? 'bg-destructive/8 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--destructive)_35%,transparent)]' : 'bg-muted')}>
-      <span className="text-muted-foreground leading-snug">
-        Write the environment after the name, so it lines up with the others on the board:
-        <span className="text-foreground mt-0.5 block font-medium">{proposal}</span>
+    <div
+      className={cn(
+        'flex items-center gap-3 rounded-lg border py-2 pr-2 pl-3',
+        urgent ? 'border-destructive/40 bg-destructive/6' : 'border-primary/20 bg-primary/5',
+      )}
+    >
+      <Sparkles className={cn('size-4 shrink-0', urgent ? 'text-destructive' : 'text-primary')} aria-hidden="true" />
+      <span className="min-w-0 flex-1 leading-snug">
+        <span className="text-muted-foreground block text-[12px]">{urgent ? 'Choose a name to continue' : 'Suggested name'}</span>
+        <span className="block text-[13.5px] font-medium break-words">{proposal}</span>
       </span>
-      <span className="flex gap-2">
-        <Button type="button" onClick={onUse}>
-          Use this name
-        </Button>
-        <Button type="button" variant="ghost" onClick={onKeep}>
-          Keep mine
-        </Button>
-      </span>
+      <Button type="button" size="sm" onClick={onUse}>
+        Use
+      </Button>
+      <Button type="button" size="sm" variant="ghost" className="text-muted-foreground" onClick={onKeep}>
+        Keep mine
+      </Button>
     </div>
   )
 }
