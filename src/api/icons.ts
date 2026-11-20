@@ -1,5 +1,8 @@
 import { neon } from '@/lib/neon'
 
+/** A web address, or a small image carried in the address itself (the copy kept of an icon served over http). */
+const isIcon = (icon: string) => (/^https?:\/\//i.test(icon) && icon.length <= 2000) || (/^data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/=]+$/i.test(icon) && icon.length <= 70000)
+
 /**
  * Asks the server for the icon the page at this address declares (see netlify/functions/icon.mjs).
  * A browser may not read another site's page itself. Returns null when there is none, when the
@@ -16,7 +19,7 @@ export async function findIcon(url: string): Promise<string | null> {
     })
     if (!response.ok) return null
     const answer = (await response.json()) as { icon?: unknown }
-    return typeof answer.icon === 'string' && /^https?:\/\//i.test(answer.icon) && answer.icon.length <= 2000 ? answer.icon : null
+    return typeof answer.icon === 'string' && isIcon(answer.icon) ? answer.icon : null
   } catch {
     return null
   }

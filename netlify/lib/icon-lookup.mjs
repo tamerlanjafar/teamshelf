@@ -11,6 +11,8 @@ import { isIP } from 'node:net'
 const TIMEOUT_MS = 5000
 const MAX_BYTES = 300_000
 const MAX_REDIRECTS = 3
+const MAX_ICON_BYTES = 48_000
+const ICON_TYPES = ['image/png', 'image/x-icon', 'image/vnd.microsoft.icon', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml']
 
 /** Addresses that are not on the public internet: this machine, private networks, link-local, and the like. */
 function isPrivateAddress(address) {
@@ -38,36 +40,64 @@ async function publicUrl(address) {
   return url
 }
 
-/** The start of the page at this address, following a few redirects, each checked like the first address. */
-async function fetchPage(address) {
+/** The answer of the server at this address, following a few redirects, each checked like the first address. */
+async function fetchPublic(address, accept) {
   let url = await publicUrl(address)
   for (let hop = 0; url && hop <= MAX_REDIRECTS; hop++) {
     const response = await fetch(url, {
       redirect: 'manual',
       signal: AbortSignal.timeout(TIMEOUT_MS),
-      headers: { accept: 'text/html', 'user-agent': 'Mozilla/5.0 (compatible; Linkboard icon lookup)' },
+      headers: { accept, 'user-agent': 'Mozilla/5.0 (compatible; Linkboard icon lookup)' },
     })
     const next = response.headers.get('location')
     if (response.status >= 300 && response.status < 400 && next) {
       url = await publicUrl(new URL(next, url).href)
       continue
     }
-    if (!response.ok || !response.body) return null
-
-    const reader = response.body.getReader()
-    const decoder = new TextDecoder()
-    let html = ''
-    while (html.length < MAX_BYTES) {
-      const { done, value } = await reader.read()
-      if (done) break
-      html += decoder.decode(value, { stream: true })
-      // Icons are declared in the head: no need to read further.
-      if (/<\/head>/i.test(html)) break
-    }
-    reader.cancel().catch(() => {})
-    return { url, html }
+    return response.ok && response.body ? { url, response } : null
   }
   return null
+}
+
+/** The start of the page at this address. */
+async function fetchPage(address) {
+  const answer = await fetchPublic(address, 'text/html')
+  if (!answer) return null
+  const { url, response } = answer
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let html = ''
+  while (html.length < MAX_BYTES) {
+    const { done, value } = await reader.read()
+    if (done) break
+    html += decoder.decode(value, { stream: true })
+    // Icons are declared in the head: no need to read further.
+    if (/<\/head>/i.test(html)) break
+  }
+  reader.cancel().catch(() => {})
+  return { url, html }
+}
+
+/**
+ * A small image as a `data:` address, or null when it is too big, not an image, or can't be fetched.
+ * An https page may not show an image from an http address, so such an icon is kept as a copy.
+ */
+async function inlineImage(address) {
+  const answer = await fetchPublic(address, 'image/*').catch(() => null)
+  if (!answer) return null
+  const type = (answer.response.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase()
+  if (!ICON_TYPES.includes(type)) return null
+  // Read piece by piece, and stop as soon as it is clearly too big.
+  const pieces = []
+  let size = 0
+  for await (const piece of answer.response.body) {
+    size += piece.length
+    if (size > MAX_ICON_BYTES) return null
+    pieces.push(piece)
+  }
+  if (size === 0) return null
+  const bytes = Buffer.concat(pieces)
+  return `data:${type};base64,${bytes.toString('base64')}`
 }
 
 const attribute = (tag, name) => tag.match(new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i'))?.slice(1).find((value) => value !== undefined)
@@ -80,7 +110,10 @@ function rank(rel) {
   return names.some((name) => name.includes('icon')) && !names.includes('mask-icon') ? 3 : -1
 }
 
-/** The icon the page at `address` declares, as a full web address, or null. */
+/**
+ * The icon the page at `address` declares, or null. A full web address, except for an icon
+ * served over plain http: that one comes back as a `data:` copy of the image, when it is small.
+ */
 export async function findIcon(address) {
   const page = await fetchPage(address).catch(() => null)
   if (!page) return null
@@ -98,5 +131,7 @@ export async function findIcon(address) {
     }
   }
   found.sort((a, b) => a.rank - b.rank)
-  return found[0]?.href ?? null
+  const icon = found[0]?.href ?? null
+  if (!icon?.startsWith('http:')) return icon
+  return (await inlineImage(icon)) ?? icon
 }
