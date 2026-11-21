@@ -62,9 +62,8 @@ const without = <Value,>(record: Record<string, Value>, key: string) => Object.f
  * space's, everyone else's is their own and wins over the space's for that card (or the columns).
  *
  * Hiding is always personal. Reordering depends on who drags: the space's admins change the
- * space's order, which everyone follows who hasn't made their own. With personal ordering
- * switched on (see lib/features.ts) everyone else changes their own order, of the groups or
- * of the one group they dragged in. With it off, only the space's admins can drag.
+ * space's order, which everyone follows who hasn't made their own. Everyone else changes their
+ * own order, of the groups or of the one group they dragged in.
  */
 export function BoardActionsProvider({ space, canReorder, children }: { space: Space | null; canReorder: boolean; children: ReactNode }) {
   const ownOrder = useHasOwnOrder()

@@ -7,12 +7,12 @@ import { setState, type MockState, type Tables } from './store'
 const day = (daysAgo: number) => new Date(Date.now() - daysAgo * 86_400_000).toISOString()
 
 const USERS = {
-  alex: { id: 'user-alex', email: 'alex@northwind.io', name: 'Alex Morgan' },
+  alex: { id: 'user-alex', email: 'alex@acme.com', name: 'Alex Morgan' },
   alexLumen: { id: 'user-alex-lumen', email: 'alex.morgan@lumenlabs.dev', name: 'Alex Morgan' },
   newcomer: { id: 'user-newcomer', email: 'sam.rivera@gmail.com', name: '' },
-  sam: { id: 'user-sam', email: 'sam@northwind.io', name: 'Sam Lee' },
-  priya: { id: 'user-priya', email: 'priya@northwind.io', name: 'Priya Nair' },
-  mina: { id: 'user-mina', email: 'mina@northwind.io', name: 'Mina Park' },
+  sam: { id: 'user-sam', email: 'sam@acme.com', name: 'Sam Lee' },
+  priya: { id: 'user-priya', email: 'priya@acme.com', name: 'Priya Nair' },
+  mina: { id: 'user-mina', email: 'mina@acme.com', name: 'Mina Park' },
 }
 
 function member(id: string, org_id: string, email: string, name: string, role: Role, user_id: string | null, daysAgo: number, extra: Partial<Member> = {}): Member {
@@ -55,10 +55,10 @@ function link(org_id: string, space_id: string, group_id: string | null, title: 
   }
 }
 
-/** Northwind (the main organization), Lumen Labs (Alex's other email), Orbit (open to @lumenlabs.dev). */
+/** Acme (the main organization), Lumen Labs (Alex's other email), Orbit (open to @lumenlabs.dev). */
 function world(): Tables {
   linkCount = 0
-  const nw = 'org-northwind'
+  const nw = 'org-acme'
   const lumen = 'org-lumen'
   const dev = 'space-nw-dev'
   const design = 'space-nw-design'
@@ -101,12 +101,32 @@ function world(): Tables {
     link('org-orbit', 'space-orbit-eng', 'g-orbit-tools', 'Issue tracker', 'https://linear.app', { created_by: 'm-orbit-owner' }),
     link('org-orbit', 'space-orbit-eng', 'g-orbit-tools', 'Team wiki', 'https://www.notion.so', { created_by: 'm-orbit-owner' }),
     link('org-orbit', 'space-orbit-eng', 'g-orbit-tools', 'Design files', 'https://www.figma.com', { created_by: 'm-orbit-owner' }),
+    // More of Development, so its board is full: groups of different lengths, in columns.
+    link(nw, dev, 'g-cloud', 'AWS console', 'https://aws.amazon.com'),
+    link(nw, dev, 'g-cloud', 'Cloudflare', 'https://www.cloudflare.com'),
+    link(nw, dev, 'g-cloud', 'Terraform Cloud', 'https://www.terraform.io'),
+    link(nw, dev, 'g-data-dev', 'Neon console', 'https://neon.tech'),
+    link(nw, dev, 'g-data-dev', 'Redis Insight', 'https://redis.io'),
+    link(nw, dev, 'g-tools', 'Postman workspace', 'https://www.postman.com'),
+    link(nw, dev, 'g-tools', 'Linear', 'https://linear.app'),
+    link(nw, dev, 'g-tools', 'Slack', 'https://slack.com'),
+    link(nw, dev, 'g-tools', 'Figma', 'https://www.figma.com'),
+    link(nw, dev, 'g-tools', 'Notion', 'https://www.notion.so'),
+    link(nw, dev, 'g-analytics', 'PostHog', 'https://posthog.com'),
+    link(nw, dev, 'g-analytics', 'Mixpanel', 'https://mixpanel.com'),
+    link(nw, dev, 'g-analytics', 'Plausible', 'https://plausible.io'),
+    link(nw, dev, 'g-security', '1Password', 'https://1password.com'),
+    link(nw, dev, 'g-security', 'Snyk', 'https://snyk.io'),
+    link(nw, dev, 'g-security', 'Access policy', '/file?key=mock/security.pdf', { kind: 'file', file_key: 'mock/security.pdf', file_name: 'access-policy.pdf', file_size: 840_000, file_type: 'application/pdf', visibility: 'admins' }),
+    link(nw, dev, 'g-docs', 'Runbooks', 'https://www.notion.so'),
+    link(nw, dev, 'g-docs', 'Release notes', 'https://github.com'),
+    link(nw, dev, 'g-monitoring', 'Datadog', 'https://www.datadoghq.com'),
   ]
 
   return {
     users: Object.values(USERS),
     orgs: [
-      { id: nw, slug: 'northwind', name: 'Northwind', allowed_domains: ['northwind.io'] },
+      { id: nw, slug: 'acme', name: 'Acme', allowed_domains: ['acme.com'] },
       { id: lumen, slug: 'lumen', name: 'Lumen Labs', allowed_domains: [] },
       { id: 'org-orbit', slug: 'orbit', name: 'Orbit', allowed_domains: ['lumenlabs.dev'] },
     ],
@@ -116,7 +136,7 @@ function world(): Tables {
       member('m-nw-priya', nw, USERS.priya.email, USERS.priya.name, 'member', USERS.priya.id, 60),
       member('m-nw-mina', nw, USERS.mina.email, USERS.mina.name, 'member', USERS.mina.id, 30),
       member('m-nw-jo', nw, 'jo@studio.design', '', 'member', null, 2),
-      // Invited to Design by Mina, from a domain Northwind doesn't let in: waits for an admin.
+      // Invited to Design by Mina, from a domain Acme doesn't let in: waits for an admin.
       member('m-nw-taylor', nw, 'taylor@freelance.example', '', 'member', null, 1, { approved: false, invited_by: 'm-nw-mina' }),
       member('m-lumen-alex', lumen, USERS.alexLumen.email, USERS.alexLumen.name, 'admin', USERS.alexLumen.id, 50),
       member('m-orbit-owner', 'org-orbit', 'owner@orbit.example', 'Robin Vale', 'admin', null, 40),
@@ -130,7 +150,7 @@ function world(): Tables {
       space('space-orbit-eng', 'org-orbit', 'engineering', 'Engineering', 'rocket', 'purple', 1),
     ],
     space_members: [
-      // Alex created Northwind and its spaces, so runs them; others run the ones given to them.
+      // Alex created Acme and its spaces, so runs them; others run the ones given to them.
       { space_id: dev, member_id: 'm-nw-alex', role: 'admin' },
       { space_id: design, member_id: 'm-nw-alex', role: 'admin' },
       { space_id: data, member_id: 'm-nw-alex', role: 'admin' },
@@ -147,6 +167,11 @@ function world(): Tables {
       group('g-monitoring', nw, dev, 'Monitoring', 'green', 2),
       group('g-cicd', nw, dev, 'CI / CD', 'purple', 3),
       group('g-docs', nw, dev, 'Docs', 'orange', 4),
+      group('g-cloud', nw, dev, 'Cloud', 'yellow', 5),
+      group('g-data-dev', nw, dev, 'Databases', 'teal', 6),
+      group('g-tools', nw, dev, 'Tools', 'indigo', 7),
+      group('g-analytics', nw, dev, 'Analytics', 'pink', 8),
+      group('g-security', nw, dev, 'Security', 'red', 9),
       group('g-figma', nw, design, 'Figma', 'pink', 1),
       group('g-assets', nw, design, 'Assets', 'yellow', 2),
       group('g-dash', nw, data, 'Dashboards', 'teal', 1),
@@ -179,11 +204,11 @@ interface Setup {
   last?: string
 }
 
-const northwindAccount: SavedAccount = { userId: USERS.alex.id, email: USERS.alex.email, name: USERS.alex.name, slots: ['northwind'], orgs: [{ slug: 'northwind', name: 'Northwind' }] }
+const acmeAccount: SavedAccount = { userId: USERS.alex.id, email: USERS.alex.email, name: USERS.alex.name, slots: ['acme'], orgs: [{ slug: 'acme', name: 'Acme' }] }
 const lumenAccount: SavedAccount = { userId: USERS.alexLumen.id, email: USERS.alexLumen.email, name: USERS.alexLumen.name, slots: ['lumen'], orgs: [{ slug: 'lumen', name: 'Lumen Labs' }] }
 
 /**
- * Alex's role in Northwind. As an admin, Alex also runs its spaces. As a member, Alex runs none,
+ * Alex's role in Acme. As an admin, Alex also runs its spaces. As a member, Alex runs none,
  * or only Development, and the spaces are run by others: Sam and Mina, with Sam as the admin.
  */
 function withRole(db: Tables, role: Role, spaceAdmin = false) {
@@ -204,16 +229,16 @@ export interface Scenario {
   id: string
   title: string
   description: string
-  /** Whether Alex's role in Northwind can be changed from the toolbar. */
+  /** Whether Alex's role in Acme can be changed from the toolbar. */
   roles: boolean
   build: (role: Role) => Setup
 }
 
-const inNorthwind = (role: Role): Setup => ({
+const inAcme = (role: Role): Setup => ({
   db: withRole(world(), role),
-  sessions: [{ userId: USERS.alex.id, slots: ['northwind'] }],
-  accounts: [northwindAccount],
-  last: 'northwind',
+  sessions: [{ userId: USERS.alex.id, slots: ['acme'] }],
+  accounts: [acmeAccount],
+  last: 'acme',
 })
 
 export const SCENARIOS: Scenario[] = [
@@ -225,32 +250,32 @@ export const SCENARIOS: Scenario[] = [
     build: () => ({ db: world(), sessions: [], accounts: [] }),
   },
   {
-    id: 'northwind',
+    id: 'acme',
     title: 'One organization',
-    description: 'Alex is signed in to Northwind only.',
+    description: 'Alex is signed in to Acme only.',
     roles: true,
-    build: inNorthwind,
+    build: inAcme,
   },
   {
     id: 'space-admin',
     title: 'Admin of one space',
-    description: 'Alex is a member of Northwind and an admin of Development and Leadership.',
+    description: 'Alex is a member of Acme and an admin of Development and Leadership.',
     roles: false,
-    build: () => ({ ...inNorthwind('member'), db: withRole(world(), 'member', true) }),
+    build: () => ({ ...inAcme('member'), db: withRole(world(), 'member', true) }),
   },
   {
     id: 'several',
     title: 'Two emails',
-    description: 'Northwind with alex@northwind.io, Lumen Labs with alex.morgan@lumenlabs.dev. That email may also join Orbit.',
+    description: 'Acme with alex@acme.com, Lumen Labs with alex.morgan@lumenlabs.dev. That email may also join Orbit.',
     roles: true,
     build: (role) => ({
       db: withRole(world(), role),
       sessions: [
-        { userId: USERS.alex.id, slots: ['northwind'] },
+        { userId: USERS.alex.id, slots: ['acme'] },
         { userId: USERS.alexLumen.id, slots: ['lumen'] },
       ],
-      accounts: [northwindAccount, lumenAccount],
-      last: 'northwind',
+      accounts: [acmeAccount, lumenAccount],
+      last: 'acme',
     }),
   },
   {
@@ -277,20 +302,20 @@ export const SCENARIOS: Scenario[] = [
   {
     id: 'no-access',
     title: 'Not a member',
-    description: "alex@northwind.io opens Orbit's address, where it isn't a member and its domain isn't let in.",
+    description: "alex@acme.com opens Orbit's address, where it isn't a member and its domain isn't let in.",
     roles: false,
-    build: () => ({ ...inNorthwind('admin'), sessions: [{ userId: USERS.alex.id, slots: ['northwind', 'orbit'] }] }),
+    build: () => ({ ...inAcme('admin'), sessions: [{ userId: USERS.alex.id, slots: ['acme', 'orbit'] }] }),
   },
   {
     id: 'empty-org',
     title: 'Empty organization',
-    description: 'Northwind without any space yet.',
+    description: 'Acme without any space yet.',
     roles: false,
     build: () => {
-      const setup = inNorthwind('admin')
-      setup.db.spaces = setup.db.spaces.filter((one) => one.org_id !== 'org-northwind')
-      setup.db.groups = setup.db.groups.filter((one) => one.org_id !== 'org-northwind')
-      setup.db.links = setup.db.links.filter((one) => one.org_id !== 'org-northwind')
+      const setup = inAcme('admin')
+      setup.db.spaces = setup.db.spaces.filter((one) => one.org_id !== 'org-acme')
+      setup.db.groups = setup.db.groups.filter((one) => one.org_id !== 'org-acme')
+      setup.db.links = setup.db.links.filter((one) => one.org_id !== 'org-acme')
       setup.db.space_members = setup.db.space_members.filter((row) => !row.space_id.startsWith('space-nw-'))
       return setup
     },
@@ -298,13 +323,13 @@ export const SCENARIOS: Scenario[] = [
   {
     id: 'empty-space',
     title: 'Empty space',
-    description: 'Northwind with a single space and nothing in it yet.',
+    description: 'Acme with a single space and nothing in it yet.',
     roles: false,
     build: () => {
-      const setup = inNorthwind('admin')
-      setup.db.spaces = setup.db.spaces.filter((one) => one.org_id !== 'org-northwind' || one.slug === 'development')
-      setup.db.groups = setup.db.groups.filter((one) => one.org_id !== 'org-northwind')
-      setup.db.links = setup.db.links.filter((one) => one.org_id !== 'org-northwind')
+      const setup = inAcme('admin')
+      setup.db.spaces = setup.db.spaces.filter((one) => one.org_id !== 'org-acme' || one.slug === 'development')
+      setup.db.groups = setup.db.groups.filter((one) => one.org_id !== 'org-acme')
+      setup.db.links = setup.db.links.filter((one) => one.org_id !== 'org-acme')
       return setup
     },
   },

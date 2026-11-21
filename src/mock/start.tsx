@@ -16,7 +16,7 @@ import { Toolbar } from './toolbar'
  */
 export function startMock(): boolean {
   installMockFetch()
-  if (!hasState()) applyScenario('northwind')
+  if (!hasState()) applyScenario('acme')
 
   const { pathname } = window.location
   const go = pathname.match(/^\/__screens\/go\/([^/]+)/)

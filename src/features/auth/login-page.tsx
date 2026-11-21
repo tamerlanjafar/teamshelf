@@ -118,6 +118,13 @@ export function LoginPage({ linkExpired = false, returnPath, intent }: { linkExp
                 setEmail(event.target.value)
                 setInvalid(false)
               }}
+              // Enter sends the form itself: a password manager's menu on the field can keep
+              // the browser's own Enter from reaching the form.
+              onKeyDown={(event) => {
+                if (event.key !== 'Enter' || event.nativeEvent.isComposing) return
+                event.preventDefault()
+                event.currentTarget.form?.requestSubmit()
+              }}
               className={AUTH_INPUT}
             />
             {error && <FieldError>{error}</FieldError>}
@@ -157,7 +164,17 @@ function CheckEmail({ email, returnPath, onChangeEmail }: { email: string; retur
         </>
       }
     >
-      <p className="text-quiet m-0 text-[14px] tabular-nums">{waiting ? `Can't find it? Check your spam folder, or resend in ${left}s.` : "Can't find it? Check your spam folder, or send it again."}</p>
+      {waiting ? (
+        <p className="text-quiet m-0 text-[14px]">
+          Can't find it? Check your spam folder, or resend in{' '}
+          {/* The countdown stands out from the sentence, so it reads as a timer. */}
+          <span className="text-brand inline-flex min-w-[46px] items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--brand)_11%,transparent)] px-2 py-px text-[13px] font-semibold tabular-nums">
+            0:{String(left).padStart(2, '0')}
+          </span>
+        </p>
+      ) : (
+        <p className="text-quiet m-0 text-[14px]">Can't find it? Check your spam folder, or send it again.</p>
+      )}
       {!waiting && (
         <Button variant="outline" size="lg" className={AUTH_SECONDARY} disabled={resend.isPending} onClick={() => resend.mutate(undefined, { onSuccess: restart })}>
           {resend.isPending ? 'Sending…' : 'Resend email'}

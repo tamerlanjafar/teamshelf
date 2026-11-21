@@ -57,7 +57,7 @@ export const SCREENS: ScreenGroup[] = [
       { id: 'check-email', title: 'Check your email', note: 'The toolbar opens the link.', scenario: 'signed-out', path: '/login', act: () => sendSignIn('sam.rivera@gmail.com') },
       // Opened the way Neon Auth sends someone whose link no longer works. The app takes the error out of the address.
       { id: 'link-expired', title: 'Link expired', scenario: 'signed-out', path: '/login?error=INVALID_TOKEN', shownAt: '/login' },
-      { id: 'login-create', title: 'Create: which email', scenario: 'northwind', path: '/login?intent=create' },
+      { id: 'login-create', title: 'Create: which email', scenario: 'acme', path: '/login?intent=create' },
     ],
   },
   {
@@ -73,20 +73,20 @@ export const SCREENS: ScreenGroup[] = [
   {
     title: 'Creating an organization',
     screens: [
-      { id: 'create', title: 'Name and address', scenario: 'northwind', path: '/new' },
+      { id: 'create', title: 'Name and address', scenario: 'acme', path: '/new' },
       { id: 'create-denied', title: "Create: email can't create", scenario: 'newcomer', path: '/new', shownAt: '/login?intent=create' },
-      { id: 'empty-org', title: 'Organization without spaces', scenario: 'empty-org', path: '/northwind', shownAt: '/northwind/none' },
-      { id: 'empty-space', title: 'Space without groups', scenario: 'empty-space', path: '/northwind/development' },
+      { id: 'empty-org', title: 'Organization without spaces', scenario: 'empty-org', path: '/acme', shownAt: '/acme/none' },
+      { id: 'empty-space', title: 'Space without groups', scenario: 'empty-space', path: '/acme/development' },
     ],
   },
   {
     title: 'Board',
     screens: [
-      { id: 'board', title: 'Board, as an organization admin', scenario: 'northwind', role: 'admin', path: '/northwind/development' },
-      { id: 'board-space-admin', title: 'Board, as an admin of this space', scenario: 'space-admin', path: '/northwind/development' },
-      { id: 'board-member', title: 'Board, as a member', note: 'No private spaces, Suggest instead of Add.', scenario: 'northwind', role: 'member', path: '/northwind/development' },
-      { id: 'private-space', title: 'Private space', scenario: 'northwind', path: '/northwind/leadership' },
-      { id: 'switcher', title: 'Organization menu, two emails', scenario: 'several', path: '/northwind/development', act: async () => {
+      { id: 'board', title: 'Board, as an organization admin', scenario: 'acme', role: 'admin', path: '/acme/development' },
+      { id: 'board-space-admin', title: 'Board, as an admin of this space', scenario: 'space-admin', path: '/acme/development' },
+      { id: 'board-member', title: 'Board, as a member', note: 'No private spaces, Suggest instead of Add.', scenario: 'acme', role: 'member', path: '/acme/development' },
+      { id: 'private-space', title: 'Private space', scenario: 'acme', path: '/acme/leadership' },
+      { id: 'switcher', title: 'Organization menu, two emails', scenario: 'several', path: '/acme/development', act: async () => {
           ;(await element<HTMLButtonElement>('[aria-label$="Switch organization"]')).click()
           await element('[role="menu"]')
         },
@@ -97,13 +97,13 @@ export const SCREENS: ScreenGroup[] = [
   {
     title: 'Organization pages',
     screens: [
-      { id: 'requests', title: 'Suggestions, as a reviewer', scenario: 'northwind', path: '/northwind/requests' },
-      { id: 'requests-member', title: 'Suggestions, as a member', scenario: 'northwind', role: 'member', path: '/northwind/requests' },
-      { id: 'team', title: 'Team', note: 'With an invitation waiting for approval.', scenario: 'northwind', path: '/northwind/team' },
-      { id: 'org-settings', title: 'Organization settings', scenario: 'northwind', path: '/northwind/settings' },
-      { id: 'space-settings', title: 'Space settings, as Org Admin', scenario: 'northwind', path: '/northwind/development/settings' },
-      { id: 'space-settings-private-member', title: 'Private space settings, as Space Admin', note: 'Not an Org Admin, so they can\'t open it to everyone.', scenario: 'space-admin', path: '/northwind/leadership/settings' },
-      { id: 'space-settings-open-member', title: 'Open space settings, as Space Admin', note: 'Not an Org Admin, so making it private is one-way.', scenario: 'space-admin', path: '/northwind/development/settings' },
+      { id: 'requests', title: 'Suggestions, as a reviewer', scenario: 'acme', path: '/acme/requests' },
+      { id: 'requests-member', title: 'Suggestions, as a member', scenario: 'acme', role: 'member', path: '/acme/requests' },
+      { id: 'team', title: 'Team', note: 'With an invitation waiting for approval.', scenario: 'acme', path: '/acme/team' },
+      { id: 'org-settings', title: 'Organization settings', scenario: 'acme', path: '/acme/settings' },
+      { id: 'space-settings', title: 'Space settings, as Org Admin', scenario: 'acme', path: '/acme/development/settings' },
+      { id: 'space-settings-private-member', title: 'Private space settings, as Space Admin', note: 'Not an Org Admin, so they can\'t open it to everyone.', scenario: 'space-admin', path: '/acme/leadership/settings' },
+      { id: 'space-settings-open-member', title: 'Open space settings, as Space Admin', note: 'Not an Org Admin, so making it private is one-way.', scenario: 'space-admin', path: '/acme/development/settings' },
     ],
   },
 ]

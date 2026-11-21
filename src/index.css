@@ -22,7 +22,6 @@
     --danger: #d5352f;
     --wash: 11%; /* how much of its color the top of a card takes */
     --wash-low: 4%; /* and the rest of it */
-    --glow: 9%; /* the colored light at the top of the page */
     --shadow: 220 30% 20%; /* the color of shadows, as HSL parts */
     --font-rounded: ui-rounded, 'SF Pro Rounded', system-ui, sans-serif;
 }
@@ -42,7 +41,6 @@
     --danger: #ff6b66;
     --wash: 17%;
     --wash-low: 7%;
-    --glow: 13%;
     --shadow: 230 40% 2%;
 }
 
@@ -129,12 +127,7 @@
         font-size: 14px;
         line-height: 1.35;
         -webkit-font-smoothing: antialiased;
-        /* Two soft lights at the top of the page, over the page color. */
-        background:
-            radial-gradient(900px 420px at 12% -8%, color-mix(in srgb, var(--brand) var(--glow), transparent), transparent 70%),
-            radial-gradient(800px 380px at 92% -10%, color-mix(in srgb, #f55494 calc(var(--glow) * 0.7), transparent), transparent 70%),
-            var(--page);
-        background-attachment: fixed;
+        background: var(--page);
     }
 
     button {
@@ -202,4 +195,20 @@
 ::view-transition-new(root) {
     animation: none;
     mix-blend-mode: normal;
+}
+
+/* The front page's small demos (src/features/landing). */
+@keyframes fade-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: none; }
+}
+@keyframes pop-in {
+    from { opacity: 0; transform: scale(0.85); }
+    to { opacity: 1; transform: none; }
+}
+@keyframes blink {
+    50% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+    [class*='animate-['] { animation: none !important; }
 }

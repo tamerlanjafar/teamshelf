@@ -1,3 +1,4 @@
+import { Kbd } from '@/components/app/kbd'
 import { Building2, Check, FlaskConical, ChevronLeft, ChevronRight, ChevronUp, LayoutDashboard, LogIn, Mail, RotateCcw, Search, Settings, SquarePlus } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import type { Role } from '@/lib/types'
@@ -194,7 +195,7 @@ function Panel({ currentId, onClose }: { currentId: string | null; onClose: () =
           autoComplete="off"
           className="h-12 min-w-0 flex-1 bg-transparent text-[14px] outline-none placeholder:text-[color:var(--quiet)]"
         />
-        <kbd className="text-quiet border-line rounded-md border px-1.5 text-[11px] font-medium">esc</kbd>
+        <Kbd keyName="esc" size="small" />
       </form>
 
       <div ref={list} className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-1.5">
@@ -244,7 +245,7 @@ function Panel({ currentId, onClose }: { currentId: string | null; onClose: () =
 
       <div className="border-line bg-well/40 flex flex-col gap-2 border-t p-2.5">
         {scenario?.roles && (
-          <div className="bg-well grid grid-cols-2 rounded-[10px] p-[3px]" role="radiogroup" aria-label="Alex's role in Northwind">
+          <div className="bg-well grid grid-cols-2 rounded-[10px] p-[3px]" role="radiogroup" aria-label="Alex's role in Acme">
             {ROLES.map((role) => (
               <button
                 key={role.value}

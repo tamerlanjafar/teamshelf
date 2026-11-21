@@ -6,7 +6,6 @@ import { useBoardPrefsIfLoaded, useSaveBoardPrefs } from '@/api/prefs'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { useMe, useOrg } from '@/features/org/org-context'
 import { crossTo } from '@/lib/accounts'
-import { FEATURES } from '@/lib/features'
 import { setThemeFrom, useTheme, type ThemeChoice } from '@/lib/theme'
 import { cn } from '@/lib/utils'
 import { OrgBadge } from './org-badge'
@@ -23,10 +22,10 @@ export function OrgSwitcher() {
   const navigate = useNavigate()
   const orgs = useSignedInOrgs()
   const signOut = useSignOutOfOrg()
-  // With personal ordering switched on: a way back from your own order of the groups.
+  // A way back from your own order of the groups.
   const savePrefs = useSaveBoardPrefs()
   const prefs = useBoardPrefsIfLoaded()
-  const ownGroupOrder = FEATURES.personalOrder && prefs.group_order.length > 0
+  const ownGroupOrder = prefs.group_order.length > 0
 
   return (
     <DropdownMenu>

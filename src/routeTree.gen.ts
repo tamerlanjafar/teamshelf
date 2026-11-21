@@ -14,6 +14,7 @@ import { Route as OrgRouteImport } from './routes/$org'
 import { Route as FileRouteImport } from './routes/file'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as NewRouteImport } from './routes/new'
+import { Route as OpenRouteImport } from './routes/open'
 import { Route as OrganizationsRouteImport } from './routes/organizations'
 import { Route as OrgIndexRouteImport } from './routes/$org/index'
 import { Route as OrgRequestsRouteImport } from './routes/$org/requests'
@@ -45,6 +46,11 @@ const LoginRoute = LoginRouteImport.update({
 const NewRoute = NewRouteImport.update({
   id: '/new',
   path: '/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OpenRoute = OpenRouteImport.update({
+  id: '/open',
+  path: '/open',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OrganizationsRoute = OrganizationsRouteImport.update({
@@ -89,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/file': typeof FileRoute
   '/login': typeof LoginRoute
   '/new': typeof NewRoute
+  '/open': typeof OpenRoute
   '/organizations': typeof OrganizationsRoute
   '/$org/requests': typeof OrgRequestsRoute
   '/$org/settings': typeof OrgSettingsRoute
@@ -102,6 +109,7 @@ export interface FileRoutesByTo {
   '/file': typeof FileRoute
   '/login': typeof LoginRoute
   '/new': typeof NewRoute
+  '/open': typeof OpenRoute
   '/organizations': typeof OrganizationsRoute
   '/$org/requests': typeof OrgRequestsRoute
   '/$org/settings': typeof OrgSettingsRoute
@@ -117,6 +125,7 @@ export interface FileRoutesById {
   '/file': typeof FileRoute
   '/login': typeof LoginRoute
   '/new': typeof NewRoute
+  '/open': typeof OpenRoute
   '/organizations': typeof OrganizationsRoute
   '/$org/requests': typeof OrgRequestsRoute
   '/$org/settings': typeof OrgSettingsRoute
@@ -133,6 +142,7 @@ export interface FileRouteTypes {
     | '/file'
     | '/login'
     | '/new'
+    | '/open'
     | '/organizations'
     | '/$org/requests'
     | '/$org/settings'
@@ -146,6 +156,7 @@ export interface FileRouteTypes {
     | '/file'
     | '/login'
     | '/new'
+    | '/open'
     | '/organizations'
     | '/$org/requests'
     | '/$org/settings'
@@ -160,6 +171,7 @@ export interface FileRouteTypes {
     | '/file'
     | '/login'
     | '/new'
+    | '/open'
     | '/organizations'
     | '/$org/requests'
     | '/$org/settings'
@@ -175,6 +187,7 @@ export interface RootRouteChildren {
   FileRoute: typeof FileRoute
   LoginRoute: typeof LoginRoute
   NewRoute: typeof NewRoute
+  OpenRoute: typeof OpenRoute
   OrganizationsRoute: typeof OrganizationsRoute
 }
 
@@ -213,6 +226,13 @@ declare module '@tanstack/react-router' {
       path: '/new'
       fullPath: '/new'
       preLoaderRoute: typeof NewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/open': {
+      id: '/open'
+      path: '/open'
+      fullPath: '/open'
+      preLoaderRoute: typeof OpenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/organizations': {
@@ -293,6 +313,7 @@ const rootRouteChildren: RootRouteChildren = {
   FileRoute: FileRoute,
   LoginRoute: LoginRoute,
   NewRoute: NewRoute,
+  OpenRoute: OpenRoute,
   OrganizationsRoute: OrganizationsRoute,
 }
 export const routeTree = rootRouteImport

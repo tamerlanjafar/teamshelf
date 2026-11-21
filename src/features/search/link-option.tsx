@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { Favicon } from '@/features/board/favicon'
 import { FileIcon } from '@/features/board/file-icon'
 import type { Link } from '@/lib/types'
+import { Kbd } from '@/components/app/kbd'
 import { cn } from '@/lib/utils'
 
 // The parts the two link menus share (the board search's "Recent" list and the command menu),
@@ -54,18 +55,18 @@ export const MenuLabel = ({ children }: { children: ReactNode }) => <div classNa
 /** The keys, under a list. */
 export function MenuKeys({ className }: { className?: string }) {
   return (
-    <div className={cn('text-quiet border-line flex flex-wrap items-center gap-x-4 gap-y-1 border-t px-3.5 py-2 text-[12px] max-sm:hidden [&_kbd]:h-[18px] [&_kbd]:min-w-[18px] [&_kbd]:px-1 [&_kbd]:text-[10.5px]', className)}>
+    <div className={cn('text-quiet border-line flex flex-wrap items-center gap-x-4 gap-y-1 border-t px-3.5 py-2 text-[12px] max-sm:hidden', className)}>
       <span className="flex items-center gap-1.5">
-        <kbd>↑</kbd>
-        <kbd>↓</kbd>
+        <Kbd keyName="up" size="small" />
+        <Kbd keyName="down" size="small" />
         choose
       </span>
       <span className="flex items-center gap-1.5">
-        <kbd>↵</kbd>
+        <Kbd keyName="enter" size="small" />
         open
       </span>
       <span className="ml-auto flex items-center gap-1.5">
-        <kbd>esc</kbd>
+        <Kbd keyName="esc" size="small" />
         close
       </span>
     </div>

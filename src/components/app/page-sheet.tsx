@@ -1,13 +1,10 @@
 import type { ReactNode } from 'react'
-import { useSpaceParam } from '@/features/spaces/current-space'
-import { cn } from '@/lib/utils'
 
 /** The layout of the pages beside the board: a narrow column with a big title. The sidebar is the way back. */
 export function PageSheet({ title, lead, action, children }: { title: string; lead?: ReactNode; /** The page's main action, at the right of its title. */ action?: ReactNode; children: ReactNode }) {
-  // Pages of the organization (Team, Suggestions, settings) have no top bar on wide screens, so the title takes its place.
-  const underBar = Boolean(useSpaceParam())
+  // Pages beside the board have no top bar on wide screens, so the title takes its place, at the same height on each.
   return (
-    <main className={cn('mx-auto w-full max-w-[760px] min-w-0 px-4 pt-1 pb-14 sm:px-5', !underBar && 'md:pt-10')}>
+    <main className="mx-auto w-full max-w-[760px] min-w-0 px-4 pt-1 pb-14 sm:px-5 md:pt-10">
       <div className="mt-1.5 flex flex-wrap items-center justify-between gap-3">
         <h1 className="m-0 text-[26px] leading-[1.15] font-[650] tracking-[-0.02em] text-balance break-words [font-family:var(--font-rounded)] sm:text-[30px]">{title}</h1>
         {action}

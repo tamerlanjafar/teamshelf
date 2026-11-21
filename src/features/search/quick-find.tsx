@@ -9,6 +9,7 @@ import { useCurrentSpaceIfLoaded } from '@/features/spaces/current-space'
 import { colorValue } from '@/lib/colors'
 import { withoutGroupName } from '@/lib/names'
 import type { Group, Link } from '@/lib/types'
+import { Kbd } from '@/components/app/kbd'
 import { LinkOption, MenuKeys, MenuLabel, type LinkChoice } from './link-option'
 import { useRecordOpen } from './use-record-open'
 
@@ -153,7 +154,7 @@ export function QuickFind() {
       />
       {/* The shortcut, while the field isn't in use, and an arrow that says (and toggles) the list. */}
       <span className="absolute right-1.5 flex items-center gap-1">
-        <kbd className="pointer-events-none max-sm:hidden [.peer:focus~span_&]:hidden">/</kbd>
+        <Kbd keyName="slash" className="pointer-events-none max-sm:hidden [.peer:focus~span_&]:hidden" />
         <button
           type="button"
           tabIndex={-1}

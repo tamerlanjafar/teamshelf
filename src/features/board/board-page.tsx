@@ -15,7 +15,6 @@ import { NewGroupDialog } from '@/features/spaces/new-group-dialog'
 import { NewSpaceDialog } from '@/features/spaces/new-space-dialog'
 import { SpaceLogo } from '@/features/spaces/space-logo'
 import { COLORS } from '@/lib/colors'
-import { FEATURES } from '@/lib/features'
 import type { Link, Space } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { BoardActionsProvider } from './board-actions'
@@ -40,7 +39,6 @@ interface BoardState {
  */
 export function BoardPage({ view, onViewChange }: { view: BoardView; onViewChange: (view: BoardView) => void }) {
   const space = useCurrentSpaceIfLoaded()
-  const { isSpaceAdmin } = usePermissions()
 
   // The board shows everything: the search at the top finds and opens a link instead of filtering.
   const filter: BoardFilter = { query: '' }
@@ -50,7 +48,7 @@ export function BoardPage({ view, onViewChange }: { view: BoardView; onViewChang
     view,
     onViewChange,
   }
-  const canReorder = view === 'board' && !isFiltering(filter) && (isSpaceAdmin(space?.id) || FEATURES.personalOrder)
+  const canReorder = view === 'board' && !isFiltering(filter)
 
   return (
     <BoardActionsProvider space={space} canReorder={canReorder}>
