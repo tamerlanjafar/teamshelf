@@ -33,7 +33,9 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
 
-# Built files have a hash in their name, so they can be cached for good.
+# Built files have a hash of their content in their name (scripts, styles, and the front page's
+# screenshots, src/features/landing/shots.ts), so they can be cached for good: a changed file is a
+# new address. Keep anything that changes out of public/ under a fixed name for long.
 [[headers]]
   for = "/assets/*"
   [headers.values]
@@ -44,8 +46,3 @@
   for = "/*.html"
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
-
-[[headers]]
-  for = "/landing/*"
-  [headers.values]
-    Cache-Control = "public, max-age=604800, stale-while-revalidate=86400"

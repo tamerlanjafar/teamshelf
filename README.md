@@ -2,7 +2,7 @@
 
 Your team's links and files, in one place, at [teamshelf.app](https://teamshelf.app). An organization is split into spaces, one per team (Development, Design, Data…). In each space, groups of links and files are cards in a Pinterest-style grid.
 
-- **Front page.** teamshelf.app is a landing page for everyone, with screenshots from mock mode (`public/landing/`, light and dark). Signed out it offers signing in and creating an organization; signed in on this browser, opening the app at the organization used last.
+- **Front page.** teamshelf.app is a landing page for everyone, with screenshots from mock mode (`src/features/landing/shots/`, light and dark; the build names each by a hash of its content, so a new one is never hidden behind a cached copy). Signed out it offers signing in and creating an organization; signed in on this browser, opening the app at the organization used last.
 - **Organizations.** Only emails listed in the database can create one (see [Who can create organizations](#who-can-create-organizations)). Everything of an organization lives under its address, `/<org>/`, and a space's board under `/<org>/<space>`. One sign-in covers every organization an email is in.
 - **A sidebar per organization.** Inside an organization there are only its spaces (the ones you can see), its pages (Suggestions, Team, Organization settings) and, at the bottom, the organization switcher: the organizations signed in on this browser, your theme, and signing out of this organization.
 - **Sign-in by email link.** No passwords.

@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { Bento } from './bento'
 import { Reveal } from './motion'
 import { Showcase } from './showcase'
+import { shot } from './shots'
 
 /** Whether this browser is signed in to an organization: then the page offers to open the app. */
 const signedIn = () => {
@@ -165,12 +166,12 @@ function Shot({ name, alt, className, eager = false }: { name: string; alt: stri
   return (
     <>
       <picture className="contents dark:hidden">
-        <source type="image/avif" srcSet={`/landing/${name}-light.avif`} />
-        <img src={`/landing/${name}-light.webp`} alt={alt} className={cn('block w-full dark:hidden', className)} loading={loading} decoding="async" />
+        <source type="image/avif" srcSet={shot(`${name}-light.avif`)} />
+        <img src={shot(`${name}-light.webp`)} alt={alt} className={cn('block w-full dark:hidden', className)} loading={loading} decoding="async" />
       </picture>
       <picture className="hidden dark:contents">
-        <source type="image/avif" srcSet={`/landing/${name}-dark.avif`} />
-        <img src={`/landing/${name}-dark.webp`} alt={alt} className={cn('hidden w-full dark:block', className)} loading={loading} decoding="async" />
+        <source type="image/avif" srcSet={shot(`${name}-dark.avif`)} />
+        <img src={shot(`${name}-dark.webp`)} alt={alt} className={cn('hidden w-full dark:block', className)} loading={loading} decoding="async" />
       </picture>
     </>
   )
@@ -183,18 +184,18 @@ function Shot({ name, alt, className, eager = false }: { name: string; alt: stri
 function HeroShot() {
   const alt = "A team's space in Teamshelf: the spaces and the organization switcher in a sidebar, and cards of links grouped by topic."
   const sizes = '(min-width: 1200px) 1130px, calc(100vw - 48px)'
-  const wide = (theme: string, type: string) => `/landing/board-${theme}-1200.${type} 1200w, /landing/board-${theme}-2240.${type} 2240w`
+  const wide = (theme: string, type: string) => `${shot(`board-${theme}-1200.${type}`)} 1200w, ${shot(`board-${theme}-2240.${type}`)} 2240w`
   return (
     <picture>
       {/* On a phone: the app as a phone shows it. AVIF where the browser takes it, WebP otherwise. */}
-      <source media="(max-width: 639px) and (prefers-color-scheme: dark)" type="image/avif" srcSet="/landing/board-dark-phone.avif" />
-      <source media="(max-width: 639px) and (prefers-color-scheme: dark)" type="image/webp" srcSet="/landing/board-dark-phone.webp" />
-      <source media="(max-width: 639px)" type="image/avif" srcSet="/landing/board-light-phone.avif" />
-      <source media="(max-width: 639px)" type="image/webp" srcSet="/landing/board-light-phone.webp" />
+      <source media="(max-width: 639px) and (prefers-color-scheme: dark)" type="image/avif" srcSet={shot("board-dark-phone.avif")} />
+      <source media="(max-width: 639px) and (prefers-color-scheme: dark)" type="image/webp" srcSet={shot("board-dark-phone.webp")} />
+      <source media="(max-width: 639px)" type="image/avif" srcSet={shot("board-light-phone.avif")} />
+      <source media="(max-width: 639px)" type="image/webp" srcSet={shot("board-light-phone.webp")} />
       <source media="(prefers-color-scheme: dark)" type="image/avif" srcSet={wide('dark', 'avif')} sizes={sizes} />
       <source media="(prefers-color-scheme: dark)" type="image/webp" srcSet={wide('dark', 'webp')} sizes={sizes} />
       <source type="image/avif" srcSet={wide('light', 'avif')} sizes={sizes} />
-      <img src="/landing/board-light-1200.webp" srcSet={wide('light', 'webp')} sizes={sizes} width={2240} height={1400} alt={alt} fetchPriority="high" decoding="async" className="block h-auto w-full" />
+      <img src={shot("board-light-1200.webp")} srcSet={wide('light', 'webp')} sizes={sizes} width={2240} height={1400} alt={alt} fetchPriority="high" decoding="async" className="block h-auto w-full" />
     </picture>
   )
 }

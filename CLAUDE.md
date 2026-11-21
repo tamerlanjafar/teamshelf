@@ -38,6 +38,7 @@ Tests find things the way people do: by role and visible name (`getByRole('butto
 
 ## Other rules
 
+- Images and other files that change go in `src/` and are imported (Vite names them by a hash of their content, served from `/assets/` with a year-long cache, see `netlify.toml`). `public/` is only for files that must keep a fixed address (favicon, `og.png`, `robots.txt`): browsers and Cloudflare may keep an old copy of a changed file there.
 - Dev server ports come from `~/Documents/DEV_PORTS.md`: 3011 dev, 3012 mock mode, 3013 build preview, 3014 end-to-end tests.
 - Example data is made up (Acme, Lumen Labs, Orbit; `example.com` addresses). Never real company names or emails, in the app, tests or screenshots.
 - Database changes are migrations in `db/migrations`, applied with `pnpm db:migrate` only when asked.
