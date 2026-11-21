@@ -400,7 +400,7 @@ function DocumentForm({ space, start, onClose }: { space: Space; start: { groupN
   const invalid = Boolean(errors.title || errors.group || errors.text)
   const started = Boolean(title.trim() || markdown.trim())
 
-  const close = () => (started && !saving ? confirm({ title: 'Discard this document?', description: "It hasn't been saved. Everything you wrote will be lost.", confirmLabel: 'Discard', onConfirm: onClose }) : onClose())
+  const close = () => (started && !saving ? confirm({ title: 'Discard this document?', description: 'Any unsaved content will be permanently lost.', confirmLabel: 'Discard', onConfirm: onClose }) : onClose())
 
   async function submit() {
     setAttempted(true)

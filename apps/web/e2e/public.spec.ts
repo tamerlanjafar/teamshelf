@@ -31,7 +31,7 @@ test.describe('front page', () => {
 
   test('every feature is named', async ({ page }) => {
     await goto(page, '/')
-    for (const feature of ['Press / and it', 'Anyone suggests, admins decide', 'The right people in every space', 'A space for every team', 'Links for a few', 'Files too', 'Several organizations', 'Your own view', 'Shape the board'])
+    for (const feature of ['Press / and it', 'Open, read and edit, right on the shelf', 'Anyone suggests, admins decide', 'The right people in every space', 'A space for every team', 'Links for a few', 'Files too', 'Several organizations', 'Your own view', 'Shape the board'])
       await expect(page.getByRole('heading', { name: new RegExp(feature) })).toHaveCount(1)
   })
 
@@ -78,6 +78,13 @@ test.describe('search engines', () => {
       await expect(tag('meta[name="twitter:card"]')).toHaveAttribute('content', 'summary_large_image')
     })
   }
+
+  test('the front page links to the source code', async ({ page }) => {
+    await goto(page, '/')
+    const links = page.getByRole('link', { name: /GitHub|Open source/ })
+    await expect(links.first()).toHaveAttribute('href', 'https://github.com/tamerlanjafar/teamshelf')
+    await expect(page.getByRole('contentinfo').getByRole('link', { name: 'Open source, MIT licensed' })).toHaveAttribute('rel', /noopener/)
+  })
 
   test('the front page describes the product as structured data', async ({ page }) => {
     await goto(page, '/')

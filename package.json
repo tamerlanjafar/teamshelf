@@ -4,6 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tamerlanjafar/teamshelf.git"
+  },
   "scripts": {
     "dev": "turbo run dev",
     "dev:web": "pnpm --filter @teamshelf/web dev",

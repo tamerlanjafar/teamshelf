@@ -7,6 +7,8 @@ export interface Confirmation {
   description: ReactNode
   confirmLabel: string
   onConfirm: () => void
+  /** Something that removes or discards (the default), or a change that loses nothing. */
+  tone?: 'danger' | 'plain'
 }
 
 const ConfirmContext = createContext<((confirmation: Confirmation) => void) | null>(null)
@@ -40,7 +42,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
 }
 
 /** A question with Cancel and the action. A click outside, or Escape, cancels it. */
-function ConfirmDialog({ open, onOpenChange, title, description, confirmLabel, onConfirm }: Confirmation & { open: boolean; onOpenChange: (open: boolean) => void }) {
+function ConfirmDialog({ open, onOpenChange, title, description, confirmLabel, onConfirm, tone = 'danger' }: Confirmation & { open: boolean; onOpenChange: (open: boolean) => void }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent showCloseButton={false} className="rounded-xl sm:max-w-md">
@@ -53,7 +55,7 @@ function ConfirmDialog({ open, onOpenChange, title, description, confirmLabel, o
             Cancel
           </Button>
           <Button
-            variant="destructive"
+            variant={tone === 'danger' ? 'destructive' : 'default'}
             onClick={() => {
               onConfirm()
               onOpenChange(false)

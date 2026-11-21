@@ -20,6 +20,8 @@ Nobody can create these accounts for you: each asks you to confirm an email and 
 ## 2. Run it
 
 ```bash
+git clone https://github.com/tamerlanjafar/teamshelf.git
+cd teamshelf
 pnpm install
 pnpm cloud
 ```

@@ -5,7 +5,7 @@
 // group's links (`links.position`). Anyone can rearrange their own board. What they changed is
 // kept in their preferences and wins over the default, for them only.
 
-import type { BoardPrefs } from '@/lib/types'
+import type { BoardPrefs, CardSizes, Space } from '@/lib/types'
 
 /** The parts of a person's preferences that arrange a board. Hiding is not one of them. */
 export type Arrangement = Pick<BoardPrefs, 'group_order' | 'group_layout' | 'link_order' | 'card_sizes'>
@@ -33,6 +33,24 @@ export function withoutOwnArrangement(prefs: BoardPrefs, spaceId: string, groupI
     group_layout: without(prefs.group_layout, (key) => key === spaceId),
     link_order: without(prefs.link_order, (key) => groups.has(key)),
     card_sizes: without(prefs.card_sizes, (key) => key === spaceId),
+  }
+}
+
+/**
+ * The space's layout with this person's own arrangement laid over it: what it becomes when they
+ * make theirs the default. Their columns where they made their own, their sizes over the
+ * space's, and their order of each group's links they rearranged.
+ */
+export function asDefault(prefs: BoardPrefs, space: Pick<Space, 'id' | 'layout' | 'card_sizes'>, groupIds: string[]) {
+  const groups = new Set(groupIds)
+  const own: CardSizes = prefs.card_sizes[space.id] ?? {}
+  const shared: CardSizes = space.card_sizes ?? {}
+  const heights = { ...shared.heights, ...own.heights }
+  const sizes: CardSizes = { ...(Object.keys(heights).length > 0 ? { heights } : {}), ...((own.widths ?? shared.widths) ? { widths: own.widths ?? shared.widths } : {}) }
+  return {
+    layout: prefs.group_layout[space.id]?.length ? prefs.group_layout[space.id] : (space.layout ?? []),
+    sizes,
+    linkOrders: Object.entries(prefs.link_order).filter(([groupId, ids]) => groups.has(groupId) && ids.length > 0),
   }
 }
 

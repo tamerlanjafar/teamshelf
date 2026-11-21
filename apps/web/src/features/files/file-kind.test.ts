@@ -1,7 +1,7 @@
 // Run with `pnpm test`.
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { documentFileName, extensionOf, fileNameFromTitle, isEditable, MAX_TEXT_BYTES, previewKind, safeHref, shownType } from './file-kind.ts'
+import { documentFileName, extensionOf, fileNameFromTitle, hasPassword, isDatabaseAddress, isEditable, MAX_TEXT_BYTES, previewKind, safeHref, shownType } from './file-kind.ts'
 
 const file = (file_name: string, file_size = 1000) => ({ file_name, file_size })
 
@@ -55,7 +55,17 @@ test('a document gets a plain file name', () => {
   assert.equal(documentFileName(''), 'document.md')
 })
 
-test('a link in a document points to the web or to mail, nothing else', () => {
+test('a link in a document may hold a database’s address, as written', () => {
+  for (const address of ['postgres://app:secret@db.example.com:5432/main', 'mongodb+srv://reader@cluster0.example.net/app?retryWrites=true', 'redis://cache.example.com:6379', 'mysql://root@localhost/shop']) {
+    assert.equal(safeHref(address), address, address)
+    assert.equal(isDatabaseAddress(address), true, address)
+  }
+  assert.equal(isDatabaseAddress('https://example.com'), false)
+  assert.equal(hasPassword('postgres://app:secret@db.example.com/main'), true)
+  assert.equal(hasPassword('mongodb+srv://reader@cluster0.example.net/app'), false)
+})
+
+test('a link in a document points to the web, to mail or to a database, nothing else', () => {
   assert.equal(safeHref('https://example.com/a?b=1'), 'https://example.com/a?b=1')
   assert.equal(safeHref('mailto:sam@example.com'), 'mailto:sam@example.com')
   for (const address of ['javascript:alert(1)', 'JaVaScRiPt:alert(1)', ' javascript:alert(1)', 'data:text/html,<script>alert(1)</script>', 'vbscript:x', 'file:///etc/passwd', 'blob:https://teamshelf.app/x', '/relative', '']) {

@@ -17,6 +17,7 @@ Files are kept in Cloudflare R2. A few small functions on Netlify cover the rest
 ## Set it up
 
 ```bash
+git clone https://github.com/tamerlanjafar/teamshelf.git && cd teamshelf
 pnpm install
 pnpm cloud     # creates the database, file storage and the site on your own accounts
 pnpm dev       # the app: http://localhost:3011, the back office: http://localhost:3015
@@ -60,6 +61,10 @@ scripts/setup.mjs   `pnpm cloud`: sets all of it up on your own accounts
 
 How it works, who can do what, the limits and the security model: [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md).
 Working rules for changes (tests come with every change): [CLAUDE.md](CLAUDE.md).
+
+## Contributing
+
+Issues and pull requests are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md). Security problems go through [SECURITY.md](SECURITY.md).
 
 ## License
 

@@ -1,9 +1,10 @@
-import { EyeOff, FolderPlus, LayoutDashboard, PencilRuler, Plus, RotateCcw } from 'lucide-react'
+import { EyeOff, FolderPlus, LayoutDashboard, PencilRuler, Plus, RotateCcw, Upload } from 'lucide-react'
 import { useState, type CSSProperties, type ReactNode } from 'react'
 import { toast } from '@/components/ui/toast'
 import { groupsOf, useGroups, useGroupsIfLoaded } from '@/api/groups'
-import { useBoardLinks, useBoardLinksIfLoaded } from '@/api/links'
+import { useBoardLinks, useBoardLinksIfLoaded, useSetTeamLinkOrder } from '@/api/links'
 import { useBoardPrefs, useBoardPrefsIfLoaded, useSaveBoardPrefs } from '@/api/prefs'
+import { useSetSpaceCardSizes, useSetSpaceLayout } from '@/api/spaces'
 import { useConfirm } from '@/components/app/confirm-dialog'
 import { BrandMark } from '@/components/app/brand'
 import { Section } from '@/components/app/section'
@@ -27,7 +28,7 @@ import { ROW, ROW_OPEN } from './link-row'
 import { buildBoard, countHidden, type BoardView } from './board-model'
 import { LayoutEditorProvider, useLayoutEditor } from './layout-editor'
 import { Masonry } from './masonry'
-import { arrangementOf, hasOwnArrangement, withoutOwnArrangement } from './own-layout'
+import { arrangementOf, asDefault, hasOwnArrangement, withoutOwnArrangement } from './own-layout'
 import { SortableBoard } from './sortable-board'
 import { useEffectiveBoardPrefs } from './use-board-prefs'
 
@@ -111,6 +112,10 @@ function LayoutMenu({ space, groupIds }: { space: Space; groupIds: string[] }) {
   const savePrefs = useSaveBoardPrefs()
   const { isSpaceAdmin } = usePermissions()
   const { start } = useLayoutEditor()
+  const confirm = useConfirm()
+  const setSpaceLayout = useSetSpaceLayout()
+  const setSpaceCardSizes = useSetSpaceCardSizes()
+  const setLinkOrder = useSetTeamLinkOrder()
   const changed = hasOwnArrangement(prefs, space.id, groupIds)
   const admin = isSpaceAdmin(space.id)
   // An empty space has nothing to arrange.
@@ -123,6 +128,29 @@ function LayoutMenu({ space, groupIds }: { space: Space; groupIds: string[] }) {
       onSuccess: () => toast('Default layout restored', { action: { label: 'Undo', onClick: () => savePrefs.mutate(before, { onError: toastError }) } }),
     })
   }
+
+  /** Makes your own arrangement the space's default, then drops it: you now see the default, which is the same. */
+  async function makeDefault() {
+    const made = asDefault(prefs, space, groupIds)
+    try {
+      await setSpaceLayout.mutateAsync({ id: space.id, layout: made.layout })
+      await setSpaceCardSizes.mutateAsync({ id: space.id, sizes: made.sizes })
+      for (const [groupId, ids] of made.linkOrders) await setLinkOrder.mutateAsync({ groupId, ids })
+      await savePrefs.mutateAsync(withoutOwnArrangement(prefs, space.id, groupIds))
+      toast.success('Default layout saved')
+    } catch (error) {
+      toastError(error)
+    }
+  }
+
+  const askMakeDefault = () =>
+    confirm({
+      title: 'Make this the default layout?',
+      description: `Everyone in ${space.name} who hasn't changed their own layout will see the board as you see it now.`,
+      confirmLabel: 'Save as default',
+      tone: 'plain',
+      onConfirm: () => void makeDefault(),
+    })
 
   return (
     <DropdownMenu>
@@ -146,6 +174,12 @@ function LayoutMenu({ space, groupIds }: { space: Space; groupIds: string[] }) {
           <DropdownMenuItem onClick={reset}>
             <RotateCcw />
             Reset my changes
+          </DropdownMenuItem>
+        )}
+        {changed && admin && (
+          <DropdownMenuItem onClick={askMakeDefault}>
+            <Upload />
+            Save as default layout…
           </DropdownMenuItem>
         )}
         {/* Not on a phone: there the board is one column, and one column is nobody's layout. */}
@@ -295,8 +329,8 @@ function EmptySpace({ space, admin }: { space: Space; admin: boolean }) {
       title={`Nothing in ${space.name} yet`}
       text={
         admin
-          ? 'Start with a group for the tools or topics you use most, then add links and files to it.'
-          : `Suggest the first link or file. It appears here once an admin of ${space.name} approves it.`
+          ? 'Start with a group for the tools or topics you use most, then add links, files and documents to it.'
+          : `Suggest the first link, file or document. It appears here once an admin of ${space.name} approves it.`
       }
     >
       {admin ? (

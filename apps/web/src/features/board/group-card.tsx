@@ -215,7 +215,7 @@ function EmptyGroup({ card }: { card: BoardCard }) {
       className="text-quiet hover:text-ink hover:bg-ink/5 mx-0.5 mb-1 flex w-[calc(100%-4px)] items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13.5px] font-medium transition-colors"
     >
       <Plus className="size-4" />
-      {admin ? 'Add the first link' : 'Suggest the first link'}
+      {admin ? 'Add the first item' : 'Suggest the first item'}
     </button>
   )
 }
@@ -240,7 +240,7 @@ function GroupMenu({ card }: { card: BoardCard }) {
         <DropdownMenuContent align="end" className="min-w-52 rounded-xl">
           <DropdownMenuItem onClick={() => addLink(group.name)}>
             <Plus />
-            {admin ? 'Add a link here…' : 'Suggest a link here…'}
+            {admin ? 'Add to this group…' : 'Suggest for this group…'}
           </DropdownMenuItem>
           {/* Hiding is for yourself: not while arranging the board for everyone. */}
           {!arranging && (

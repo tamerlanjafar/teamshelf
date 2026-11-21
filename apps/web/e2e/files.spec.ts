@@ -228,6 +228,27 @@ test.describe('editing a file', () => {
     await expect(viewer.getByText('Release flow · pictures.example.com')).toBeVisible()
   })
 
+  test('a database’s address can be a link: a password is pointed out, and reading, a click copies it', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+    await openScreen(page, 'files')
+    const viewer = await openFile(page, 'Deploy runbook')
+    await viewer.getByRole('button', { name: 'Edit' }).click()
+    await viewer.getByRole('heading', { name: 'Steps' }).dblclick()
+    await viewer.getByRole('button', { name: 'Link' }).click()
+    const address = 'postgres://app:secret@db.example.com:5432/main'
+    await viewer.getByLabel('Link address').fill(address)
+    await expect(viewer.getByText('This address includes a password.')).toBeVisible()
+    await viewer.getByRole('button', { name: 'Add link' }).click()
+    await viewer.getByRole('button', { name: 'Save' }).click()
+    await expect(page.getByText('Saved', { exact: true })).toBeVisible()
+
+    await viewer.getByRole('link', { name: 'Steps' }).click()
+    await expect(page.getByText('Connection string copied')).toBeVisible()
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(address)
+    // Nothing tried to open it.
+    expect(context.pages()).toHaveLength(1)
+  })
+
   test('leaving with changes asks first', async ({ page }) => {
     await openScreen(page, 'files')
     const viewer = await openFile(page, 'On-call notes')

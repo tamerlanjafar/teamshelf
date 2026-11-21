@@ -5,6 +5,9 @@ export const SITE_URL: string = __SITE_URL__
 
 export const SITE_NAME = 'Teamshelf'
 
+/** Where Teamshelf's source is, for anyone who wants to run their own. */
+export const SOURCE_URL = 'https://github.com/tamerlanjafar/teamshelf'
+
 /** The line under the name, wherever the site describes itself in a sentence. */
 export const TAGLINE = "Your team's links and files, in one place."
 

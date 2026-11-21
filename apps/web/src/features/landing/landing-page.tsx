@@ -1,9 +1,9 @@
 import { Link } from '@tanstack/react-router'
-import { ArrowRight, Check, Command, Inbox, Search, ShieldCheck, Users } from 'lucide-react'
+import { ArrowRight, Check, Command, FileText, Inbox, Search, ShieldCheck, Users } from 'lucide-react'
 import { useEffect, useSyncExternalStore, type MouseEvent, type ReactNode } from 'react'
 import { Wordmark } from '@/components/app/brand'
 import { lastOrg, savedAccounts } from '@/lib/accounts'
-import { SITE_URL } from '@/lib/site'
+import { SITE_URL, SOURCE_URL } from '@/lib/site'
 import { cn } from '@/lib/utils'
 import { Bento } from './bento'
 import { Reveal } from './motion'
@@ -141,6 +141,9 @@ function Header() {
               {label}
             </a>
           ))}
+          <a href={SOURCE_URL} target="_blank" rel="noopener noreferrer" className="hover:text-ink transition-colors">
+            GitHub
+          </a>
         </nav>
         <div className="ml-auto flex items-center gap-1">
           <OpenLink className={cn(PRIMARY, 'if-signed-in group h-9 rounded-lg px-4 text-[14px]')}>
@@ -297,6 +300,18 @@ function Spotlights() {
           />
           <Spotlight
             flip
+            icon={<FileText />}
+            eyebrow="Files and documents"
+            title="Open, read and edit, right on the shelf"
+            text="Pictures, PDFs, video and documents open inside Teamshelf. Write a new doc with headings, checklists and tables, kept as a Markdown or text file."
+            points={[
+              { title: 'Edit in place', text: "Admins update a runbook or a page of notes without downloading a thing." },
+              { title: 'Safe by design', text: 'Nothing in a file can run, and pictures from other sites load only when you ask.' },
+            ]}
+            shot="document"
+            alt="A runbook open in Teamshelf's editor, with a formatting toolbar, a checklist, a table and a block of code."
+          />
+          <Spotlight
             icon={<Inbox />}
             eyebrow="Suggestions"
             title="Anyone suggests, admins decide"
@@ -309,6 +324,7 @@ function Spotlights() {
             alt="Suggested links waiting for approval, each showing its space and group."
           />
           <Spotlight
+            flip
             icon={<Users />}
             eyebrow="People"
             title="The right people in every space"
@@ -328,7 +344,7 @@ function Spotlights() {
 
 const STEPS = [
   { icon: <Command />, title: 'Create your organization', text: `Pick a name and an address, like ${new URL(SITE_URL).host}/acme.` },
-  { icon: <Inbox />, title: 'Add spaces and links', text: 'A space for each team, with cards of links and files.' },
+  { icon: <Inbox />, title: 'Add spaces, links and docs', text: 'A space for each team, with cards of links, files and documents.' },
   { icon: <ShieldCheck />, title: 'Invite your team', text: 'By email, or let everyone at your domain join on their own.' },
 ]
 
@@ -395,7 +411,12 @@ function Footer() {
       <div className="text-quiet mx-auto flex max-w-6xl flex-col gap-2 text-[13.5px] sm:flex-row sm:items-center sm:gap-4">
         <Wordmark className="text-ink w-fit text-[18px]" />
         <span>Your team's links and files, in one place.</span>
-        <span className="tabular-nums sm:ml-auto">© {YEAR} Teamshelf</span>
+        <span className="flex items-center gap-4 sm:ml-auto">
+          <a href={SOURCE_URL} target="_blank" rel="noopener noreferrer" className="hover:text-ink transition-colors">
+            Open source, MIT licensed
+          </a>
+          <span className="tabular-nums">© {YEAR} Teamshelf</span>
+        </span>
       </div>
     </footer>
   )

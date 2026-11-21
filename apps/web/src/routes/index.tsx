@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { LandingPage } from '@/features/landing/landing-page'
 import { shot } from '@/features/landing/shots'
-import { OG_IMAGE, pageHead, SITE_NAME, SITE_URL, TAGLINE } from '@/lib/site'
+import { OG_IMAGE, pageHead, SITE_NAME, SITE_URL, TAGLINE, SOURCE_URL } from '@/lib/site'
 
 const TITLE = "Teamshelf: your team's links and files, in one place"
 const DESCRIPTION =
@@ -15,7 +15,7 @@ const STRUCTURED_DATA = {
   '@context': 'https://schema.org',
   '@graph': [
     { '@type': 'WebSite', '@id': `${SITE_URL}/#website`, url: `${SITE_URL}/`, name: SITE_NAME, description: TAGLINE, inLanguage: 'en' },
-    { '@type': 'Organization', '@id': `${SITE_URL}/#organization`, name: SITE_NAME, url: `${SITE_URL}/`, logo: `${SITE_URL}/icon-512.png` },
+    { '@type': 'Organization', '@id': `${SITE_URL}/#organization`, name: SITE_NAME, url: `${SITE_URL}/`, logo: `${SITE_URL}/icon-512.png`, sameAs: [SOURCE_URL] },
     {
       '@type': 'SoftwareApplication',
       name: SITE_NAME,
@@ -25,14 +25,19 @@ const STRUCTURED_DATA = {
       description: DESCRIPTION,
       image: OG_IMAGE,
       publisher: { '@id': `${SITE_URL}/#organization` },
+      isAccessibleForFree: true,
+      license: 'https://opensource.org/license/mit',
       featureList: [
         'A space for each team, open to everyone or private',
         'Quick find: search every link and file with /',
         'Suggestions that admins of a space approve',
         'Links visible to everyone, to admins, or to chosen people',
-        'Files up to 25 MB next to your links',
+        'Files up to 25 MB next to your links, opened right in the app',
+        'Documents written and edited in the app, kept as Markdown',
+        'A default layout for each space, and your own on top of it',
         'Several organizations, each with its own email',
         'Sign in by email link, no passwords',
+        'Open source, under the MIT license',
       ],
     },
   ],

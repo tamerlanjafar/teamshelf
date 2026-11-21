@@ -1,7 +1,7 @@
 // Run with `pnpm test`.
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { arrangementOf, hasOwnArrangement, withoutOwnArrangement } from './own-layout.ts'
+import { arrangementOf, asDefault, hasOwnArrangement, withoutOwnArrangement } from './own-layout.ts'
 
 const NONE = { group_order: [], group_layout: {}, link_order: {}, hidden_groups: [], hidden_links: [], recent_links: {}, card_sizes: {} }
 const DEV = ['g1', 'g2']
@@ -41,4 +41,21 @@ test('resetting a space leaves the other spaces, and what was hidden, as they we
   assert.deepEqual(reset.hidden_links, ['l1'])
   // Undoing puts back exactly what was there.
   assert.deepEqual({ ...reset, ...arrangementOf(prefs) }, prefs)
+})
+
+test('making your own arrangement the default lays it over the space’s, for this space only', () => {
+  const space = { id: 'dev', layout: [['g1'], ['g2']], card_sizes: { heights: { g1: 300, g2: 200 }, widths: [1, 1] } }
+  const prefs = {
+    ...NONE,
+    group_layout: { dev: [['g2', 'g1']] },
+    card_sizes: { dev: { heights: { g1: 120 } } },
+    link_order: { g1: ['b', 'a'], x: ['d', 'c'] },
+  }
+  const made = asDefault(prefs, space, DEV)
+  assert.deepEqual(made.layout, [['g2', 'g1']])
+  // Your heights win, the space's stay where you set none, and its widths stay.
+  assert.deepEqual(made.sizes, { heights: { g1: 120, g2: 200 }, widths: [1, 1] })
+  assert.deepEqual(made.linkOrders, [['g1', ['b', 'a']]])
+  // Only sizes changed: the space's columns stay.
+  assert.deepEqual(asDefault({ ...NONE, card_sizes: { dev: { widths: [2, 1] } } }, space, DEV).layout, [['g1'], ['g2']])
 })

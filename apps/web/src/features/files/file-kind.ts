@@ -91,16 +91,39 @@ export function documentFileName(typed: string, format: DocumentFormat = 'md'): 
   return `${base || 'document'}.${format}`
 }
 
+/** Databases a document may hold the address of. A browser opens none of them: they are copied instead. */
+const DATABASES = ['postgres:', 'postgresql:', 'mysql:', 'mariadb:', 'mongodb:', 'mongodb+srv:', 'redis:', 'rediss:', 'sqlserver:', 'clickhouse:', 'amqp:', 'amqps:']
+
+/** Whether an address is a database's ("mongodb+srv://…"), not a page's. */
+export function isDatabaseAddress(address: string): boolean {
+  try {
+    return DATABASES.includes(new URL(address.trim()).protocol)
+  } catch {
+    return false
+  }
+}
+
+/** Whether an address carries a password ("postgres://user:secret@host"). */
+export function hasPassword(address: string): boolean {
+  try {
+    return new URL(address.trim()).password !== ''
+  } catch {
+    return false
+  }
+}
+
 /**
- * An address for a link in a document, or null when it isn't one a document may point to. Only
- * web and mail addresses: never "javascript:" and the like.
+ * An address for a link in a document, or null when it isn't one a document may point to: a web
+ * or mail address, or a database's. Never "javascript:" and the like.
  */
 export function safeHref(address: string): string | null {
   const text = address.trim()
   if (!text) return null
   try {
     const url = new URL(text)
-    return url.protocol === 'http:' || url.protocol === 'https:' || url.protocol === 'mailto:' ? url.href : null
+    if (url.protocol === 'http:' || url.protocol === 'https:' || url.protocol === 'mailto:') return url.href
+    // As written: the parts of a database's address mean what its driver says, not what a browser would make of them.
+    return DATABASES.includes(url.protocol) ? text : null
   } catch {
     return null
   }

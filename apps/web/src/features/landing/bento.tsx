@@ -235,11 +235,11 @@ export function Bento({ actions }: { actions: ReactNode }) {
       <Reveal className="bg-page border-line flex flex-col justify-between gap-10 rounded-[20px] border p-7 sm:col-span-2 lg:row-span-2 lg:p-9">
         <div className="grid gap-4">
           <h2 className="m-0 text-[clamp(30px,3.6vw,44px)] leading-[1.06] font-[650] tracking-[-0.03em] text-balance [font-family:var(--font-rounded)]">The shelf your team reaches for every day</h2>
-          <p className="text-quiet m-0 max-w-md text-[16px] leading-relaxed">Spaces for each team, links and files in tidy cards, and the right people in each. It stays organized because everyone helps and admins decide.</p>
+          <p className="text-quiet m-0 max-w-md text-[16px] leading-relaxed">Spaces for each team, links, files and documents in tidy cards, and the right people in each. It stays organized because everyone helps and admins decide.</p>
         </div>
         <div className="grid gap-6">
           <ul className="divide-line m-0 list-none divide-y p-0">
-            {['Sign in with a link by email, no passwords', 'Light and dark, on any screen', 'Set up in about a minute'].map((point) => (
+            {['Sign in with a link by email, no passwords', 'Light and dark, on any screen', 'Open source: run it on your own accounts'].map((point) => (
               <li key={point} className="flex items-center gap-3 py-3 text-[14.5px]">
                 <span className="bg-brand text-on-brand grid size-5 flex-none place-items-center rounded-full">
                   <Check className="size-3" strokeWidth={3} />
@@ -263,7 +263,7 @@ export function Bento({ actions }: { actions: ReactNode }) {
       <Tile delay={1} tint={COLORS.purple} title="Links for a few" text="Show a link to everyone, to admins, or to people you pick.">
         <AudienceDemo />
       </Tile>
-      <Tile delay={2} tint={COLORS.orange} title="Files too" text="PDFs and docs up to 25 MB sit next to your links.">
+      <Tile delay={2} tint={COLORS.orange} title="Files too" text="Up to 25 MB each, next to your links, and they open right in the app.">
         <FileDemo />
       </Tile>
       <Tile delay={1} tint={COLORS.teal} title="Several organizations" text="Stay signed in to each, with the email you use there.">
@@ -272,7 +272,7 @@ export function Bento({ actions }: { actions: ReactNode }) {
       <Tile delay={2} tint={COLORS.green} title="Your own view" text="Hide what you never use. Only your board changes.">
         <HideDemo />
       </Tile>
-      <Tile delay={3} tint={COLORS.blue} title="Shape the board" text="Drag cards anywhere, resize them and their columns." className="sm:col-span-2">
+      <Tile delay={3} tint={COLORS.blue} title="Shape the board" text="Arrange your own board, or set the default layout everyone in the space starts from." className="sm:col-span-2">
         <ShapeDemo />
       </Tile>
     </div>

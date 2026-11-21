@@ -246,6 +246,30 @@ test.describe('your own changes to a space’s layout', () => {
     await expect(button).toHaveAccessibleName('Space layout: changed by you')
   })
 
+  test('an admin makes their own changes the default, for everyone, after saying so', async ({ page }) => {
+    await openScreen(page, 'board')
+    const { button } = layoutMenu(page)
+    await page.getByRole('separator', { name: 'Height of Web app' }).focus()
+    await page.keyboard.press('ArrowUp')
+    await expect(button).toHaveAccessibleName('Space layout: changed by you')
+    await button.click()
+    await page.getByRole('menuitem', { name: 'Save as default layout…' }).click()
+    const question = page.getByRole('dialog', { name: 'Make this the default layout?' })
+    await expect(question).toContainText("Everyone in Development who hasn't changed their own layout")
+    await question.getByRole('button', { name: 'Save as default' }).click()
+    await expect(page.getByText('Default layout saved')).toBeVisible()
+    // It is the space's now: nothing of their own is left, and the card kept its height.
+    await expect(button).toHaveAccessibleName('Space layout')
+    await expect(page.getByRole('button', { name: /Scroll down: \d+ more in Web app/ })).toBeVisible()
+  })
+
+  test('someone who isn’t an admin of the space can’t make their changes the default', async ({ page }) => {
+    await openScreen(page, 'board-own-layout')
+    await layoutMenu(page).button.click()
+    await expect(layoutMenu(page).reset).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Save as default layout…' })).toHaveCount(0)
+  })
+
   test('resizing a card is yours alone: it says so once, and marks the layout as changed', async ({ page }) => {
     await openScreen(page, 'board-member')
     await page.getByRole('separator', { name: 'Height of Web app' }).focus()

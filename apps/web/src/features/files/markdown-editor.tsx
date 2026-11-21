@@ -32,7 +32,9 @@ import { useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import { safeHref } from './file-kind'
+import { toast } from '@/components/ui/toast'
+import { toastError } from '@/lib/errors'
+import { hasPassword, isDatabaseAddress, safeHref } from './file-kind'
 
 /** An address as typed into the link box, made whole: "example.com" → "https://example.com/". Null when it isn't a web or mail address. */
 const typedAddress = (typed: string) => {
@@ -166,6 +168,15 @@ export default function MarkdownEditor({
     enableInputRules: false,
     autofocus: autoFocus ? 'start' : false,
     editorProps: {
+      // A database's address can't be opened in a browser. Clicked while reading, it is copied.
+      handleClick: (_view, _position, event) => {
+        const link = event.target instanceof Element ? event.target.closest('a[href]') : null
+        const href = link?.getAttribute('href') ?? ''
+        if (!readOnly || !isDatabaseAddress(href)) return false
+        event.preventDefault()
+        navigator.clipboard.writeText(href).then(() => toast.success('Connection string copied'), toastError)
+        return true
+      },
       attributes: { class: 'doc-prose', role: 'textbox', 'aria-multiline': 'true', 'aria-label': label, ...(readOnly ? { 'aria-readonly': 'true' } : {}) },
     },
     // The editor writes Markdown its own way (a table's columns lined up, a bare address as a
@@ -359,10 +370,12 @@ function Toolbar({ editor }: { editor: Editor }) {
   )
 }
 
-/** Where a link points: typed here, under the toolbar. Only a web or mail address is taken. */
+/** Where a link points: typed here, under the toolbar. A web or mail address, or a database's. */
 function LinkBox({ editor, current, onDone }: { editor: Editor; current: string; onDone: () => void }) {
   const [typed, setTyped] = useState(current)
   const [refused, setRefused] = useState(false)
+  // Whoever can open the document sees the address, password and all.
+  const secret = hasPassword(typed)
 
   function apply(event: FormEvent) {
     event.preventDefault()
@@ -410,10 +423,12 @@ function LinkBox({ editor, current, onDone }: { editor: Editor; current: string;
           <Link2Off />
         </button>
       )}
-      {refused && (
+      {refused ? (
         <span role="alert" className="text-destructive basis-full text-[12.5px]">
-          Enter a web address, like https://example.com, or a mail address (mailto:).
+          Enter a web address like https://example.com, a mail address (mailto:), or a database's connection string.
         </span>
+      ) : (
+        secret && <span className="basis-full text-[12.5px] text-amber-700 dark:text-amber-400">This address includes a password. Everyone who can open this document will see it.</span>
       )}
     </form>
   )
