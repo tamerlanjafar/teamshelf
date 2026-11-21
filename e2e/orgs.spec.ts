@@ -127,10 +127,12 @@ test.describe('creating an organization', () => {
     await expect(page.getByText(/taken/i)).toBeVisible()
   })
 
-  test('creating it opens the new organization', async ({ page }) => {
+  test('creating it opens the new organization, which starts without spaces', async ({ page }) => {
     await page.getByLabel('Name').fill('Blue Owl')
     await page.getByRole('button', { name: 'Create organization' }).click()
     await expect(page).toHaveURL(/\/blue-owl(\/|$)/)
+    await expect(page.getByRole('button', { name: /New space/ }).first()).toBeVisible()
+    await expect(page.locator('aside').getByRole('link', { name: 'Development' })).toHaveCount(0)
   })
 })
 

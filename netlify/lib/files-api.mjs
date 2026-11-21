@@ -2,13 +2,13 @@
 // for an address that works for a few minutes, and this function first asks the database, as
 // the caller, whether they may. Row-level security decides, the same way it does for the app.
 //
+// Served by netlify/functions (upload by actions.mjs, url by api.mjs).
+//
 //   POST /api/files/upload  { spaceId, name, size, type }  →  { key, uploadUrl }
-//   GET  /api/files/url?key=<key>[&download=1]               →  { url }
+//   GET  /api/files/url?key=<key>                            →  { url }, which downloads the file
 
-import { asCaller, json, verifiedToken } from '../lib/neon.mjs'
-import { downloadAddress, r2Configured, uploadAddress } from '../lib/r2.mjs'
-
-export const config = { path: ['/api/files/upload', '/api/files/url'] }
+import { asCaller, DataApiError, json, verifiedToken } from './neon.mjs'
+import { downloadAddress, r2Configured, uploadAddress } from './r2.mjs'
 
 /** Keep in step with MAX_FILE_BYTES in src/api/files.ts and links.file_size in the database. */
 const MAX_BYTES = 25 * 1024 * 1024
@@ -37,10 +37,28 @@ async function upload(request, token) {
   if (size > MAX_BYTES) return json({ error: 'Files can be up to 25 MB.' }, 413)
   if (typeof type !== 'string' || type.length > 120 || !/^[\w.+-]+\/[\w.+-]+$/.test(type)) return json({ error: 'Unknown file type.' }, 400)
 
-  // Seeing the space is what it takes to add to it (an admin publishes, everyone else suggests).
+  // The database decides, as the caller: seeing the space is what it takes to add to it (an admin
+  // publishes, everyone else suggests), and each person has so many uploads an hour. It records
+  // the upload, and only a recorded upload can become a link (db/migrations/003_files_and_limits.sql).
+  let key
+  try {
+    key = await asCaller(token, 'rpc/start_upload', { method: 'POST', body: JSON.stringify({ space: spaceId, file_name: keyName(name), size }) })
+  } catch (error) {
+    if (!(error instanceof DataApiError)) throw error
+    // A database from before that migration has no start_upload: the way it was done then.
+    if (error.status === 404) return uploadWithoutRecord(token, { spaceId, name, size, type })
+    // Refused by the database, in its own words (not allowed, or too many uploads lately).
+    if (error.code === '42501') return json({ error: "You can't add files to this space." }, 403)
+    if (error.code === 'P0001') return json({ error: error.message }, 429)
+    throw error
+  }
+  if (typeof key !== 'string') throw new Error('start_upload gave no key')
+  return json({ key, uploadUrl: await uploadAddress(key, { type, size }) })
+}
+
+async function uploadWithoutRecord(token, { spaceId, name, size, type }) {
   const spaces = await asCaller(token, `spaces?id=eq.${spaceId}&select=id,org_id`)
   if (spaces.length === 0) return json({ error: "You can't add files to this space." }, 403)
-
   const key = `${spaces[0].org_id}/${spaceId}/${crypto.randomUUID()}/${keyName(name)}`
   return json({ key, uploadUrl: await uploadAddress(key, { type, size }) })
 }
@@ -51,9 +69,9 @@ async function address(request, token) {
   if (!key || key.length > 400) return json({ error: 'Which file?' }, 400)
 
   // Only a file on a link the caller can see. Row-level security leaves out every other.
-  const links = await asCaller(token, `links?file_key=eq.${encodeURIComponent(key)}&select=file_name,file_type&limit=1`)
+  const links = await asCaller(token, `links?file_key=eq.${encodeURIComponent(key)}&select=file_name&limit=1`)
   if (links.length === 0) return json({ error: "This file isn't there, or you can't open it." }, 404)
-  return json({ url: await downloadAddress(key, { name: links[0].file_name, type: links[0].file_type, download: query.get('download') === '1' }) })
+  return json({ url: await downloadAddress(key, { name: links[0].file_name }) })
 }
 
 export default async function files(request) {

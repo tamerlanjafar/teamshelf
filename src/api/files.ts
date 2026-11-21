@@ -1,11 +1,11 @@
 // Files are kept in Cloudflare R2. The browser never holds the storage keys: it asks the
-// server (netlify/functions/files.mjs) for a short-lived address to upload to, or to download
+// server (netlify/lib/files-api.mjs) for a short-lived address to upload to, or to download
 // from, and the server first checks with the database, as the signed-in person, that they may.
 
 import { neon } from '@/lib/neon'
 import type { Link } from '@/lib/types'
 
-/** The largest file Teamshelf takes. Keep in step with netlify/functions/files.mjs and the database. */
+/** The largest file Teamshelf takes. Keep in step with netlify/lib/files-api.mjs and the database. */
 export const MAX_FILE_BYTES = 25 * 1024 * 1024
 
 export interface StoredFile {
@@ -58,33 +58,31 @@ export async function uploadFile(spaceId: string, file: File, onProgress?: (shar
 
 /**
  * The address a file has on the board. It is a page of the app (routes/file.tsx), which signs
- * in and then opens the file, so the address also works when copied or opened in a new tab.
+ * in and then downloads the file, so the address also works when copied or opened in a new tab.
  */
 export const fileAddress = (key: string) => `${window.location.origin}/file?key=${encodeURIComponent(key)}`
 
-/** Where the file itself can be read, for a few minutes. */
-export async function fileUrl(key: string, download = false): Promise<string> {
-  const query = new URLSearchParams({ key, ...(download ? { download: '1' } : {}) })
-  const response = await fetch(`/api/files/url?${query}`, { headers: await authorization() })
-  if (!response.ok) throw await failure(response, "The file couldn't be opened.")
+/** Where the file itself can be downloaded from, for a few minutes. */
+export async function fileUrl(key: string): Promise<string> {
+  const response = await fetch(`/api/files/url?${new URLSearchParams({ key })}`, { headers: await authorization() })
+  if (!response.ok) throw await failure(response, "The file couldn't be downloaded.")
   return ((await response.json()) as { url: string }).url
 }
 
-/**
- * Opens a file in a new tab. The tab is opened at once, in the click, so the browser doesn't
- * block it, and pointed at the file when the server has said where it is.
- */
-export async function openFile(link: Pick<Link, 'file_key'>, download = false) {
-  const tab = download ? null : window.open('about:blank', '_blank')
-  if (tab) tab.opener = null
-  try {
-    const url = await fileUrl(link.file_key!, download)
-    if (tab) tab.location.href = url
-    else window.location.href = url
-  } catch (error) {
-    tab?.close()
-    throw error
-  }
+/** Starts the browser's download of the file at this address. The page stays where it is. */
+export function startDownload(url: string) {
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = ''
+  anchor.rel = 'noreferrer'
+  document.body.append(anchor)
+  anchor.click()
+  anchor.remove()
+}
+
+/** Downloads a file. Files are always saved to disk, never shown in a tab (netlify/lib/r2.mjs). */
+export async function downloadFile(link: Pick<Link, 'file_key'>) {
+  startDownload(await fileUrl(link.file_key!))
 }
 
 export function formatBytes(bytes: number) {

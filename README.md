@@ -8,10 +8,10 @@ Your team's links and files, in one place, at [teamshelf.app](https://teamshelf.
 - **Sign-in by email link.** No passwords.
 - **Several organizations at once, with any emails.** The Organizations page lists every organization signed in on this browser, each with its email, and offers two things that don't depend on where you came from: signing in to an organization (with the email you use there) and creating one (with the email that will own it). There are no accounts to switch: signing out leaves one organization, and the others stay signed in.
 - **Joining.** An organization can name email domains whose people join on their own. Admins can invite anyone else, at any domain.
-- **Spaces.** Each has its own admins, members, logo and color. A space is open to the whole organization, or private to its members.
+- **Spaces.** A new organization has none: its people create the ones they need. Each has its own admins, members, logo and color. A space is open to the whole organization, or private to its members.
 - **Suggestions.** Anyone who sees a space can suggest a link or a file. It waits until an admin of that space approves or rejects it.
 - **Strict names.** Link names follow fixed rules (extra detail in brackets, like “Payments API (v2)”, no group name in front…), checked in the form and again in the database.
-- **Files.** Uploaded to Cloudflare R2, up to 25 MB each, opened through short-lived signed addresses.
+- **Files.** Uploaded to Cloudflare R2, up to 25 MB each, downloaded through short-lived signed addresses. A file is always saved to disk, never shown in a tab.
 - **Restricted links.** A link can be visible to everyone who sees the space, to its admins only, or to chosen people.
 - **Your own view.** Hide groups and links you don't need. Only you are affected.
 - **Layout.** A space's admins drag cards to any column and place, and that is the layout everyone sees.
@@ -56,7 +56,7 @@ delete from org_creators where email = 'someone@example.com';     -- stop allowi
 
 There is no backend server. The browser talks to Neon directly:
 
-- **Neon Auth** (Managed Better Auth) signs people in with a magic link. Its requests go through this site (`/api/auth/<org>/…`, `netlify/functions/auth.mjs`), so each organization's session is a cookie kept under its own path, and organizations of different emails can be signed in at once. A page uses the session of the organization in its address; switching to an organization of another email loads the page again. Signing out of an organization forgets its cookie only; the session ends at Neon Auth when its email's last organization is signed out. A new sign-in starts at `/api/auth/_new` and is then copied to each of the account's organizations (`src/lib/accounts.ts`).
+- **Neon Auth** (Managed Better Auth) signs people in with a magic link. Its requests go through this site (`/api/auth/<org>/…`, `netlify/lib/auth-proxy.mjs`), so each organization's session is a cookie kept under its own path, and organizations of different emails can be signed in at once. A page uses the session of the organization in its address; switching to an organization of another email loads the page again. Signing out of an organization forgets its cookie only; the session ends at Neon Auth when its email's last organization is signed out. A new sign-in starts at `/api/auth/_new` and is then copied to each of the account's organizations (`src/lib/accounts.ts`).
 - **Neon Data API** reads and writes the tables, as the signed-in person.
 - **Row-level security** in Postgres decides what each person can read and change. Every rule above is enforced there (`db/migrations`), so the checks in the app only decide what to show.
 
@@ -78,7 +78,8 @@ src/components/app/     shared pieces: sidebar, org switcher, top bar, sections,
 src/components/ui/      shadcn components, as installed by its CLI
 src/lib/                colors, ordering, roles, theme, feature flags, the Neon client
 src/routes/             one small file per page
-netlify/                server functions: icon lookup, file upload and download, file cleanup
+netlify/                server functions (functions/) and what they are made of (lib/): the sign-in proxy,
+                        icon lookup, file upload and download, file cleanup
 ```
 
 ### Mock mode
@@ -130,8 +131,19 @@ Tests: `pnpm test` (rules in plain code), `pnpm test:e2e` (end to end in a brows
 
 The layout of the sign-in email is Neon's and can't be edited. Only the app name in it is ours ("Teamshelf"). The sender stays "Neon Auth" until you set your own email sender. A different layout means sending the email yourself: a webhook for the `send.magic_link` event, plus an email service and a domain to send from.
 
+### Limits
+
+Every request can be made by hand, so nothing relies on the app's screens:
+
+- **Who may read and change what** is decided in Postgres (`db/migrations`), for each row.
+- **How much one person can store** is too: 1000 links and files and 200 groups per space, 20 suggestions of yours waiting at once, 200 people per organization (50 of them waiting for approval), 50 uploads a day per person.
+- **A file belongs to one link.** An upload is recorded when it starts (`start_upload()`), a file link must name an upload its author made, and an upload that never became a link (the form was closed before saving) has no link to be deleted with, so the daily cleanup deletes it after a day. Files are always downloaded, as plain bytes: an uploaded web page or SVG never opens as a page.
+- **How often** the server functions answer one address (IP), counted by Netlify: 40 a minute for the costly ones (sending a sign-in email, an icon lookup, starting an upload: `netlify/functions/actions.mjs`), 600 a minute for the rest (`netlify/functions/api.mjs`). After that, 429 until the minute is over. Netlify allows two such limits per site below its Pro plan, which is why there are two functions.
+
+Neon Auth and the Data API are also reachable at their own addresses (they are in the page's code), where Neon's own limits apply, not these.
+
 ### Link icons
 
-Icons are loaded from the linked site itself, never through an icon service, so internal addresses stay private. When a link is saved, a small Netlify function (`netlify/functions/icon.mjs`, at `/api/icon`) reads the page and stores the address of the icon it declares. A browser can't do that across sites. The function only answers signed-in people and refuses addresses inside private networks. For pages it can't reach (internal tools), the app tries the usual icon locations itself, and a link without a loadable icon shows its first letter.
+Icons are loaded from the linked site itself, never through an icon service, so internal addresses stay private. When a link is saved, a small Netlify function (`netlify/lib/icon-api.mjs`, at `/api/icon`) reads the page and stores the address of the icon it declares. A browser can't do that across sites. The function only answers signed-in people and refuses addresses inside private networks. For pages it can't reach (internal tools), the app tries the usual icon locations itself, and a link without a loadable icon shows its first letter.
 
 `node db/backfill-icons.mjs` looks up icons for links that have none saved.

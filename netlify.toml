@@ -32,6 +32,10 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    # No page of another site may frame this one, change where its relative addresses point
+    # (<base>), embed plugins, or receive its forms. Scripts and images are not restricted here:
+    # link icons load from any site, and the pages carry small inline scripts.
+    Content-Security-Policy = "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'"
 
 # Built files have a hash of their content in their name (scripts, styles, and the front page's
 # screenshots, src/features/landing/shots.ts), so they can be cached for good: a changed file is a

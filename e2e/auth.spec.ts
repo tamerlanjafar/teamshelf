@@ -62,6 +62,26 @@ test.describe('sign in', () => {
   })
 })
 
+test('after signing in, a way back that would lead to another site is ignored', async ({ page, context }) => {
+  // "/\\evil.example" starts with one slash, but a browser reads it as "//evil.example".
+  let leftTheSite = false
+  await context.route('**://evil.example/**', (route) => {
+    leftTheSite = true
+    return route.fulfill({ body: 'another site' })
+  })
+  await signedOut(page)
+  // Not through goto(): it hides mock mode's toolbar, which holds the emailed link.
+  await page.goto(`/login?redirect=${encodeURIComponent('/\\evil.example')}`)
+  await page.waitForFunction(() => !('$_TSR' in window))
+  await page.getByLabel('Email').fill('sam.rivera@gmail.com')
+  await page.getByRole('button', { name: 'Sign in' }).click()
+  await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible()
+  await page.getByRole('button', { name: 'All screens' }).click()
+  await page.getByRole('button', { name: /Open the sign-in link/ }).click()
+  await page.waitForURL(/\/organizations$/)
+  expect(leftTheSite).toBe(false)
+})
+
 test('a link that expired says so, without an error in the address', async ({ page }) => {
   await openScreen(page, 'link-expired')
   expect(new URL(page.url()).search).toBe('')

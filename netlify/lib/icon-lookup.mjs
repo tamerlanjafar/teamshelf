@@ -5,8 +5,10 @@
 // an address inside a private network, a few redirects at most, a short timeout, and it
 // reads only the start of the page.
 
-import { lookup } from 'node:dns/promises'
-import { isIP } from 'node:net'
+import { lookup } from 'node:dns'
+import http from 'node:http'
+import https from 'node:https'
+import { BlockList, isIP } from 'node:net'
 
 const TIMEOUT_MS = 5000
 const MAX_BYTES = 300_000
@@ -14,19 +16,68 @@ const MAX_REDIRECTS = 3
 const MAX_ICON_BYTES = 48_000
 const ICON_TYPES = ['image/png', 'image/x-icon', 'image/vnd.microsoft.icon', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml']
 
-/** Addresses that are not on the public internet: this machine, private networks, link-local, and the like. */
-function isPrivateAddress(address) {
-  if (isIP(address) === 4) {
-    const [a, b] = address.split('.').map(Number)
-    return a === 0 || a === 10 || a === 127 || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || a >= 224
-  }
-  const text = address.toLowerCase()
-  if (text.startsWith('::ffff:')) return isPrivateAddress(text.slice(7))
-  return text === '::' || text === '::1' || text.startsWith('fc') || text.startsWith('fd') || text.startsWith('fe8') || text.startsWith('fe9') || text.startsWith('fea') || text.startsWith('feb')
+// Addresses that are not on the public internet: this machine, private networks, link-local,
+// carrier NAT, multicast, the ranges kept for documentation and tests, and the IPv6 ranges that
+// carry an IPv4 address inside them (so "::ffff:7f00:1", 6to4 or NAT64 can't stand in for 127.0.0.1).
+const PRIVATE = new BlockList()
+for (const [network, prefix] of [
+  ['0.0.0.0', 8],
+  ['10.0.0.0', 8],
+  ['100.64.0.0', 10],
+  ['127.0.0.0', 8],
+  ['169.254.0.0', 16],
+  ['172.16.0.0', 12],
+  ['192.0.0.0', 24],
+  ['192.0.2.0', 24],
+  ['192.88.99.0', 24],
+  ['192.168.0.0', 16],
+  ['198.18.0.0', 15],
+  ['198.51.100.0', 24],
+  ['203.0.113.0', 24],
+  ['224.0.0.0', 3],
+])
+  PRIVATE.addSubnet(network, prefix, 'ipv4')
+for (const [network, prefix] of [
+  ['::', 96], // ::, ::1 and the old "IPv4-compatible" addresses
+  ['64:ff9b::', 96], // NAT64
+  ['64:ff9b:1::', 48],
+  ['100::', 64],
+  ['2001::', 32], // Teredo
+  ['2001:db8::', 32],
+  ['2002::', 16], // 6to4
+  ['fc00::', 7],
+  ['fe80::', 10],
+  ['fec0::', 10],
+  ['ff00::', 8],
+])
+  PRIVATE.addSubnet(network, prefix, 'ipv6')
+
+/** Whether this IP address is one the lookup must never connect to. Anything that isn't an IP address counts as one. */
+export function isPrivateAddress(address) {
+  const family = isIP(address)
+  if (family === 0) return true
+  // An IPv4 address written as IPv6 (::ffff:a.b.c.d) is checked against the IPv4 ranges too.
+  return PRIVATE.check(address, family === 4 ? 'ipv4' : 'ipv6')
+}
+
+/**
+ * Resolves a host name for a connection, and refuses it when any of its addresses is private.
+ * The connection uses the addresses checked here, so a name can't answer with a public address
+ * for the check and a private one for the connection (DNS rebinding).
+ */
+function publicLookup(hostname, options, callback) {
+  lookup(hostname, { ...options, all: true }, (error, addresses) => {
+    if (error) return callback(error)
+    if (addresses.length === 0 || addresses.some((entry) => isPrivateAddress(entry.address))) {
+      return callback(Object.assign(new Error(`${hostname} is not a public address`), { code: 'ENOTFOUND' }))
+    }
+    if (options.all) callback(null, addresses)
+    else callback(null, addresses[0].address, addresses[0].family)
+  })
 }
 
 /** The address as a URL, if it is one this function is willing to fetch. */
-async function publicUrl(address) {
+function publicUrl(address) {
   let url
   try {
     url = new URL(address)
@@ -34,27 +85,55 @@ async function publicUrl(address) {
     return null
   }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return null
+  if (url.username || url.password) return null
+  // An address given as numbers is never looked up, so it is checked here. Names are checked
+  // when the connection is made (publicLookup).
   const host = url.hostname.replace(/^\[|\]$/g, '')
-  const addresses = isIP(host) ? [host] : (await lookup(host, { all: true }).catch(() => [])).map((entry) => entry.address)
-  if (addresses.length === 0 || addresses.some(isPrivateAddress)) return null
+  if (!host || (isIP(host) && isPrivateAddress(host))) return null
   return url
 }
 
-/** The answer of the server at this address, following a few redirects, each checked like the first address. */
-async function fetchPublic(address, accept) {
-  let url = await publicUrl(address)
-  for (let hop = 0; url && hop <= MAX_REDIRECTS; hop++) {
-    const response = await fetch(url, {
-      redirect: 'manual',
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+/** One GET request. Resolves with the answer once its headers are in; the body is still to be read. */
+function get(url, accept, signal) {
+  return new Promise((resolve, reject) => {
+    const request = (url.protocol === 'https:' ? https : http).request(url, {
+      method: 'GET',
+      // A connection of its own each time: never one kept open to a host checked earlier.
+      agent: false,
+      lookup: publicLookup,
+      signal,
       headers: { accept, 'user-agent': 'Mozilla/5.0 (compatible; Teamshelf icon lookup)' },
     })
-    const next = response.headers.get('location')
-    if (response.status >= 300 && response.status < 400 && next) {
-      url = await publicUrl(new URL(next, url).href)
+    request.on('response', resolve)
+    request.on('error', reject)
+    request.end()
+  })
+}
+
+/**
+ * The answer of the server at this address, following a few redirects, each checked like the
+ * first address. All of it, the body included, has TIMEOUT_MS: after that the body stops with an error.
+ */
+async function fetchPublic(address, accept) {
+  const signal = AbortSignal.timeout(TIMEOUT_MS)
+  let url = publicUrl(address)
+  for (let hop = 0; url && hop <= MAX_REDIRECTS; hop++) {
+    const response = await get(url, accept, signal)
+    const next = response.headers.location
+    if (response.statusCode >= 300 && response.statusCode < 400 && next) {
+      response.destroy()
+      let target
+      try {
+        target = new URL(next, url).href
+      } catch {
+        return null
+      }
+      url = publicUrl(target)
       continue
     }
-    return response.ok && response.body ? { url, response } : null
+    if (response.statusCode >= 200 && response.statusCode < 300) return { url, response }
+    response.destroy()
+    return null
   }
   return null
 }
@@ -64,17 +143,17 @@ async function fetchPage(address) {
   const answer = await fetchPublic(address, 'text/html')
   if (!answer) return null
   const { url, response } = answer
-  const reader = response.body.getReader()
   const decoder = new TextDecoder()
   let html = ''
-  while (html.length < MAX_BYTES) {
-    const { done, value } = await reader.read()
-    if (done) break
-    html += decoder.decode(value, { stream: true })
-    // Icons are declared in the head: no need to read further.
-    if (/<\/head>/i.test(html)) break
+  try {
+    for await (const piece of response) {
+      html += decoder.decode(piece, { stream: true })
+      // Icons are declared in the head: no need to read further.
+      if (html.length >= MAX_BYTES || /<\/head>/i.test(html)) break
+    }
+  } finally {
+    response.destroy()
   }
-  reader.cancel().catch(() => {})
   return { url, html }
 }
 
@@ -85,15 +164,22 @@ async function fetchPage(address) {
 async function inlineImage(address) {
   const answer = await fetchPublic(address, 'image/*').catch(() => null)
   if (!answer) return null
-  const type = (answer.response.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase()
-  if (!ICON_TYPES.includes(type)) return null
+  const { response } = answer
+  const type = String(response.headers['content-type'] ?? '').split(';')[0].trim().toLowerCase()
   // Read piece by piece, and stop as soon as it is clearly too big.
   const pieces = []
   let size = 0
-  for await (const piece of answer.response.body) {
-    size += piece.length
-    if (size > MAX_ICON_BYTES) return null
-    pieces.push(piece)
+  try {
+    if (!ICON_TYPES.includes(type)) return null
+    for await (const piece of response) {
+      size += piece.length
+      if (size > MAX_ICON_BYTES) return null
+      pieces.push(piece)
+    }
+  } catch {
+    return null
+  } finally {
+    response.destroy()
   }
   if (size === 0) return null
   const bytes = Buffer.concat(pieces)

@@ -61,7 +61,7 @@ async function answer(url: URL, init?: RequestInit): Promise<Response | null> {
   }
 
   if (url.pathname === '/api/icon') return json({ icon: null })
-  if (url.pathname === '/api/files/url') return json({ url: 'https://example.com/' })
+  if (url.pathname === '/api/files/url') return json({ url: '/robots.txt' }) // any file of this site: the browser saves it
   if (url.pathname === '/api/files/upload') return json({ error: 'Uploading files is off in mock mode.' }, 503)
   return null
 }

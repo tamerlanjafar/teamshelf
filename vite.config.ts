@@ -7,7 +7,7 @@ import { defineConfig, type Plugin } from 'vite'
 import { SITE_URL } from './src/lib/site.ts'
 
 /**
- * On Netlify, /api/icon is a function (netlify/functions/icon.mjs). This gives the dev server
+ * On Netlify, /api/icon is a function (netlify/functions/actions.mjs). This gives the dev server
  * the same address with the same lookup, without the sign-in check (it only listens locally).
  */
 const iconLookup = (): Plugin => ({
@@ -23,7 +23,7 @@ const iconLookup = (): Plugin => ({
 })
 
 /**
- * On Netlify, /api/auth/<org>/* is a function (netlify/functions/auth.mjs) that keeps each
+ * On Netlify, /api/auth/<org>/* is a function (netlify/functions/api.mjs) that keeps each
  * organization's session in its own cookie. The dev server runs the same code.
  */
 const authProxy = (): Plugin => ({

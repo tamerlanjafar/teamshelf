@@ -4,7 +4,7 @@ import { neon } from '@/lib/neon'
 const isIcon = (icon: string) => (/^https?:\/\//i.test(icon) && icon.length <= 2000) || (/^data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/=]+$/i.test(icon) && icon.length <= 70000)
 
 /**
- * Asks the server for the icon the page at this address declares (see netlify/functions/icon.mjs).
+ * Asks the server for the icon the page at this address declares (see netlify/lib/icon-api.mjs).
  * A browser may not read another site's page itself. Returns null when there is none, when the
  * page can't be reached from the server (an internal address), or when the lookup isn't there.
  * It never fails: a link is saved with or without an icon.

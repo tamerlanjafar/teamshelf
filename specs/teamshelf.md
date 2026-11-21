@@ -20,6 +20,7 @@ What the end-to-end tests cover, by area. Each line is a test in `e2e/<area>.spe
 
 - Sign-in asks for an email only, no password.
 - Sent to sign in by a page that needs it: the form shows (no waiting screen), and the address keeps where to go back.
+- A way back that would lead to another site (`/login?redirect=/\evil.example`, which a browser reads as `//evil.example`) is ignored: after signing in, the person stays on Teamshelf.
 - "Your organizations" isn't offered on a browser with no organizations; it is when signing in to another one, and goes there.
 - Sign-in links to creating an organization ("New to Teamshelf?"), and creating links back to signing in ("Already use Teamshelf?").
 - An address that isn't an email is refused under the field; typing again clears the message.
@@ -43,7 +44,7 @@ What the end-to-end tests cover, by area. Each line is a test in `e2e/<area>.spe
 - From creating one, "Sign in" is for another organization (→ /login?intent=join), with the way back.
 - An email at an allowed domain joins with one click, and lands in the organization.
 - An organization this email can't open offers another email (→ /login?intent=join&redirect=…), and a way back.
-- Creating: the URL follows the name until typed itself; the URL keeps only a-z, 0-9 and dashes; a name is needed; reserved addresses (signup, login, open, organizations) are refused; one character is too short; a taken address is refused; creating opens the new organization.
+- Creating: the URL follows the name until typed itself; the URL keeps only a-z, 0-9 and dashes; a name is needed; reserved addresses (signup, login, open, organizations) are refused; one character is too short; a taken address is refused; creating opens the new organization, which starts without spaces and offers to create one.
 - An organization without spaces offers to create one.
 
 ## The board (`board.spec.ts`)

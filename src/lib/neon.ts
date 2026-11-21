@@ -1,6 +1,9 @@
 import { createClient } from '@neondatabase/neon-js'
 import { BetterAuthReactAdapter } from '@neondatabase/neon-js/auth/react/adapters'
 import { ACTIVE_SLOT, authUrl, NEW_SLOT } from './accounts'
+import { safePath } from './safe-path'
+
+export { safePath }
 
 /**
  * One client for both sign-in (Neon Auth) and data (Neon Data API, guarded by row-level security).
@@ -32,8 +35,6 @@ const signInAuth = () =>
 
 export const isEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
 
-/** A path inside this app ("/acme/team"), or "/" for anything else. Keeps redirects on this site. */
-export const safePath = (path: string | undefined) => (path && /^\/(?!\/)/.test(path) ? path : '/')
 
 /**
  * Emails a sign-in link that comes back to `returnPath`. One sign-in covers every organization

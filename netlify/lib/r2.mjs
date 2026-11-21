@@ -19,13 +19,17 @@ export async function uploadAddress(key, { type, size }) {
   return signed.url
 }
 
-/** An address the browser can read one file from, for a few minutes. */
-export async function downloadAddress(key, { name, type, download }) {
+/**
+ * An address the browser can download one file from, for a few minutes. Always saved to disk, as
+ * plain bytes: a page or an SVG that someone uploaded never opens as a web page, with its scripts
+ * running. The type the file was uploaded with (which its uploader chose) decides nothing.
+ */
+export async function downloadAddress(key, { name }) {
   const url = new URL(objectUrl(key))
   url.searchParams.set('X-Amz-Expires', '300')
   const filename = encodeURIComponent(name).replace(/['()*]/g, (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`)
-  url.searchParams.set('response-content-disposition', `${download ? 'attachment' : 'inline'}; filename*=UTF-8''${filename}`)
-  if (type) url.searchParams.set('response-content-type', type)
+  url.searchParams.set('response-content-disposition', `attachment; filename*=UTF-8''${filename}`)
+  url.searchParams.set('response-content-type', 'application/octet-stream')
   const signed = await client.sign(url, { method: 'GET', aws: { signQuery: true } })
   return signed.url
 }

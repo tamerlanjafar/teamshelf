@@ -1,12 +1,10 @@
 // GET /api/icon?url=<address>  →  { "icon": "<address of the page's icon>" | null }
 //
-// Used by the app when a link is saved. Only for people who are signed in: the caller sends
+// Served by netlify/functions/actions.mjs. Used by the app when a link is saved. Only for people who are signed in: the caller sends
 // the same token it uses for the database, and it is verified against Neon Auth's public keys.
 
-import { findIcon } from '../lib/icon-lookup.mjs'
-import { json, verifiedToken } from '../lib/neon.mjs'
-
-export const config = { path: '/api/icon' }
+import { findIcon } from './icon-lookup.mjs'
+import { json, verifiedToken } from './neon.mjs'
 
 export default async function icon(request) {
   if (request.method !== 'GET') return json({ error: 'method not allowed' }, 405)

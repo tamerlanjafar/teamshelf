@@ -17,6 +17,8 @@ export default async function cleanup() {
   const client = new pg.Client({ connectionString })
   await client.connect()
   try {
+    // Uploads that never became a link join the list after a day (db/migrations/003_files_and_limits.sql).
+    await client.query('select public.sweep_file_uploads()').catch((error) => console.error('Could not list abandoned uploads:', error.message))
     const { rows } = await client.query('select file_key from public.file_trash order by trashed_at limit 500')
     let deleted = 0
     for (const { file_key: key } of rows) {

@@ -3,7 +3,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { Copy, Download, Eye, EyeOff, Lock, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import type { ComponentProps, CSSProperties, ReactNode, Ref } from 'react'
 import { toast } from 'sonner'
-import { formatBytes, openFile } from '@/api/files'
+import { downloadFile, formatBytes } from '@/api/files'
 import { useDeleteLink } from '@/api/links'
 import { useConfirm } from '@/components/app/confirm-dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -100,7 +100,7 @@ export function LinkRow({ row, restoring, rowRef, style, placeholder, lifted, dr
             // The file's address needs the person's sign-in, which a plain link doesn't carry.
             event.preventDefault()
             recordOpen(link.id)
-            openFile(link).catch(toastError)
+            downloadFile(link).catch(toastError)
           }}
         >
           <FileIcon type={link.file_type} name={link.file_name} className="mt-[3px]" />
@@ -183,7 +183,7 @@ function LinkMenu({ link, hidden, label, className, children }: { link: Link; hi
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-44 rounded-xl">
         {link.kind === 'file' ? (
-          <DropdownMenuItem onClick={() => openFile(link, true).catch(toastError)}>
+          <DropdownMenuItem onClick={() => downloadFile(link).catch(toastError)}>
             <Download />
             Download
           </DropdownMenuItem>
