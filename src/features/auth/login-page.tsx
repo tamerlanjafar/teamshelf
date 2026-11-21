@@ -1,10 +1,11 @@
 import { useMutation } from '@tanstack/react-query'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { MailCheck } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { crossTo, setLastSlot, slotsOfEmail } from '@/lib/accounts'
+import { ACTIVE_SLOT, crossTo, NEW_SLOT, setLastSlot, slotsOfEmail } from '@/lib/accounts'
 import { errorMessage } from '@/lib/errors'
 import { isEmail, sendSignInLink } from '@/lib/neon'
 import { AUTH_BUTTON, AUTH_INPUT, AUTH_SECONDARY, AuthCard, Strong } from './screens'
@@ -73,6 +74,11 @@ export function LoginPage({ linkExpired = false, returnPath, intent }: { linkExp
     }
   }, [intent])
   const [invalid, setInvalid] = useState(false)
+  const navigate = useNavigate()
+  // Opened from the Organizations page, this page still uses that page's session: back there
+  // within the page, its list still loaded. Opened by itself, the list needs its session: load it.
+  const inOrgSession = ACTIVE_SLOT !== NEW_SLOT
+  const backToOrgs = () => (inOrgSession ? void navigate({ to: '/organizations' }) : crossTo('/organizations'))
   const send = useMutation({ mutationFn: (address: string) => sendSignInLink(address, returnPath) })
   const wording = WORDING[intent ?? 'first']
 
@@ -106,7 +112,7 @@ export function LoginPage({ linkExpired = false, returnPath, intent }: { linkExp
           : undefined
 
   return (
-    <AuthCard title={wording.title} description={wording.description} back={intent ? { label: 'Your organizations', onClick: () => crossTo('/organizations'), signedInOnly: true } : undefined}>
+    <AuthCard title={wording.title} description={wording.description} back={intent ? { label: 'Your organizations', onClick: backToOrgs, signedInOnly: true } : undefined}>
       <form onSubmit={submit} noValidate>
         <FieldGroup className="gap-6">
           <Field className="gap-1.5" data-invalid={Boolean(error)}>
@@ -144,9 +150,29 @@ export function LoginPage({ linkExpired = false, returnPath, intent }: { linkExp
           </Field>
         </FieldGroup>
       </form>
+      {/* The other way in. Signed in already (from the Organizations page), signing in is for another organization. */}
+      <p className="text-quiet m-0 mt-3 text-center text-[14px]">
+        {intent === 'create' ? (
+          <>
+            Already use Teamshelf?{' '}
+            <Link to="/login" search={inOrgSession ? { intent: 'join' } : {}} className={OTHER_WAY}>
+              Sign in
+            </Link>
+          </>
+        ) : (
+          <>
+            New to Teamshelf?{' '}
+            <Link to="/signup" className={OTHER_WAY}>
+              Create an organization
+            </Link>
+          </>
+        )}
+      </p>
     </AuthCard>
   )
 }
+
+const OTHER_WAY = 'text-brand font-medium underline-offset-4 hover:underline'
 
 /** How long to wait before the link can be sent again, so impatient clicks don't pile up emails. */
 const RESEND_AFTER_SECONDS = 30

@@ -6,7 +6,6 @@ import { useJoinOrg, useMyOrgs } from '@/api/orgs'
 import { Button } from '@/components/ui/button'
 import { OrgBadge } from '@/components/app/org-badge'
 import { AuthCard, Strong } from '@/features/auth/screens'
-import { crossTo } from '@/lib/accounts'
 import { errorMessage } from '@/lib/errors'
 import { neon } from '@/lib/neon'
 import type { OrgSummary } from '@/lib/types'
@@ -79,8 +78,9 @@ export function OrgsPage() {
       )}
 
       <div className="grid gap-2.5 sm:grid-cols-2">
-        <Action icon={<LogIn />} title="Sign in to an organization" detail="With the email you use there." onClick={() => crossTo('/login?intent=join')} />
-        <Action icon={<Plus />} title="Create an organization" detail="A new board for a team." onClick={() => crossTo('/signup')} />
+        {/* Within this page: the sign-in form needs no other session (src/lib/neon.ts), so the list stays loaded to come back to. */}
+        <Action icon={<LogIn />} title="Sign in to an organization" detail="With the email you use there." to="/login" search={{ intent: 'join' }} />
+        <Action icon={<Plus />} title="Create an organization" detail="A new board for a team." to="/signup" />
       </div>
 
     </AuthCard>
@@ -102,17 +102,17 @@ function OrgRow({ name, detail }: { name: string; detail: string }) {
   )
 }
 
-function Action({ icon, title, detail, onClick }: { icon: ReactNode; title: string; detail: string; onClick: () => void }) {
+function Action({ icon, title, detail, to, search }: { icon: ReactNode; title: string; detail: string; to: '/login' | '/signup'; search?: { intent: 'join' } }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
+    <Link
+      to={to}
+      search={search}
       className="border-border hover:border-primary flex flex-col items-start gap-2 rounded-xl border p-3.5 text-left transition-colors [&_svg]:size-4"
     >
       <span className="bg-primary/12 text-primary grid size-8 place-items-center rounded-lg">{icon}</span>
       <span className="font-semibold">{title}</span>
       <span className="text-muted-foreground text-[12.5px] leading-snug">{detail}</span>
-    </button>
+    </Link>
   )
 }
 

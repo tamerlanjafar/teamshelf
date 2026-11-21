@@ -8,7 +8,8 @@ test.describe('sign in', () => {
   test.beforeEach(async ({ page }) => signedOut(page))
 
   test('sent here by a page that needs signing in, shows the form, with the way back to it kept', async ({ page }) => {
-    await goto(page, '/organizations')
+    // Not goto(): the page leaves at once, so there is no page to wait for until the form's.
+    await page.goto('/organizations')
     await page.waitForURL(/\/login\?redirect=%2Forganizations$/)
     await expect(page.getByLabel('Email')).toBeVisible()
   })
@@ -65,6 +66,18 @@ test('a link that expired says so, without an error in the address', async ({ pa
   await openScreen(page, 'link-expired')
   expect(new URL(page.url()).search).toBe('')
   await expect(page.getByText('That link has expired. Sign in again to get a new one.')).toBeVisible()
+})
+
+test.describe('between signing in and creating', () => {
+  test('signing in links to creating an organization, and back', async ({ page }) => {
+    await signedOut(page)
+    await page.getByRole('link', { name: 'Create an organization' }).click()
+    await expect(page).toHaveURL(/\/signup$/)
+    await expect(page.getByRole('heading', { name: 'Create an organization' })).toBeVisible()
+    await page.getByRole('link', { name: 'Sign in' }).click()
+    await expect(page).toHaveURL(/\/login$/)
+    await expect(page.getByRole('heading', { name: 'Welcome to Teamshelf' })).toBeVisible()
+  })
 })
 
 test.describe('the way back to your organizations', () => {

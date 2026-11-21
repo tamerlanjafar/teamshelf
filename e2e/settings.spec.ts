@@ -81,10 +81,59 @@ test.describe('space settings', () => {
     await expect(page.getByRole('dialog')).toContainText('Only an Org Admin can open it again.')
   })
 
-  test('adding a person of the organization', async ({ page }) => {
+  test('an open space lists only its admins, since everyone in the organization is in it', async ({ page }) => {
     await openScreen(page, 'space-settings')
+    await expect(page.getByRole('heading', { name: /^Admins/ })).toBeVisible()
+    await expect(page.getByText('Everyone in Acme can see this space.')).toBeVisible()
+    await expect(page.locator('main').getByText('sam@acme.com')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Add people' })).toHaveCount(0)
+  })
+
+  test('adding an admin to an open space', async ({ page }) => {
+    await openScreen(page, 'space-settings')
+    await page.getByRole('button', { name: 'Add admins' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Add admins to Development' })
+    await expect(dialog.getByRole('radiogroup', { name: 'Role in the space' })).toHaveCount(0)
+    await dialog.getByRole('checkbox', { name: /Mina Park/ }).click()
+    await dialog.getByRole('button', { name: 'Add 1 admin' }).click()
+    await expect(page.locator('main').getByText('mina@acme.com')).toBeVisible()
+  })
+
+  test('removing an admin of an open space', async ({ page }) => {
+    await openScreen(page, 'space-settings')
+    await page.getByRole('button', { name: 'More for Sam Lee' }).click()
+    await page.getByRole('menuitem', { name: 'Remove as admin' }).click()
+    await expect(page.locator('main').getByText('sam@acme.com')).toHaveCount(0)
+  })
+
+  test('opening a private space takes its members off the list, keeping its admins', async ({ page }) => {
+    await openScreen(page, 'space-settings')
+    await goto(page, '/acme/leadership/settings')
+    await expect(page.locator('main').getByText('priya@acme.com')).toBeVisible()
+    await page.getByRole('radio', { name: /Everyone in Acme/ }).click()
+    const dialog = page.getByRole('dialog', { name: 'Open Leadership to everyone in Acme?' })
+    await expect(dialog).toContainText('Its 2 members are taken off its list')
+    await dialog.getByRole('button', { name: 'Open to everyone' }).click()
+    await expect(page.getByRole('heading', { name: /^Admins/ })).toBeVisible()
+    await expect(page.locator('main').getByText('priya@acme.com')).toHaveCount(0)
+    await expect(page.locator('main').getByText('alex@acme.com')).toBeVisible()
+  })
+
+  test('making a space private asks who else keeps it', async ({ page }) => {
+    await openScreen(page, 'space-settings')
+    await page.getByRole('radio', { name: /Only its people/ }).click()
+    const dialog = page.getByRole('dialog', { name: 'Make Development private?' })
+    await dialog.getByRole('checkbox', { name: /Mina Park/ }).click()
+    await dialog.getByRole('button', { name: 'Make private with 1 person' }).click()
+    await expect(page.getByRole('heading', { name: /^People/ })).toBeVisible()
+    await expect(page.locator('main').getByText('mina@acme.com')).toBeVisible()
+  })
+
+  test('adding a person of the organization to a private space', async ({ page }) => {
+    await openScreen(page, 'space-settings')
+    await goto(page, '/acme/leadership/settings')
     await page.getByRole('button', { name: 'Add people' }).click()
-    const dialog = page.getByRole('dialog', { name: 'Add people to Development' })
+    const dialog = page.getByRole('dialog', { name: 'Add people to Leadership' })
     await dialog.getByRole('checkbox', { name: /Mina Park/ }).click()
     await expect(dialog.getByRole('button', { name: 'Add 1 person' })).toBeVisible()
     await dialog.getByRole('button', { name: 'Add 1 person' }).click()
@@ -93,8 +142,9 @@ test.describe('space settings', () => {
 
   test('inviting someone new by email from a space', async ({ page }) => {
     await openScreen(page, 'space-settings')
+    await goto(page, '/acme/leadership/settings')
     await page.getByRole('button', { name: 'Add people' }).click()
-    const dialog = page.getByRole('dialog', { name: 'Add people to Development' })
+    const dialog = page.getByRole('dialog', { name: 'Add people to Leadership' })
     await dialog.getByPlaceholder('Search by name or email').fill('jordan@acme.com')
     await dialog.getByRole('button', { name: /Invite jordan@acme.com/ }).click()
     await dialog.getByRole('button', { name: 'Invite 1 person' }).click()
@@ -103,6 +153,7 @@ test.describe('space settings', () => {
 
   test('the people list keeps its order while choosing', async ({ page }) => {
     await openScreen(page, 'space-settings')
+    await goto(page, '/acme/leadership/settings')
     await page.getByRole('button', { name: 'Add people' }).click()
     const options = page.getByRole('dialog').getByRole('checkbox')
     const before = await options.allTextContents()
@@ -114,15 +165,15 @@ test.describe('space settings', () => {
     await openScreen(page, 'space-settings')
     await goto(page, '/acme/data/settings')
     await page.getByRole('button', { name: 'More for Alex Morgan' }).click()
-    await expect(page.getByRole('menuitem', { name: 'Make member' })).toBeDisabled()
-    await expect(page.getByRole('menuitem', { name: /Remove from Data/ })).toBeDisabled()
+    await expect(page.getByRole('menuitem', { name: 'Remove as admin' })).toBeDisabled()
     await expect(page.getByText('A space keeps at least one admin.')).toBeVisible()
   })
 
-  test('removing someone from a space', async ({ page }) => {
+  test('removing someone from a private space', async ({ page }) => {
     await openScreen(page, 'space-settings')
+    await goto(page, '/acme/leadership/settings')
     await page.getByRole('button', { name: 'More for Priya Nair' }).click()
-    await page.getByRole('menuitem', { name: 'Remove from Development' }).click()
+    await page.getByRole('menuitem', { name: 'Remove from Leadership' }).click()
     await expect(page.locator('main').getByText('priya@acme.com')).toHaveCount(0)
   })
 

@@ -48,7 +48,7 @@ export function MemberRow({ member }: { member: Member }) {
 }
 
 /**
- * How many spaces someone is in, as a quiet button. It opens the list: each space with its logo
+ * How many spaces someone is in (every open space, and the private ones they were added to), as a quiet button. It opens the list: each space with its logo
  * and their role in it. Stays one small thing however many spaces there are.
  */
 function SpacesRun({ member }: { member: Member }) {
@@ -56,7 +56,8 @@ function SpacesRun({ member }: { member: Member }) {
   const rows = useSpaceMembersIfLoaded()
   const [open, setOpen] = useState(false)
   const theirs = spaces
-    .map((space) => ({ space, role: rows.find((row) => row.space_id === space.id && row.member_id === member.id)?.role }))
+    // Everyone in the organization is in its open spaces; private ones only for their people.
+    .map((space) => ({ space, role: rows.find((row) => row.space_id === space.id && row.member_id === member.id)?.role ?? (space.visibility === 'org' ? ('member' as const) : undefined) }))
     .filter((entry): entry is { space: (typeof spaces)[number]; role: SpaceRole } => Boolean(entry.role))
     .sort((a, b) => (a.role === b.role ? a.space.name.localeCompare(b.space.name) : a.role === 'admin' ? -1 : 1))
   if (theirs.length === 0) return null
@@ -66,6 +67,7 @@ function SpacesRun({ member }: { member: Member }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
+        aria-label={`${theirs.length} ${theirs.length === 1 ? 'space' : 'spaces'} for ${displayName(member)}`}
         className="text-quiet hover:text-ink hover:bg-ink/5 flex flex-none items-center gap-1.5 rounded-sm px-2 text-[12.5px] leading-6 font-medium whitespace-nowrap transition-colors"
       >
         <Layers className="size-3.5" />

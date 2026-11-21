@@ -73,7 +73,7 @@ function SpaceSettings() {
 }
 
 /** A part of the page: a small heading (with a count and an action at its right), then one rounded box. */
-function Panel({ title, count, action, padded = true, children }: { title: string; count?: number; action?: ReactNode; padded?: boolean; children: ReactNode }) {
+function Panel({ title, count, action, note, padded = true, children }: { title: string; count?: number; action?: ReactNode; note?: ReactNode; padded?: boolean; children: ReactNode }) {
   return (
     <section className="grid min-w-0 gap-2.5">
       <div className="mx-1 flex min-h-8 flex-wrap items-center gap-2">
@@ -83,6 +83,7 @@ function Panel({ title, count, action, padded = true, children }: { title: strin
         </h2>
         {action}
       </div>
+      {note && <p className="text-quiet m-0 mx-1 -mt-1 text-[13px] leading-relaxed">{note}</p>}
       <div className={cn('bg-raised border-line min-w-0 overflow-hidden rounded-xl border', padded ? 'p-4' : 'divide-line divide-y')}>{children}</div>
     </section>
   )
@@ -219,19 +220,25 @@ function Visibility({ space }: { space: Space }) {
   const { admin } = usePermissions()
   const updateSpace = useUpdateSpace()
   const confirm = useConfirm()
+  const members = useMembers()
+  const rows = useSpaceMembersIfLoaded().filter((row) => row.space_id === space.id)
+  const [closing, setClosing] = useState(false)
   const locked = !admin && space.visibility !== 'org'
+  // Plain members of a private space: opening it takes them off (the database does, too), as
+  // being in an open space adds nothing. Invitations still waiting stay, as the database keeps them.
+  const plain = rows.filter((row) => row.role === 'member' && members.find((member) => member.id === row.member_id)?.approved).length
 
   function change(visibility: SpaceVisibility) {
     if (visibility === space.visibility) return
+    if (visibility === 'private') return setClosing(true)
     const apply = () => updateSpace.mutate({ id: space.id, changes: { visibility } }, { onError: toastError })
-    if (visibility === 'org') apply()
-    else
-      confirm({
-        title: `Make ${space.name} private?`,
-        description: `Only people you add under People will see ${space.name}. Everyone else in ${org.name} won't see it anymore.${admin ? '' : ` Only an Org Admin can open it again.`}`,
-        confirmLabel: 'Make private',
-        onConfirm: apply,
-      })
+    if (plain === 0) return apply()
+    confirm({
+      title: `Open ${space.name} to everyone in ${org.name}?`,
+      description: `Everyone in ${org.name} will see ${space.name} and can suggest links. Its ${plain === 1 ? 'member is' : `${plain} members are`} taken off its list, as everyone is in it now. Its admins stay.`,
+      confirmLabel: 'Open to everyone',
+      onConfirm: apply,
+    })
   }
 
   return (
@@ -247,6 +254,9 @@ function Visibility({ space }: { space: Space }) {
         />
         <Choice chosen={space.visibility === 'private'} icon={<Lock />} label="Only its people" detail="Hidden from everyone else in the organization." onClick={() => change('private')} />
       </div>
+      <Dialog open={closing} onOpenChange={setClosing}>
+        <DialogContent className="rounded-xl sm:max-w-[560px]">{closing && <MakePrivate space={space} onDone={() => setClosing(false)} />}</DialogContent>
+      </Dialog>
     </Panel>
   )
 }
@@ -254,8 +264,12 @@ function Visibility({ space }: { space: Space }) {
 /**
  * The space's people, one calm line each like the Team page: who they are, where their invitation
  * stands, an Admin badge, and a menu for the rest. A space keeps at least one admin.
+ *
+ * An open space is everyone's: it lists only its admins, the people who run it.
  */
 function People({ space }: { space: Space }) {
+  const org = useOrg()
+  const open = space.visibility === 'org'
   const me = useMe()
   const members = useMembers()
   const rows = useSpaceMembersIfLoaded().filter((row) => row.space_id === space.id)
@@ -267,24 +281,26 @@ function People({ space }: { space: Space }) {
     .filter((entry): entry is { row: (typeof rows)[number]; member: Member } => Boolean(entry.member))
     .sort((a, b) => (a.row.role === b.row.role ? displayName(a.member).localeCompare(displayName(b.member)) : a.row.role === 'admin' ? -1 : 1))
   const admins = rows.filter((row) => row.role === 'admin').length
+  const listed = open ? inSpace.filter(({ row }) => row.role === 'admin') : inSpace
 
   const set = (member: Member, role: SpaceRole | null, current: SpaceRole | null) =>
     setMember.mutate({ spaceId: space.id, memberId: member.id, role, current }, { onError: toastError })
 
   return (
     <Panel
-      title="People"
-      count={inSpace.length}
+      title={open ? 'Admins' : 'People'}
+      count={listed.length}
       padded={false}
+      note={open ? `Everyone in ${org.name} can see this space. Admins manage its links and settings.` : undefined}
       action={
         <Button variant="outline" onClick={() => setAdding(true)}>
-          <UserPlus />
-          Add people
+          {open ? <Shield /> : <UserPlus />}
+          {open ? 'Add admins' : 'Add people'}
         </Button>
       }
     >
-      {inSpace.length === 0 && <p className="text-quiet m-0 px-4 py-3">Nobody yet.</p>}
-      {inSpace.map(({ row, member }) => {
+      {listed.length === 0 && <p className="text-quiet m-0 px-4 py-3">Nobody yet.</p>}
+      {listed.map(({ row, member }) => {
         const lastAdmin = row.role === 'admin' && admins === 1
         return (
           <div key={member.id} className="flex items-center gap-3 px-4 py-3">
@@ -301,23 +317,33 @@ function People({ space }: { space: Space }) {
               </div>
               <div className="text-quiet truncate text-[13px]">{member.email}</div>
             </div>
-            {row.role === 'admin' && <span className="text-brand flex-none rounded-sm bg-[color-mix(in_srgb,var(--brand)_11%,transparent)] px-2 text-[12px] leading-6 font-semibold">Admin</span>}
+            {row.role === 'admin' && !open && <span className="text-brand flex-none rounded-sm bg-[color-mix(in_srgb,var(--brand)_11%,transparent)] px-2 text-[12px] leading-6 font-semibold">Admin</span>}
             <RowMenu label={`More for ${displayName(member)}`}>
-              <DropdownMenuItem disabled={lastAdmin} onClick={() => set(member, row.role === 'admin' ? 'member' : 'admin', row.role)}>
-                {row.role === 'admin' ? <ShieldOff /> : <Shield />}
-                {row.role === 'admin' ? 'Make member' : 'Make admin'}
-              </DropdownMenuItem>
-              <DropdownMenuItem variant="destructive" disabled={lastAdmin} onClick={() => set(member, null, row.role)}>
-                <UserMinus />
-                Remove from {space.name}
-              </DropdownMenuItem>
+              {open ? (
+                // In an open space, an admin who stops being one is simply in it like everyone.
+                <DropdownMenuItem variant="destructive" disabled={lastAdmin} onClick={() => set(member, null, row.role)}>
+                  <ShieldOff />
+                  Remove as admin
+                </DropdownMenuItem>
+              ) : (
+                <>
+                  <DropdownMenuItem disabled={lastAdmin} onClick={() => set(member, row.role === 'admin' ? 'member' : 'admin', row.role)}>
+                    {row.role === 'admin' ? <ShieldOff /> : <Shield />}
+                    {row.role === 'admin' ? 'Make member' : 'Make admin'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem variant="destructive" disabled={lastAdmin} onClick={() => set(member, null, row.role)}>
+                    <UserMinus />
+                    Remove from {space.name}
+                  </DropdownMenuItem>
+                </>
+              )}
               {lastAdmin && <p className="text-quiet m-0 px-2 py-1.5 text-[12px]">A space keeps at least one admin.</p>}
             </RowMenu>
           </div>
         )
       })}
       <Dialog open={adding} onOpenChange={setAdding}>
-        <DialogContent className="rounded-xl sm:max-w-[560px]">{adding && <AddPeople space={space} onDone={() => setAdding(false)} />}</DialogContent>
+        <DialogContent className="rounded-xl sm:max-w-[560px]">{adding && <AddPeople space={space} adminsOnly={open} onDone={() => setAdding(false)} />}</DialogContent>
       </Dialog>
     </Panel>
   )
@@ -334,20 +360,22 @@ const ROLES: { value: SpaceRole; label: string; detail: string }[] = [
  * Someone new joins the organization too: at once when its email's domain is let in, otherwise
  * once an admin of the organization approves.
  */
-function AddPeople({ space, onDone }: { space: Space; onDone: () => void }) {
+function AddPeople({ space, adminsOnly = false, onDone }: { space: Space; adminsOnly?: boolean; onDone: () => void }) {
   const org = useOrg()
   const members = useMembers()
   const rows = useSpaceMembersIfLoaded().filter((row) => row.space_id === space.id)
   const setMember = useSetSpaceMember()
   const invite = useInviteToSpace()
   const [query, setQuery] = useState('')
-  const [role, setRole] = useState<SpaceRole>('member')
+  const [chosenRole, setRole] = useState<SpaceRole>('member')
+  const role: SpaceRole = adminsOnly ? 'admin' : chosenRole
   const [picked, setPicked] = useState<Member[]>([])
   const [emails, setEmails] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
 
   const words = query.trim().toLowerCase()
-  const others = members.filter((member) => member.approved && !rows.some((row) => row.member_id === member.id))
+  // In an open space, anyone not running it yet (a waiting invitation's row aside).
+  const others = members.filter((member) => member.approved && !rows.some((row) => row.member_id === member.id && (!adminsOnly || row.role === 'admin')))
   const found = others.filter((member) => !words || `${displayName(member)} ${member.email}`.toLowerCase().includes(words)).sort((a, b) => displayName(a).localeCompare(displayName(b)))
   // Picked people stay listed while the search hides others, still in name order.
   const shown = others.filter((member) => found.includes(member) || picked.includes(member)).sort((a, b) => displayName(a).localeCompare(displayName(b)))
@@ -364,7 +392,7 @@ function AddPeople({ space, onDone }: { space: Space; onDone: () => void }) {
     setSaving(true)
     let waiting = 0
     try {
-      for (const member of picked) await setMember.mutateAsync({ spaceId: space.id, memberId: member.id, role, current: null })
+      for (const member of picked) await setMember.mutateAsync({ spaceId: space.id, memberId: member.id, role, current: rows.find((row) => row.member_id === member.id)?.role ?? null })
       for (const address of emails) if ((await invite.mutateAsync({ space, email: address, role })) === 'waiting') waiting += 1
       toast.success(
         waiting > 0
@@ -382,7 +410,7 @@ function AddPeople({ space, onDone }: { space: Space; onDone: () => void }) {
   return (
     <div className="grid gap-4">
       <DialogHeader>
-        <DialogTitle className="text-[18px] font-[650] [font-family:var(--font-rounded)]">Add people to {space.name}</DialogTitle>
+        <DialogTitle className="text-[18px] font-[650] [font-family:var(--font-rounded)]">{adminsOnly ? 'Add admins to' : 'Add people to'} {space.name}</DialogTitle>
       </DialogHeader>
 
       <div className="bg-well flex h-10 items-center gap-2 rounded-md px-3 shadow-[inset_0_0_0_1px_var(--line)] focus-within:shadow-[inset_0_0_0_1px_var(--brand)]">
@@ -441,28 +469,107 @@ function AddPeople({ space, onDone }: { space: Space; onDone: () => void }) {
         )}
       </ul>
 
-      <div role="radiogroup" aria-label="Role in the space" className="grid gap-2 sm:grid-cols-2">
-        {ROLES.map((option) => (
-          <Choice key={option.value} chosen={role === option.value} icon={option.value === 'admin' ? <Shield /> : <UserPlus />} label={option.label} detail={option.detail} onClick={() => setRole(option.value)} />
-        ))}
-      </div>
+      {adminsOnly ? (
+        <p className="text-quiet m-0 text-[13px]">Admins manage links and settings.</p>
+      ) : (
+        <div role="radiogroup" aria-label="Role in the space" className="grid gap-2 sm:grid-cols-2">
+          {ROLES.map((option) => (
+            <Choice key={option.value} chosen={role === option.value} icon={option.value === 'admin' ? <Shield /> : <UserPlus />} label={option.label} detail={option.detail} onClick={() => setRole(option.value)} />
+          ))}
+        </div>
+      )}
 
       <DialogFooter>
         <Button variant="outline" onClick={onDone}>
           Cancel
         </Button>
         <Button disabled={count === 0 || saving} onClick={confirm}>
-          {saving ? 'Adding…' : confirmLabel(picked.length, emails.length)}
+          {saving ? 'Adding…' : confirmLabel(picked.length, emails.length, adminsOnly)}
         </Button>
       </DialogFooter>
     </div>
   )
 }
 
-/** What the Add people button does: "Add 2 people", "Invite 1 person", "Add 2, invite 1". */
-function confirmLabel(adding: number, inviting: number) {
-  const people = (count: number) => `${count} ${count === 1 ? 'person' : 'people'}`
-  if (adding === 0 && inviting === 0) return 'Add people'
+/**
+ * Making a space private: its admins keep it, and the people picked here are added, first, so
+ * nobody picked loses it in between. Everyone else in the organization stops seeing it.
+ */
+function MakePrivate({ space, onDone }: { space: Space; onDone: () => void }) {
+  const org = useOrg()
+  const { admin } = usePermissions()
+  const members = useMembers()
+  const rows = useSpaceMembersIfLoaded().filter((row) => row.space_id === space.id)
+  const setMember = useSetSpaceMember()
+  const updateSpace = useUpdateSpace()
+  const [query, setQuery] = useState('')
+  const [picked, setPicked] = useState<Member[]>([])
+  const [saving, setSaving] = useState(false)
+
+  const words = query.trim().toLowerCase()
+  const admins = rows.filter((row) => row.role === 'admin').map((row) => row.member_id)
+  const others = members.filter((member) => member.approved && !admins.includes(member.id)).sort((a, b) => displayName(a).localeCompare(displayName(b)))
+  const shown = others.filter((member) => picked.includes(member) || !words || `${displayName(member)} ${member.email}`.toLowerCase().includes(words))
+  const toggle = (member: Member) => setPicked((current) => (current.includes(member) ? current.filter((one) => one !== member) : [...current, member]))
+
+  async function confirm() {
+    setSaving(true)
+    try {
+      for (const member of picked) if (!rows.some((row) => row.member_id === member.id)) await setMember.mutateAsync({ spaceId: space.id, memberId: member.id, role: 'member', current: null })
+      await updateSpace.mutateAsync({ id: space.id, changes: { visibility: 'private' } })
+      onDone()
+    } catch (error) {
+      toastError(error)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="grid gap-4">
+      <DialogHeader>
+        <DialogTitle className="text-[18px] font-[650] [font-family:var(--font-rounded)]">Make {space.name} private?</DialogTitle>
+      </DialogHeader>
+      <p className="text-quiet m-0 text-[14px] leading-relaxed">
+        Only its admins and the people you pick will see {space.name}. Everyone else in {org.name} won't see it anymore.{admin ? '' : ' Only an Org Admin can open it again.'}
+      </p>
+
+      <div className="bg-well flex h-10 items-center gap-2 rounded-md px-3 shadow-[inset_0_0_0_1px_var(--line)] focus-within:shadow-[inset_0_0_0_1px_var(--brand)]">
+        <Search className="text-quiet size-4 flex-none" />
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Who else keeps it? Search by name or email"
+          aria-label="Search by name or email"
+          autoComplete="off"
+          className="placeholder:text-quiet/80 h-full min-w-0 flex-1 bg-transparent outline-none"
+        />
+      </div>
+      <ul className="border-line divide-line m-0 max-h-[280px] list-none divide-y overflow-y-auto rounded-md border p-0">
+        {shown.map((member) => (
+          <li key={member.id}>
+            <PickRow chosen={picked.includes(member)} onClick={() => toggle(member)} mark={<Avatar member={member} className="size-8" />} title={displayName(member)} detail={member.email} />
+          </li>
+        ))}
+        {shown.length === 0 && <li className="text-quiet px-3 py-6 text-center text-[13.5px]">{others.length === 0 ? `Everyone else in ${org.name} runs it already.` : `No one in ${org.name} matches.`}</li>}
+      </ul>
+
+      <DialogFooter>
+        <Button variant="outline" onClick={onDone}>
+          Cancel
+        </Button>
+        <Button disabled={saving} onClick={confirm}>
+          {saving ? 'Saving…' : picked.length ? `Make private with ${picked.length} ${picked.length === 1 ? 'person' : 'people'}` : 'Make private'}
+        </Button>
+      </DialogFooter>
+    </div>
+  )
+}
+
+/** What the Add people button does: "Add 2 people", "Invite 1 person", "Add 2, invite 1" (or admins). */
+function confirmLabel(adding: number, inviting: number, admins = false) {
+  const people = (count: number) => (admins ? `${count} ${count === 1 ? 'admin' : 'admins'}` : `${count} ${count === 1 ? 'person' : 'people'}`)
+  if (adding === 0 && inviting === 0) return admins ? 'Add admins' : 'Add people'
   if (inviting === 0) return `Add ${people(adding)}`
   if (adding === 0) return `Invite ${people(inviting)}`
   return `Add ${adding}, invite ${inviting}`

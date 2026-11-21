@@ -220,7 +220,11 @@ export function runQuery(query: Query, user: User | null): Answer {
           answer = fail(problem, '23505')
           return
         }
+        const opening = table === 'spaces' && values.visibility === 'org' && row.visibility !== 'org'
         Object.assign(row, query.values)
+        // As the trigger open_spaces_keep_admins: an open space keeps only its admins (and invitations still waiting).
+        if (opening)
+          db.space_members = db.space_members.filter((one) => one.space_id !== row.id || one.role === 'admin' || !db.members.find((member) => member.id === one.member_id)?.approved)
       }
       answer = shape(targets, query)
       return

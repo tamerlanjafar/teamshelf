@@ -64,7 +64,15 @@ test('your own row has no menu', async ({ page }) => {
 })
 
 test('a space count opens the spaces someone is in, with their role', async ({ page }) => {
-  await page.getByRole('button', { name: '4 spaces' }).click()
+  await page.getByRole('button', { name: '4 spaces for Alex Morgan' }).click()
   const dialog = page.getByRole('dialog', { name: "Alex Morgan's spaces" })
   await expect(dialog.getByRole('listitem')).toHaveCount(4)
+})
+
+test('the space count includes every open space, which everyone is in', async ({ page }) => {
+  // Mina runs Design, and is in Development and Data as everyone is; Leadership is private.
+  await page.getByRole('button', { name: '3 spaces for Mina Park' }).click()
+  const dialog = page.getByRole('dialog', { name: "Mina Park's spaces" })
+  await expect(dialog.getByRole('listitem')).toHaveCount(3)
+  await expect(dialog.getByRole('listitem').filter({ hasText: 'Leadership' })).toHaveCount(0)
 })

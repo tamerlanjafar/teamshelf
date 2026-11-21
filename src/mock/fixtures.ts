@@ -155,11 +155,12 @@ function world(): Tables {
       { space_id: design, member_id: 'm-nw-alex', role: 'admin' },
       { space_id: data, member_id: 'm-nw-alex', role: 'admin' },
       { space_id: dev, member_id: 'm-nw-sam', role: 'admin' },
-      { space_id: dev, member_id: 'm-nw-priya', role: 'member' },
       { space_id: design, member_id: 'm-nw-mina', role: 'admin' },
       { space_id: leads, member_id: 'm-nw-alex', role: 'admin' },
       { space_id: design, member_id: 'm-nw-taylor', role: 'member' },
       { space_id: leads, member_id: 'm-nw-sam', role: 'member' },
+      // Open spaces are everyone's: only private ones list their plain members.
+      { space_id: leads, member_id: 'm-nw-priya', role: 'member' },
       { space_id: 'space-lumen-research', member_id: 'm-lumen-alex', role: 'admin' },
     ],
     groups: [

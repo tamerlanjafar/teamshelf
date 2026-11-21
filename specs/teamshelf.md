@@ -21,6 +21,7 @@ What the end-to-end tests cover, by area. Each line is a test in `e2e/<area>.spe
 - Sign-in asks for an email only, no password.
 - Sent to sign in by a page that needs it: the form shows (no waiting screen), and the address keeps where to go back.
 - "Your organizations" isn't offered on a browser with no organizations; it is when signing in to another one, and goes there.
+- Sign-in links to creating an organization ("New to Teamshelf?"), and creating links back to signing in ("Already use Teamshelf?").
 - An address that isn't an email is refused under the field; typing again clears the message.
 - An empty field is refused.
 - Enter sends the link, like the button.
@@ -38,6 +39,8 @@ What the end-to-end tests cover, by area. Each line is a test in `e2e/<area>.spe
 - Each organization signed in is listed with its email; "Sign out of all" with more than one.
 - An organization the open email may join by domain is offered to join.
 - Opening an organization goes to its address.
+- Going to create one (or sign in to another) and back stays on the page: the list shows at once, without loading again.
+- From creating one, "Sign in" is for another organization (→ /login?intent=join), with the way back.
 - An email at an allowed domain joins with one click, and lands in the organization.
 - An organization this email can't open offers another email (→ /login?intent=join&redirect=…), and a way back.
 - Creating: the URL follows the name until typed itself; the URL keeps only a-z, 0-9 and dashes; a name is needed; reserved addresses (signup, login, open, organizations) are refused; one character is too short; a taken address is refused; creating opens the new organization.
@@ -68,11 +71,16 @@ What the end-to-end tests cover, by area. Each line is a test in `e2e/<area>.spe
 - Inviting by email (button disabled until an email is typed).
 - Making someone an Org Admin and a member again; removing asks first and says what happens.
 - Your own row has no menu; a space count opens their spaces with roles.
+- The space count includes every open space (everyone is in them), and only the private spaces they were added to.
 
 ## Settings (`settings.spec.ts`)
 
 - Organization: rename; add and remove a join domain; a domain must look like one; changing the URL warns that old links stop working, and moves there; a taken URL is refused; members don't see organization settings.
-- Space: rename (Save disabled until changed); an Org Admin makes a space private after a warning; a space admin who isn't an Org Admin can't open a private space to everyone, and is warned that making one private is one-way for them; adding a person; inviting a new email from a space; the people list keeps its order while choosing; the last admin can't leave or step down; removing someone; deleting a space asks first and says what goes; members can't open a space's settings.
+- Space: rename (Save disabled until changed); a space admin who isn't an Org Admin can't open a private space to everyone, and is warned that making one private is one-way for them; deleting a space asks first and says what goes; members can't open a space's settings.
+- Open space: lists only its Admins, saying everyone in the organization sees it; "Add admins" adds admins (no role choice); removing an admin; the last admin can't stop being one.
+- Making a space private asks who else keeps it; the people picked are listed under People after.
+- Opening a private space says its members are taken off the list; afterwards only its admins are listed (the database does the same, `001_open_spaces_keep_admins.sql`).
+- Private space: adding a person; inviting a new email; the people list keeps its order while choosing; removing someone.
 
 ## Frame and layout (`layout.spec.ts`)
 

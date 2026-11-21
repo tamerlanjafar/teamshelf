@@ -8,14 +8,33 @@ test.describe('your organizations', () => {
   test('nobody’s organization yet: a welcome, and the two ways in', async ({ page }) => {
     await openScreen(page, 'welcome')
     await expect(page.getByRole('heading', { name: 'Welcome to Teamshelf' })).toBeVisible()
-    await page.getByRole('button', { name: /Create an organization/ }).click()
+    await page.getByRole('link', { name: /Create an organization/ }).click()
     await expect(page).toHaveURL(/\/signup$/)
   })
 
   test('signing in to another organization starts at /login, for joining', async ({ page }) => {
     await openScreen(page, 'welcome')
-    await page.getByRole('button', { name: /Sign in to an organization/ }).click()
+    await page.getByRole('link', { name: /Sign in to an organization/ }).click()
     await expect(page).toHaveURL(/\/login\?intent=join$/)
+  })
+
+  test('going to create one and back keeps the page: the list is there at once, without loading again', async ({ page }) => {
+    await openScreen(page, 'orgs')
+    // A mark on the page, gone if it loads again.
+    await page.evaluate(() => ((window as unknown as { kept: boolean }).kept = true))
+    await page.getByRole('link', { name: /Create an organization/ }).click()
+    await expect(page.getByRole('heading', { name: 'Create an organization' })).toBeVisible()
+    await page.getByRole('button', { name: 'Your organizations' }).click()
+    await expect(page.getByRole('link', { name: /Lumen Labs/ })).toBeVisible()
+    expect(await page.evaluate(() => (window as unknown as { kept?: boolean }).kept)).toBe(true)
+  })
+
+  test('from creating one, signing in is for another organization', async ({ page }) => {
+    await openScreen(page, 'orgs')
+    await page.getByRole('link', { name: /Create an organization/ }).click()
+    await page.getByRole('link', { name: 'Sign in' }).click()
+    await expect(page).toHaveURL(/\/login\?intent=join$/)
+    await expect(page.getByRole('button', { name: 'Your organizations' })).toBeVisible()
   })
 
   test('lists each organization signed in, with its email', async ({ page }) => {
