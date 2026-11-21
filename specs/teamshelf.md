@@ -95,6 +95,7 @@ What the end-to-end tests cover, by area. Each line is a test in `e2e/<area>.spe
 - The front page fits, and its two actions are the same full width.
 - Board, team, suggestions, space settings, organization settings, organizations and sign-in don't scroll sideways.
 - The sidebar opens as a drawer from the menu button and closes after choosing a space.
+- On a phone, Team, Suggestions and Organization settings show the wordmark next to the menu button, back to the board.
 - A new space starts from the + by the Spaces heading (no "New space" line under the spaces, except when there are none).
 - A new space starts private, also for an Org Admin ("Only you see it until you add people or open it to everyone."), and opens; the sidebar shows its lock.
 - With more spaces than fit (`many-spaces` screen), only the spaces scroll; Suggestions, Team and Organization settings stay at the bottom, in view.

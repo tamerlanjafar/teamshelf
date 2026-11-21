@@ -33,3 +33,10 @@ test('the sidebar opens as a drawer from the menu button, and closes after choos
   await expect(page).toHaveURL(/\/acme\/design$/)
   await expect(page.getByRole('dialog')).toHaveCount(0)
 })
+
+test('on a page outside any space, the wordmark leads back to the board', async ({ page }) => {
+  await openScreen(page, 'requests')
+  await page.getByRole('link', { name: 'Back to the board' }).click()
+  await page.waitForURL(/\/acme\/[a-z-]+$/)
+  await expect(page.getByRole('button', { name: 'Add link' })).toBeVisible()
+})

@@ -9,6 +9,7 @@ import { useCurrentSpaceIfLoaded, useSpaceParam } from '@/features/spaces/curren
 import { SpaceLogo } from '@/features/spaces/space-logo'
 import { QuickFind } from '@/features/search/quick-find'
 import { cn } from '@/lib/utils'
+import { Wordmark } from './brand'
 import { useOpenSidebar } from './sidebar'
 
 /**
@@ -17,8 +18,9 @@ import { useOpenSidebar } from './sidebar'
  * (the count of what you hid), and adding a link on the right. Everything else is in the sidebar.
  *
  * Wide screens get one line, with the search centered. Below that the search gets a line of its
- * own under the rest. On a phone a menu button opens the sidebar. A page with nothing for the bar
- * (Team, Suggestions, settings, a space's settings) has it on phones only, for that button.
+ * own under the rest. On a phone a menu button opens the sidebar. A page with nothing else for the bar
+ * (Team, Suggestions, settings, a space's settings) has it on phones only: that button, and the
+ * way back (the space, or the wordmark).
  */
 export function TopBar({ children }: { children?: ReactNode }) {
   const { isSpaceAdmin } = usePermissions()
@@ -37,6 +39,8 @@ export function TopBar({ children }: { children?: ReactNode }) {
           <Menu className="size-5" />
         </button>
         {onSpace && space && <SpaceTitle space={space} admin={publishes} />}
+        {/* A page outside any space (on a phone, where this bar shows): the wordmark, back to the board. */}
+        {!onSpace && <BackToBoard />}
       </div>
 
       {/* On a board: the search finds and opens any link of the space. A comfortable width, centered. */}
@@ -56,6 +60,16 @@ export function TopBar({ children }: { children?: ReactNode }) {
         )}
       </div>
     </header>
+  )
+}
+
+/** The wordmark, opening the organization's board (the space opened last). */
+function BackToBoard() {
+  const org = useOrg()
+  return (
+    <Link to="/$org" params={{ org: org.slug }} aria-label="Back to the board" className="ml-0.5 flex items-center rounded-md">
+      <Wordmark className="text-[20px]" />
+    </Link>
   )
 }
 
