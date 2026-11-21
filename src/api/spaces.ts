@@ -1,7 +1,7 @@
 import { queryOptions, useMutation, useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import { useOrg } from '@/features/org/org-context'
-import { neon } from '@/lib/neon'
-import type { Color, Space, SpaceMember, SpaceRole, SpaceVisibility } from '@/lib/types'
+import { neon, sendSignInLink } from '@/lib/neon'
+import type { CardSizes, Color, Space, SpaceMember, SpaceRole, SpaceVisibility } from '@/lib/types'
 import { isUniqueViolation, NONE, unwrap } from './db'
 
 const spacesKey = (orgId: string) => [orgId, 'spaces'] as const
@@ -74,7 +74,7 @@ export function useCreateSpace() {
   })
 }
 
-export type SpaceChanges = Partial<Pick<Space, 'name' | 'logo' | 'color' | 'visibility' | 'environments'>>
+export type SpaceChanges = Partial<Pick<Space, 'name' | 'logo' | 'color' | 'visibility'>>
 
 /** The space's admins. */
 export function useUpdateSpace() {
@@ -107,13 +107,29 @@ export function useSetSpaceLayout() {
   })
 }
 
+/** The space's card sizes, for everyone who hasn't resized a card themselves. The space's admins. Shown at once, saved behind. */
+export function useSetSpaceCardSizes() {
+  const org = useOrg()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, sizes }: { id: string; sizes: CardSizes }) => unwrap(neon.from('spaces').update({ card_sizes: sizes }).eq('id', id)),
+    onMutate: ({ id, sizes }) => {
+      const before = queryClient.getQueryData<Space[]>(spacesKey(org.id))
+      queryClient.setQueryData<Space[]>(spacesKey(org.id), (spaces) => spaces?.map((space) => (space.id === id ? { ...space, card_sizes: sizes } : space)))
+      return { before }
+    },
+    onError: (_error, _input, context) => queryClient.setQueryData(spacesKey(org.id), context?.before),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: spacesKey(org.id) }),
+  })
+}
+
 /** Deletes the space with every group, link and file in it. The space's admins. */
 export function useDeleteSpace() {
   const refresh = useRefresh()
   return useMutation({ mutationFn: (id: string) => unwrap(neon.from('spaces').delete().eq('id', id)), onSettled: refresh })
 }
 
-/** The organization's order of its spaces. The super admin. */
+/** The organization's order of its spaces. Its admins. */
 export function useSetSpaceOrder() {
   const org = useOrg()
   const refresh = useRefresh()
@@ -129,6 +145,34 @@ export function useSetSpaceMember() {
       if (role === null) await unwrap(row.delete().eq('space_id', spaceId).eq('member_id', memberId))
       else if (current === null) await unwrap(row.insert({ space_id: spaceId, member_id: memberId, role }))
       else await unwrap(row.update({ role }).eq('space_id', spaceId).eq('member_id', memberId))
+    },
+    onSettled: refresh,
+  })
+}
+
+/** What inviting someone to a space did: added them, invited them, or asked an admin of the organization to approve. */
+export type SpaceInviteResult = 'added' | 'invited' | 'waiting'
+
+/**
+ * Invites someone to a space by email. The space's admins. Someone already in the organization is
+ * added; someone new is invited to it too, at once when its email's domain is let in, otherwise
+ * once an admin of the organization approves. Those invited at once get the sign-in link now.
+ */
+export function useInviteToSpace() {
+  const org = useOrg()
+  const refresh = useRefresh()
+  return useMutation({
+    mutationFn: async ({ space, email, role }: { space: Space; email: string; role: SpaceRole }): Promise<SpaceInviteResult> => {
+      const address = email.trim().toLowerCase()
+      const result = await unwrap<SpaceInviteResult>(neon.rpc('invite_to_space', { space: space.id, invitee_email: address, invitee_role: role }))
+      if (result === 'invited') {
+        try {
+          await sendSignInLink(address, `/${org.slug}/${space.slug}`)
+        } catch {
+          throw new Error(`${address} was invited, but the email could not be sent. Try again in a minute.`)
+        }
+      }
+      return result
     },
     onSettled: refresh,
   })

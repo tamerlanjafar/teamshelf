@@ -1,7 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { Favicon } from '@/features/board/favicon'
 import { FileIcon } from '@/features/board/file-icon'
-import { isProduction } from '@/lib/environments'
 import type { Link } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -15,12 +14,11 @@ export interface LinkChoice {
   groupName: string
   /** Only for a link of another space than the open one. */
   spaceName?: string
-  environment: string | null
   /** The group's color. */
   color: string
 }
 
-/** One compact line: icon, "Group / Name" (with the space in front when it is another one), environment. */
+/** One compact line: icon, and "Group / Name" (with the space in front when it is another one). */
 export function LinkOption({ id, choice, selected, onHover, onChoose }: { id: string; choice: LinkChoice; selected: boolean; onHover: () => void; onChoose: () => void }) {
   return (
     <li
@@ -29,11 +27,10 @@ export function LinkOption({ id, choice, selected, onHover, onChoose }: { id: st
       aria-selected={selected}
       onPointerMove={onHover}
       onClick={onChoose}
-      className={cn('flex h-8 min-w-0 cursor-pointer items-center gap-2.5 rounded-[9px] px-2.5 text-[13.5px]', selected && 'bg-[color-mix(in_srgb,var(--brand)_9%,transparent)]')}
+      className={cn('flex h-8 min-w-0 cursor-pointer items-center gap-2.5 rounded-lg px-2.5 text-[13.5px]', selected && 'bg-[color-mix(in_srgb,var(--brand)_9%,transparent)]')}
       style={{ '--c': choice.color } as CSSProperties}
     >
       {choice.link.kind === 'file' ? <FileIcon type={choice.link.file_type} name={choice.link.file_name} /> : <Favicon url={choice.link.url} iconUrl={choice.link.icon_url} title={choice.title} />}
-      {/* The environment follows the name directly, so it reads as part of it. */}
       <span className="flex min-w-0 flex-1 items-center gap-2">
         <span className="min-w-0 truncate">
           {choice.spaceName && (
@@ -46,16 +43,6 @@ export function LinkOption({ id, choice, selected, onHover, onChoose }: { id: st
           <span className="text-quiet/60 mx-1.5">/</span>
           <span className="text-ink font-medium">{choice.title}</span>
         </span>
-        {choice.environment && (
-          <span
-            className={cn(
-              'flex-none rounded-full px-1.5 py-px text-[10.5px] font-semibold [font-family:var(--font-rounded)]',
-              isProduction(choice.environment) ? 'bg-danger/12 text-danger' : 'bg-brand/12 text-brand',
-            )}
-          >
-            {choice.environment}
-          </span>
-        )}
       </span>
     </li>
   )

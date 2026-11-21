@@ -4,8 +4,9 @@ import { useJoinOrg, useOrgAccess } from '@/api/orgs'
 import { usePreloadOrg } from '@/api/preload'
 import { ConfirmProvider } from '@/components/app/confirm-dialog'
 import { Button, buttonVariants } from '@/components/ui/button'
-import { AUTH_BUTTON, AuthCard, Strong } from '@/features/auth/screens'
+import { AUTH_BUTTON, AUTH_SECONDARY, AuthCard, Strong } from '@/features/auth/screens'
 import { LinkDialogProvider } from '@/features/links/link-dialog'
+import { crossTo } from '@/lib/accounts'
 import { errorMessage } from '@/lib/errors'
 import { neon } from '@/lib/neon'
 import { OrgProvider } from './org-context'
@@ -49,36 +50,51 @@ function FirstLoad({ children }: { children: ReactNode }) {
   return children
 }
 
+/** An organization's address, opened with an email whose domain it lets in: joining takes one click. */
 function JoinOrg({ slug, name }: { slug: string; name: string }) {
   const join = useJoinOrg()
+  const domain = neon.auth.useSession().data?.user.email.split('@')[1]
   return (
-    <AuthCard title={`Join ${name}?`} description={`Your email is at a domain that ${name} lets in, so you don't need an invitation.`}>
+    <AuthCard
+      title={`Join ${name}?`}
+      description={
+        <>
+          {name} lets anyone with an <Strong>@{domain}</Strong> email join, so you don't need an invitation.
+        </>
+      }
+    >
       <Button size="lg" className={AUTH_BUTTON} disabled={join.isPending} onClick={() => join.mutate(slug)}>
         {join.isPending ? 'Joining…' : `Join ${name}`}
       </Button>
-      <Link to="/organizations" className={buttonVariants({ variant: 'outline', size: 'lg', className: AUTH_BUTTON })}>
-        Your organizations
+      <Link to="/organizations" className={buttonVariants({ variant: 'outline', size: 'lg', className: AUTH_SECONDARY })}>
+        Back to your organizations
       </Link>
-      {join.isError && <p className="text-destructive m-0 text-center text-sm">{errorMessage(join.error)}</p>}
+      {join.isError && <p className="text-destructive m-0 text-sm">{errorMessage(join.error)}</p>}
     </AuthCard>
   )
 }
 
+/**
+ * An organization's address opened with an email that isn't in it, usually from a link someone
+ * sent. It doesn't say whether the organization exists. The likely way in is the email the
+ * person joined with, so that comes first.
+ */
 function NoAccess({ slug }: { slug: string }) {
   const email = neon.auth.useSession().data?.user.email
   return (
     <AuthCard
-      title="Nothing here for you"
+      title="Can't open this organization"
       description={
         <>
-          There is no organization at <Strong>/{slug}</Strong>, or <Strong>{email}</Strong> isn't in it.
-          <br />
-          Ask one of its admins to invite you.
+          <Strong>/{slug}</Strong> doesn't exist, or <Strong>{email}</Strong> isn't a member. If you joined with another email, sign in with that one.
         </>
       }
     >
-      <Link to="/organizations" className={buttonVariants({ size: 'lg', className: AUTH_BUTTON })}>
-        Your organizations
+      <Button size="lg" className={AUTH_BUTTON} onClick={() => crossTo(`/login?intent=join&redirect=${encodeURIComponent(`/${slug}`)}`)}>
+        Sign in with another email
+      </Button>
+      <Link to="/organizations" className={buttonVariants({ variant: 'outline', size: 'lg', className: AUTH_SECONDARY })}>
+        Back to your organizations
       </Link>
     </AuthCard>
   )

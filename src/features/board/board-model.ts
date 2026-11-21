@@ -1,6 +1,6 @@
 // Turns groups, links and one person's preferences into what the board draws. Pure functions, no React.
 
-import { compareEnvironments, splitName, withoutGroupName } from '@/lib/environments'
+import { withoutGroupName } from '@/lib/names'
 import { personalOrder, teamOrder } from '@/lib/order'
 import type { BoardPrefs, Group, Link } from '@/lib/types'
 
@@ -59,7 +59,7 @@ export function orderedLinks(links: Link[], groupId: string, prefs: BoardPrefs):
 export interface BoardOptions {
   filter: BoardFilter
   view: BoardView
-  /** Keep groups without links (for the super admin, who can add to them) when nothing is filtered. */
+  /** Keep groups without links (for a space admin, who can add to them) when nothing is filtered. */
   keepEmpty: boolean
 }
 
@@ -83,37 +83,18 @@ export function buildBoard(groups: Group[], links: Link[], prefs: BoardPrefs, { 
     .filter((card) => card.links.length > 0 || (view === 'hidden' ? card.hidden : keepEmpty && !filtering))
 }
 
-/**
- * One line of a card. Links whose names differ only after the last " - " are one thing in
- * several environments ("Online WEB - Staging", "Online WEB - Prod"), and share a line:
- * the name once, and a small link per environment.
- */
+/** One line of a card: one link or file. */
 export interface BoardRow {
-  /** Stable while the row's links stay the same: the id of its first link. */
+  /** The link's id. */
   id: string
-  /** The name without the environment, and without the group's own name in front. */
+  /** The name, without the group's own name in front. */
   title: string
-  links: { item: BoardLink; /** "Staging", "Prod"… or null for a link that has no environment in its name. */ environment: string | null }[]
+  item: BoardLink
 }
 
-/**
- * The lines of a card, in the order of its links: a line sits where its first link is.
- * Within a line, environments follow the order of the space's list.
- */
-export function rowsOf(card: BoardCard, environmentOrder: string[] = []): BoardRow[] {
-  const rows = new Map<string, BoardRow>()
-  for (const item of card.links) {
-    const { base, environment } = item.link.kind === 'file' ? { base: item.link.title, environment: null } : splitName(item.link.title)
-    // A link without an environment, and a file, is always a line of its own.
-    const title = withoutGroupName(base, card.group.name)
-    const key = environment ? `env:${title.toLowerCase()}` : `link:${item.link.id}`
-    const row = rows.get(key) ?? { id: item.link.id, title, links: [] }
-    row.links.push({ item, environment })
-    rows.set(key, row)
-  }
-  // Within a line the environments always come in the same order, from the safest to production.
-  for (const row of rows.values()) row.links.sort((a, b) => compareEnvironments(a.environment ?? '', b.environment ?? '', environmentOrder))
-  return [...rows.values()]
+/** The lines of a card, one per link, in the order of its links. */
+export function rowsOf(card: BoardCard): BoardRow[] {
+  return card.links.map((item) => ({ id: item.link.id, title: withoutGroupName(item.link.title, card.group.name), item }))
 }
 
 /** How many groups and links the person hid, counting only ones that still exist. */
@@ -123,5 +104,9 @@ export function countHidden(groups: Group[], links: Link[], prefs: BoardPrefs): 
   return prefs.hidden_groups.filter((id) => groupIds.has(id)).length + prefs.hidden_links.filter((id) => linkIds.has(id)).length
 }
 
-/** A rough height for a card, enough to balance the columns before anything is measured. Long cards stop at about 16 lines and scroll (see board.css). */
-export const estimateCardHeight = (card: BoardCard) => 62 + Math.min(Math.max(rowsOf(card).length, 1), 16) * 37
+/** A rough height for a card, enough to balance the columns before anything is measured. Long cards stop at about 16 lines and scroll (see CAPPED in group-card.tsx). */
+export const estimateCardHeight = (card: BoardCard, maxLines = 16) => {
+  const lines = card.links.length
+  return 62 + Math.min(Math.max(lines, 1), maxLines) * 37
+}
+

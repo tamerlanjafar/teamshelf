@@ -1,12 +1,38 @@
 import { ImageUp } from 'lucide-react'
 import { useRef } from 'react'
+import { Button } from '@/components/ui/button'
 import { toastError } from '@/lib/errors'
 import type { Space } from '@/lib/types'
 import { cn } from '@/lib/utils'
-import { isImageLogo, logoFromImage, SPACE_LOGOS, SpaceLogo } from './space-logo'
+import { logoFromImage, SPACE_LOGOS, SpaceLogo } from './space-logo'
 
-/** The app's logos to choose from, and a button to upload an image instead. */
+/** The app's icons to choose from, in even columns, the chosen one ringed. */
 export function LogoPicker({ space, onChange }: { space: Pick<Space, 'logo' | 'color' | 'name'>; onChange: (logo: string) => void }) {
+  return (
+    <div role="radiogroup" aria-label="Icon" className="grid grid-cols-[repeat(auto-fill,minmax(40px,1fr))] gap-1.5">
+      {Object.entries(SPACE_LOGOS).map(([key, { label }]) => {
+        const chosen = space.logo === key
+        return (
+          <button
+            key={key}
+            type="button"
+            role="radio"
+            aria-checked={chosen}
+            aria-label={label}
+            title={label}
+            onClick={() => onChange(key)}
+            className={cn('grid aspect-square place-items-center rounded-md transition-shadow', chosen ? 'shadow-[0_0_0_2px_var(--brand)]' : 'hover:bg-ink/5')}
+          >
+            <SpaceLogo space={{ ...space, logo: key }} className="size-8 rounded-sm" />
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+/** Uploading an image as the logo instead of an icon: turned into a small square (logoFromImage). */
+export function UploadLogoButton({ onChange, className }: { onChange: (logo: string) => void; className?: string }) {
   const input = useRef<HTMLInputElement>(null)
 
   async function upload(file: File | undefined) {
@@ -21,35 +47,12 @@ export function LogoPicker({ space, onChange }: { space: Pick<Space, 'logo' | 'c
   }
 
   return (
-    <div role="radiogroup" aria-label="Logo" className="flex flex-wrap gap-2">
-      {Object.entries(SPACE_LOGOS).map(([key, { label }]) => (
-        <button
-          key={key}
-          type="button"
-          role="radio"
-          aria-checked={space.logo === key}
-          aria-label={label}
-          onClick={() => onChange(key)}
-          className={cn('rounded-[10px] p-[3px] outline-offset-2 transition-shadow', space.logo === key ? 'shadow-[0_0_0_2px_var(--brand)]' : 'hover:shadow-[0_0_0_1px_var(--line)]')}
-        >
-          <SpaceLogo space={{ ...space, logo: key }} className="size-8" />
-        </button>
-      ))}
-      {isImageLogo(space.logo) && (
-        <span role="radio" aria-checked="true" aria-label="Uploaded image" className="rounded-[10px] p-[3px] shadow-[0_0_0_2px_var(--brand)]">
-          <SpaceLogo space={space} className="size-8" />
-        </span>
-      )}
-      <button
-        type="button"
-        onClick={() => input.current?.click()}
-        className="text-quiet hover:text-ink border-line grid size-[38px] place-items-center rounded-[10px] border border-dashed"
-        aria-label="Upload an image"
-        title="Upload an image"
-      >
-        <ImageUp className="size-4" />
-      </button>
+    <>
+      <Button type="button" variant="outline" onClick={() => input.current?.click()} className={className}>
+        <ImageUp />
+        Upload image
+      </Button>
       <input ref={input} type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" hidden onChange={(event) => upload(event.target.files?.[0])} />
-    </div>
+    </>
   )
 }

@@ -1,5 +1,5 @@
 import { useSpaceMembersIfLoaded } from '@/api/spaces'
-import { isAdmin, isSuperAdmin } from '@/lib/roles'
+import { isAdmin } from '@/lib/roles'
 import type { Link, SpaceRole } from '@/lib/types'
 import { useMe } from './org-context'
 
@@ -8,25 +8,24 @@ import { useMe } from './org-context'
  * This only decides which buttons to show.
  *
  * Inside a space, its admins do everything: add links straight to the board, edit, delete,
- * review suggestions, manage groups, members and the space's settings. The organization's
- * super admin is an admin of every space. The organization's admins create spaces.
+ * review suggestions, manage groups, its people and its settings. Anyone in the organization can
+ * create a space, and runs it. The organization's admins manage its people and its settings, but
+ * run only the spaces they are admins of.
  */
 export function usePermissions() {
   const me = useMe()
   const rows = useSpaceMembersIfLoaded()
-  const superAdmin = isSuperAdmin(me)
 
   const roleIn = (spaceId: string | undefined | null): SpaceRole | null => rows.find((row) => row.space_id === spaceId && row.member_id === me.id)?.role ?? null
-  const isSpaceAdmin = (spaceId: string | undefined | null) => Boolean(spaceId) && (superAdmin || roleIn(spaceId) === 'admin')
+  const isSpaceAdmin = (spaceId: string | undefined | null) => Boolean(spaceId) && roleIn(spaceId) === 'admin'
 
   return {
-    superAdmin,
-    /** An admin of the organization: manages its people, creates spaces. */
+    /** An admin of the organization: manages its people and its settings. */
     admin: isAdmin(me),
     roleIn,
     isSpaceAdmin,
     /** Reviews suggestions in at least one space. */
-    reviewer: superAdmin || rows.some((row) => row.member_id === me.id && row.role === 'admin'),
+    reviewer: rows.some((row) => row.member_id === me.id && row.role === 'admin'),
     /** Edit, delete, approve or reject this link. */
     canManage: (link: Link) => isSpaceAdmin(link.space_id),
   }

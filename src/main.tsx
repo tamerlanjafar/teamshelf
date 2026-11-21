@@ -18,10 +18,15 @@ declare module '@tanstack/react-router' {
 
 watchAppVersion()
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
-  </StrictMode>,
-)
+// Mock mode only (`pnpm dev:mock`): a made-up backend in the browser, and a toolbar to open any screen
+// (src/mock). The condition is false in every other build, which then leaves all of it out.
+const mockPage = import.meta.env.MODE === 'mock' && (await import('./mock/start')).startMock()
+
+if (!mockPage)
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>
+    </StrictMode>,
+  )

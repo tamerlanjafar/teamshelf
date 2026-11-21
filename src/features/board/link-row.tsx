@@ -1,6 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Copy, Download, Eye, EyeOff, Lock, MoreHorizontal, MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import { Copy, Download, Eye, EyeOff, Lock, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import type { ComponentProps, CSSProperties, ReactNode, Ref } from 'react'
 import { toast } from 'sonner'
 import { formatBytes, openFile } from '@/api/files'
@@ -13,7 +13,6 @@ import { toastError } from '@/lib/errors'
 import type { Link } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useBoardActions } from './board-actions'
-import { isProduction } from '@/lib/environments'
 import type { BoardRow } from './board-model'
 import { Favicon } from './favicon'
 import { FileIcon } from './file-icon'
@@ -21,7 +20,7 @@ import { FileIcon } from './file-icon'
 interface LinkRowProps {
   row: BoardRow
   groupId: string
-  /** In the view of what you hid: the line gets an eye button that brings its links back. */
+  /** In the view of what you hid: the line gets an eye button that brings the link back. */
   restoring: boolean
 }
 
@@ -36,86 +35,106 @@ interface RowDragProps {
   dragProps?: ComponentProps<'div'>
 }
 
-const Restricted = () => <Lock className="text-quiet size-3 flex-none" aria-label="Only some people see this" />
+const Restricted = ({ className }: { className?: string }) => <Lock className={cn('text-quiet size-3 flex-none', className)} aria-label="Only some people see this" />
+
+// The card's color (--c), mixed in. Rows react to the pointer, and to focus from the keyboard
+// (:focus-visible), not to any focus: a menu hands focus back to its button when it closes, and
+// the row would stay lit although the pointer has left.
+// Written out in full: Tailwind finds classes only as whole words in the source.
+const LIT_IN_USE = 'hover:bg-[color-mix(in_srgb,var(--c)_14%,transparent)] has-[:focus-visible]:bg-[color-mix(in_srgb,var(--c)_14%,transparent)]'
+
+/** A line of a card, also drawn by the board's skeleton. */
+export const ROW = 'relative flex min-h-[34px] items-start gap-1.5 rounded-md pr-1'
+
+/** What you click on a line: its icon and name. */
+export const ROW_OPEN = 'flex min-w-0 flex-1 items-start gap-2.5 rounded-md py-1.5 pr-1 pl-2.5'
+
+/** The name of a line. A long one wraps between words instead of being cut off. */
+const TITLE = 'min-w-0 flex-1 leading-[22px] wrap-break-word'
 
 /**
- * One line of a card. A single link: the whole line opens it. One thing in several
- * environments: its name, and a small link per environment, each with its own menu.
+ * A small square button in a card: the menu of a card, or of a line. Each place gives it its
+ * size and corners: on a line it sits 4px in from the line's edge, so its corners are the
+ * line's (10px) less those 4px, and the two curves run alongside each other.
  */
+export const CARD_BUTTON =
+  'text-quiet grid flex-none place-items-center hover:text-ink hover:bg-[color-mix(in_srgb,var(--c)_18%,transparent)] data-[popup-open]:text-ink data-[popup-open]:bg-[color-mix(in_srgb,var(--c)_18%,transparent)]'
+
+/** The button on a line: 26px, 4px in from the line's edge. */
+const LINE_BUTTON = 'mt-1 size-[26px] rounded-xs'
+
+/** Shows only while its line is in use (always on a touch screen), so it never takes the name's room. */
+const WHEN_IN_USE = 'opacity-0 data-[popup-open]:opacity-100 [@media(hover:none)]:opacity-100'
+
+/** One line of a card: one link or file. The whole line opens it, and it has its own menu. */
 export function LinkRow({ row, restoring, rowRef, style, placeholder, lifted, dragProps }: LinkRowProps & RowDragProps) {
   const { setLinksHidden, recordOpen } = useBoardActions()
+  const { item } = row
+  const { link } = item
   // A click, a middle click or a cmd-click: each opens the link, so each counts as opened lately.
-  const opened = (id: string) => ({ onClick: () => recordOpen(id), onAuxClick: (event: { button: number }) => event.button === 1 && recordOpen(id) })
-  const [first] = row.links
-  const hidden = row.links.filter(({ item }) => item.hidden).map(({ item }) => item.link.id)
+  const opened = { onClick: () => recordOpen(link.id), onAuxClick: (event: { button: number }) => event.button === 1 && recordOpen(link.id) }
 
   return (
-    <div ref={rowRef} style={style} className={cn('tab', placeholder && 'is-placeholder', lifted && 'is-lifted')} {...dragProps}>
-      {first.item.link.kind === 'file' ? (
+    <div
+      ref={rowRef}
+      style={style}
+      data-row
+      className={cn(
+        'group/row',
+        ROW,
+        !placeholder && !lifted && LIT_IN_USE,
+        // A finger drags only after a press and hold (see sortable-board.tsx), so a swipe still
+        // scrolls. Holding doesn't select text or open the phone's link menu instead.
+        dragProps && 'touch-manipulation select-none [-webkit-touch-callout:none]',
+        // Its place while it is dragged: an empty, dashed slot.
+        placeholder && 'bg-[color-mix(in_srgb,var(--c)_7%,transparent)] outline-[1.5px] -outline-offset-[1.5px] outline-[color-mix(in_srgb,var(--c)_45%,transparent)] outline-dashed *:invisible',
+      )}
+      {...dragProps}
+    >
+      {link.kind === 'file' ? (
         <a
-          className="open"
-          href={first.item.link.url}
+          className={ROW_OPEN}
+          href={link.url}
           draggable={false}
           onClick={(event) => {
             // The file's address needs the person's sign-in, which a plain link doesn't carry.
             event.preventDefault()
-            recordOpen(first.item.link.id)
-            openFile(first.item.link).catch(toastError)
+            recordOpen(link.id)
+            openFile(link).catch(toastError)
           }}
         >
-          <FileIcon type={first.item.link.file_type} name={first.item.link.file_name} />
-          <span className="title">{row.title}</span>
-          {first.item.link.visibility !== 'everyone' && <Restricted />}
-          {first.item.link.file_size !== null && <span className="file-size">{formatBytes(first.item.link.file_size)}</span>}
-        </a>
-      ) : first.environment === null ? (
-        <a className="open" href={first.item.link.url} target="_blank" rel="noreferrer" draggable={false} {...opened(first.item.link.id)}>
-          <Favicon url={first.item.link.url} iconUrl={first.item.link.icon_url} title={row.title} />
-          <span className="title">{row.title}</span>
-          {first.item.link.visibility !== 'everyone' && <Restricted />}
+          <FileIcon type={link.file_type} name={link.file_name} className="mt-[3px]" />
+          <span className={TITLE}>{row.title}</span>
+          {link.visibility !== 'everyone' && <Restricted className="mt-[5px]" />}
+          {link.file_size !== null && <span className="text-quiet flex-none [font:500_12px/22px_var(--font-rounded)] tabular-nums">{formatBytes(link.file_size)}</span>}
         </a>
       ) : (
-        <div className="open">
-          <Favicon url={first.item.link.url} iconUrl={first.item.link.icon_url} title={row.title} />
-          <span className="title">{row.title}</span>
-          <span className="envs">
-            {row.links.map(({ item, environment }) => (
-              <span key={item.link.id} className="env-item">
-                <a
-                  className={cn('env', isProduction(environment!) && 'is-production')}
-                  href={item.link.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  draggable={false}
-                  aria-label={`${row.title}, ${environment}`}
-                  {...opened(item.link.id)}
-                >
-                  {environment}
-                  {item.link.visibility !== 'everyone' && <Restricted />}
-                </a>
-                {!(restoring && item.hidden) && (
-                  <LinkMenu link={item.link} hidden={item.hidden} label={`More for ${row.title}, ${environment}`} className="env-more">
-                    <MoreVertical className="size-3.5" />
-                  </LinkMenu>
-                )}
-              </span>
-            ))}
-          </span>
-        </div>
+        <a className={ROW_OPEN} href={link.url} target="_blank" rel="noreferrer" draggable={false} {...opened}>
+          <Favicon url={link.url} iconUrl={link.icon_url} title={row.title} className="mt-[3px]" />
+          <span className={TITLE}>{row.title}</span>
+          {link.visibility !== 'everyone' && <Restricted className="mt-[5px]" />}
+        </a>
       )}
-      {restoring && hidden.length > 0 ? (
+      {restoring && item.hidden ? (
         // In the view of what you hid, the one thing to do with a line is to bring it back:
-        // an eye where the menu usually is, so the name keeps its room.
-        <button type="button" className="room-button shown" aria-label={`Show ${row.title} again`} onClick={() => setLinksHidden(hidden, false)}>
+        // an eye where the menu usually is, always there, in the card's color.
+        <button
+          type="button"
+          className={cn(CARD_BUTTON, LINE_BUTTON, 'bg-[color-mix(in_srgb,var(--c)_16%,transparent)] text-[color-mix(in_srgb,var(--c)_55%,var(--ink))] hover:bg-(--c) hover:text-white')}
+          aria-label={`Show ${row.title} again`}
+          onClick={() => setLinksHidden([link.id], false)}
+        >
           <Eye className="size-4" />
         </button>
       ) : (
-        // A line with several environments has a menu on each of them instead.
-        first.environment === null && (
-          <LinkMenu link={first.item.link} hidden={first.item.hidden} label={`More for ${row.title}`} className="room-button">
-            <MoreHorizontal className="size-4" />
-          </LinkMenu>
-        )
+        <LinkMenu
+          link={link}
+          hidden={item.hidden}
+          label={`More for ${row.title}`}
+          className={cn(CARD_BUTTON, WHEN_IN_USE, LINE_BUTTON, 'group-hover/row:opacity-100 group-has-[:focus-visible]/row:opacity-100')}
+        >
+          <MoreHorizontal className="size-4" />
+        </LinkMenu>
       )}
     </div>
   )

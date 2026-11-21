@@ -1,22 +1,72 @@
 import { useMutation } from '@tanstack/react-query'
 import { MailCheck } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
+import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { crossTo, setLastSlot, slotsOfEmail } from '@/lib/accounts'
 import { errorMessage } from '@/lib/errors'
 import { isEmail, sendSignInLink } from '@/lib/neon'
-import { AuthCard } from './screens'
+import { AUTH_BUTTON, AUTH_INPUT, AUTH_SECONDARY, AuthCard, Strong } from './screens'
 import { useCountdown } from './use-countdown'
 
 /**
- * Sign-in is by a link sent to your email. There are no passwords, and one sign-in covers
- * every organization you are in. The link comes back to `returnPath`.
+ * Why someone signs in from the Organizations page: to sign in to an organization with the email
+ * they use there, or to give the email that will own an organization they create.
  */
-export function LoginPage({ linkError, returnPath }: { linkError?: string; returnPath: string }) {
-  const [email, setEmail] = useState('')
+export type LoginIntent = 'join' | 'create'
+
+const SIGN_IN = { title: 'Welcome to Teamshelf', description: "Enter your email and we'll send you a link to sign in.", button: 'Sign in' }
+
+/** Signing in to another organization is the same sign-in, with a way back. Creating one asks for its owner. */
+const WORDING: Record<LoginIntent | 'first', { title: string; description: string; button: string }> = {
+  first: SIGN_IN,
+  join: SIGN_IN,
+  create: { title: 'Create an organization', description: "Enter your email to get started.", button: 'Continue' },
+}
+
+// Whether an email may create organizations is only known once it is signed in (the list is
+// readable by signed-in people only). So the create page sends an email that may not back here,
+// with the email kept in this tab for one visit, and this form says why under the field.
+const CREATE_DENIED = 'teamshelf:create-denied'
+
+/** From the create page: back to the email step, saying this email can't create organizations. */
+export function backToCreateDenied(email: string) {
+  try {
+    sessionStorage.setItem(CREATE_DENIED, email)
+  } catch {
+    // Without storage the form comes back without the message.
+  }
+  crossTo('/login?intent=create')
+}
+
+function readCreateDenied() {
+  try {
+    return sessionStorage.getItem(CREATE_DENIED)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Sign-in is by a link sent to your email. There are no passwords, and one sign-in covers
+ * every organization the email is in. The link comes back to `returnPath`. With an `intent`, this
+ * signs in next to the organizations already signed in, whatever their emails.
+ */
+export function LoginPage({ linkExpired = false, returnPath, intent }: { linkExpired?: boolean; returnPath: string; intent?: LoginIntent }) {
+  // The email the create page sent back, if it did: filled in, with the reason under it.
+  const [denied] = useState(() => (intent === 'create' ? readCreateDenied() : null))
+  useEffect(() => {
+    try {
+      sessionStorage.removeItem(CREATE_DENIED)
+    } catch {
+      // Nothing to clear.
+    }
+  }, [])
+  const [email, setEmail] = useState(denied ?? '')
   const [invalid, setInvalid] = useState(false)
   const send = useMutation({ mutationFn: (address: string) => sendSignInLink(address, returnPath) })
+  const wording = WORDING[intent ?? 'first']
 
   function submit(event: FormEvent) {
     event.preventDefault()
@@ -24,27 +74,42 @@ export function LoginPage({ linkError, returnPath }: { linkError?: string; retur
       setInvalid(true)
       return
     }
+    // An email already signed in on this browser needs no link: go on with its session.
+    const slots = intent ? slotsOfEmail(email) : []
+    if (slots.length > 0) {
+      setLastSlot(slots[0])
+      crossTo(intent === 'create' ? '/new' : '/organizations')
+      return
+    }
     send.mutate(email)
   }
 
   if (send.isSuccess) return <CheckEmail email={email.trim().toLowerCase()} returnPath={returnPath} onChangeEmail={() => send.reset()} />
 
-  const error = invalid ? 'Enter a valid email address.' : send.isError ? errorMessage(send.error) : linkError ? 'That link has expired. Sign in again to get a new one.' : undefined
+  const deniedNow = denied !== null && email.trim().toLowerCase() === denied.toLowerCase()
+  const error = invalid
+    ? 'Enter a valid email address.'
+    : send.isError
+      ? errorMessage(send.error)
+      : deniedNow
+        ? 'Creating organizations is limited to approved emails for now, and this one isn\'t on the list yet.'
+        : linkExpired
+          ? 'That link has expired. Sign in again to get a new one.'
+          : undefined
 
   return (
-    <AuthCard title="Welcome to Teamshelf" description="Sign in to your account">
+    <AuthCard title={wording.title} description={wording.description} back={intent ? { label: 'Your organizations', onClick: () => crossTo('/organizations') } : undefined}>
       <form onSubmit={submit} noValidate>
         <FieldGroup className="gap-6">
           <Field className="gap-1.5" data-invalid={Boolean(error)}>
-            <FieldLabel htmlFor="email" className="text-muted-foreground text-sm font-normal">
-              Email*
+            <FieldLabel htmlFor="email" className="text-[13.5px] font-medium">
+              Email
             </FieldLabel>
             <Input
               id="email"
               type="email"
               name="email"
               autoComplete="email"
-              autoFocus
               required
               placeholder="you@company.com"
               value={email}
@@ -53,15 +118,14 @@ export function LoginPage({ linkError, returnPath }: { linkError?: string; retur
                 setEmail(event.target.value)
                 setInvalid(false)
               }}
-              className="h-10 shadow-xs"
+              className={AUTH_INPUT}
             />
             {error && <FieldError>{error}</FieldError>}
           </Field>
           <Field className="gap-4">
-            <Button type="submit" size="lg" className="h-10 rounded-lg" disabled={send.isPending}>
-              {send.isPending ? 'Sending…' : 'Sign in'}
+            <Button type="submit" size="lg" className={AUTH_BUTTON} disabled={send.isPending}>
+              {send.isPending ? 'Sending…' : wording.button}
             </Button>
-            <FieldDescription className="text-center text-sm">We'll email you a sign-in link.</FieldDescription>
           </Field>
         </FieldGroup>
       </form>
@@ -72,33 +136,34 @@ export function LoginPage({ linkError, returnPath }: { linkError?: string; retur
 /** How long to wait before the link can be sent again, so impatient clicks don't pile up emails. */
 const RESEND_AFTER_SECONDS = 30
 
-/** After the link was sent: where it went (with a way to correct the address), and sending it again. */
+/**
+ * After the link was sent. The sentence says what to do, with the address it went to. Sending it
+ * again is quiet: a line that counts down, then a button once the wait is over, so nothing on
+ * the page looks like the main action but blocked.
+ */
 function CheckEmail({ email, returnPath, onChangeEmail }: { email: string; returnPath: string; onChangeEmail: () => void }) {
   const resend = useMutation({ mutationFn: () => sendSignInLink(email, returnPath) })
   const { left, restart } = useCountdown(RESEND_AFTER_SECONDS)
+  const waiting = left > 0
 
   return (
     <AuthCard
-      icon={
-        <span className="bg-primary/10 text-primary mx-auto grid size-14 place-items-center rounded-full">
-          <MailCheck className="size-6" strokeWidth={1.8} />
-        </span>
-      }
+      back={{ label: 'Use another email', onClick: onChangeEmail }}
+      icon={<MailCheck strokeWidth={2} />}
       title="Check your email"
-      description="We sent you a sign-in link. It expires in 30 minutes."
+      description={
+        <>
+          Click the link we sent to <Strong>{email}</Strong> to sign in. It expires in 30 minutes.
+        </>
+      }
     >
-      <>
-        <div className="bg-muted flex h-11 items-center gap-3 rounded-lg pr-1.5 pl-3.5">
-          <span className="min-w-0 flex-1 truncate text-sm font-medium">{email}</span>
-          <Button variant="ghost" size="sm" className="text-primary hover:text-primary h-8 rounded-md px-2.5 text-sm" onClick={onChangeEmail}>
-            Change
-          </Button>
-        </div>
-        <Button variant="outline" size="lg" className="h-11 rounded-lg tabular-nums" disabled={left > 0 || resend.isPending} onClick={() => resend.mutate(undefined, { onSuccess: restart })}>
-          {resend.isPending ? 'Sending…' : left > 0 ? `Resend in ${left}s` : 'Resend email'}
+      <p className="text-quiet m-0 text-[14px] tabular-nums">{waiting ? `Can't find it? Check your spam folder, or resend in ${left}s.` : "Can't find it? Check your spam folder, or send it again."}</p>
+      {!waiting && (
+        <Button variant="outline" size="lg" className={AUTH_SECONDARY} disabled={resend.isPending} onClick={() => resend.mutate(undefined, { onSuccess: restart })}>
+          {resend.isPending ? 'Sending…' : 'Resend email'}
         </Button>
-        {resend.isError && <p className="text-destructive m-0 text-center text-sm">{errorMessage(resend.error)}</p>}
-      </>
+      )}
+      {resend.isError && <p className="text-destructive m-0 text-sm">{errorMessage(resend.error)}</p>}
     </AuthCard>
   )
 }

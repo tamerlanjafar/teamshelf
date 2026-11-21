@@ -30,7 +30,7 @@ function useMembersMutation<Input>(run: (input: Input) => Promise<unknown>) {
 /** Adds the person to the organization and emails them a sign-in link that opens it. */
 export function useInviteMember() {
   const org = useOrg()
-  return useMembersMutation(async ({ email, role }: { email: string; role: Exclude<Role, 'super_admin'> }) => {
+  return useMembersMutation(async ({ email, role }: { email: string; role: Role }) => {
     const address = email.trim().toLowerCase()
     try {
       await unwrap(neon.from('members').insert({ org_id: org.id, email: address, role }))
@@ -52,9 +52,25 @@ export function useResendInvite() {
 }
 
 export function useSetMemberRole() {
-  return useMembersMutation(({ id, role }: { id: string; role: Exclude<Role, 'super_admin'> }) =>
+  return useMembersMutation(({ id, role }: { id: string; role: Role }) =>
     unwrap(neon.from('members').update({ role }).eq('id', id)),
   )
+}
+
+/**
+ * Lets in someone a space invited from outside what the organization lets in, and emails them the
+ * sign-in link to it. Admins of the organization.
+ */
+export function useApproveMember() {
+  const org = useOrg()
+  return useMembersMutation(async (member: Member) => {
+    await unwrap(neon.from('members').update({ approved: true }).eq('id', member.id))
+    try {
+      await sendSignInLink(member.email, `/${org.slug}`)
+    } catch {
+      throw new Error(`${member.email} was approved, but the email could not be sent. Use "Resend invite" in a minute.`)
+    }
+  })
 }
 
 export function useRemoveMember() {

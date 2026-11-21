@@ -1,4 +1,4 @@
-import { Check, CheckCheck, Pencil } from 'lucide-react'
+import { Check, CheckCheck, Pencil, Plus } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { toast } from 'sonner'
 import { useGroups } from '@/api/groups'
@@ -10,27 +10,24 @@ import { ListSkeleton, Section } from '@/components/app/section'
 import { TopBar } from '@/components/app/top-bar'
 import { Button } from '@/components/ui/button'
 import { useLinkDialog } from '@/features/links/link-dialog'
+import { useMe } from '@/features/org/org-context'
 import { usePermissions } from '@/features/org/permissions'
 import { toastError } from '@/lib/errors'
 import type { Link } from '@/lib/types'
 import { IconButton } from './icon-button'
 import { RejectButton } from './reject-button'
-import { RequestRow, StatusPill } from './request-row'
+import { RequestRow } from './request-row'
 
 /**
- * Suggested links that are not on a board yet. Each space's admins approve or reject the ones
- * for their space here. Everyone follows their own.
+ * Suggested links that are not on a board yet, on one page: first what waits for this person to
+ * review (in the spaces they run), then what they sent themselves, waiting or turned down. Each
+ * part only shows when it has something, so a member sees just their own.
  */
 export function RequestsPage() {
-  const { reviewer } = usePermissions()
-  const lead = reviewer
-    ? 'Links and files people suggested in the spaces you run, and your own suggestions elsewhere. Approved ones go on the space’s board.'
-    : 'Links and files you suggested that are not on a board yet. An admin of the space reviews them.'
-
   return (
     <>
       <TopBar />
-      <PageSheet title={reviewer ? 'Review suggestions' : 'Your suggestions'} lead={lead}>
+      <PageSheet title="Suggestions">
         <Section compact skeleton={<ListSkeleton />}>
           <Requests />
         </Section>
@@ -40,46 +37,54 @@ export function RequestsPage() {
 }
 
 function Requests() {
-  const { reviewer, canManage } = usePermissions()
+  const { canManage } = usePermissions()
+  const me = useMe()
+  const { addLink } = useLinkDialog()
   const requests = useRequests()
   const groups = useGroups()
   const spaces = useSpaces()
   const members = useMembers()
 
-  const waiting = requests.filter((link) => link.status === 'pending')
-  const rejected = requests.filter((link) => link.status === 'rejected')
+  const toReview = requests.filter((link) => link.status === 'pending' && canManage(link))
+  const mine = requests.filter((link) => link.created_by === me.id && !toReview.includes(link))
 
-  const row = (link: Link, actions: ReactNode, status?: ReactNode) => (
+  const row = (link: Link, actions: ReactNode) => (
     <RequestRow
       key={link.id}
       link={link}
       group={groups.find((group) => group.id === link.group_id)}
       space={spaces.find((space) => space.id === link.space_id)}
       author={members.find((member) => member.id === link.created_by)}
-      status={status}
     >
       {actions}
     </RequestRow>
   )
 
-  if (requests.length === 0) {
+  if (toReview.length === 0 && mine.length === 0)
     return (
-      <p className="bg-raised border-line text-quiet m-0 rounded-[14px] border px-4 py-8 text-center">
-        {reviewer ? 'Nothing to review. New suggestions show up here.' : 'Nothing waiting. Use “Suggest link” to add something to the board.'}
-      </p>
+      <div className="bg-raised border-line flex flex-col items-center gap-3 rounded-2xl border px-4 py-8 text-center">
+        <p className="text-quiet m-0">No suggestions right now.</p>
+        <Button variant="outline" onClick={() => addLink()}>
+          <Plus />
+          Suggest a link
+        </Button>
+      </div>
     )
-  }
 
   return (
     <>
-      {waiting.length > 0 && (
-        <SheetGroup title="Waiting for review" count={waiting.length} action={<ApproveAll links={waiting.filter(canManage)} />}>
-          {waiting.map((link) => row(link, canManage(link) ? <ReviewActions link={link} /> : <RemoveButton link={link} label="Withdraw" />))}
+      {toReview.length > 0 && (
+        <SheetGroup cards title="Waiting for you" count={toReview.length} action={<ApproveAll links={toReview} />}>
+          {toReview.map((link) => row(link, <ReviewActions link={link} />))}
         </SheetGroup>
       )}
-      {rejected.length > 0 && (
-        <SheetGroup title="Rejected" count={rejected.length}>
-          {rejected.map((link) => row(link, <RemoveButton link={link} label="Remove" />, <StatusPill tone="rejected">Rejected</StatusPill>))}
+      {mine.length > 0 && (
+        <SheetGroup cards title="Sent by you" count={mine.length}>
+          {mine.map((link) =>
+            link.status === 'rejected'
+              ? row(link, <RemoveButton link={link} label="Remove" />)
+              : row(link, <RemoveButton link={link} label="Withdraw" />),
+          )}
         </SheetGroup>
       )}
     </>
@@ -96,7 +101,7 @@ function ReviewActions({ link }: { link: Link }) {
       <IconButton label="Edit before approving" onClick={() => editLink(link)}>
         <Pencil />
       </IconButton>
-      <Button size="lg" className="ml-1.5" disabled={approveLink.isPending} onClick={() => approveLink.mutate(link, { onError: toastError })}>
+      <Button className="ml-1" disabled={approveLink.isPending} onClick={() => approveLink.mutate(link, { onError: toastError })}>
         <Check />
         Approve
       </Button>
@@ -123,7 +128,7 @@ function ApproveAll({ links }: { links: Link[] }) {
 function RemoveButton({ link, label }: { link: Link; label: string }) {
   const deleteLink = useDeleteLink()
   return (
-    <Button variant="outline" size="lg" disabled={deleteLink.isPending} onClick={() => deleteLink.mutate(link.id, { onError: toastError })}>
+    <Button variant="outline" size="sm" disabled={deleteLink.isPending} onClick={() => deleteLink.mutate(link.id, { onError: toastError })}>
       {label}
     </Button>
   )

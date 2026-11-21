@@ -1,92 +1,84 @@
-import { Link } from '@tanstack/react-router'
-import { Inbox, Plus, Users } from 'lucide-react'
+import { Link, useMatch } from '@tanstack/react-router'
+import { Menu, Plus, Settings } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { useRequestsIfLoaded } from '@/api/links'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Button } from '@/components/ui/button'
 import { useOrg } from '@/features/org/org-context'
 import { useLinkDialog } from '@/features/links/link-dialog'
 import { usePermissions } from '@/features/org/permissions'
-import { useCurrentSpaceIfLoaded } from '@/features/spaces/current-space'
-import { SpaceSwitcher } from '@/features/spaces/space-switcher'
+import { useCurrentSpaceIfLoaded, useSpaceParam } from '@/features/spaces/current-space'
+import { SpaceLogo } from '@/features/spaces/space-logo'
+import { QuickFind } from '@/features/search/quick-find'
 import { cn } from '@/lib/utils'
-import { OrgSwitcher } from './org-switcher'
-import { UserMenu } from './user-menu'
+import { useOpenSidebar } from './sidebar'
 
 /**
- * The bar at the top of every page: the organization, the open space, whatever the page puts
- * in the middle (the board puts its search there), and the ways to the other pages.
+ * The bar at the top of every page: the open space (and, for its admins, the way to its settings)
+ * on the left. On a board only: the search in the middle with whatever the board adds beside it
+ * (the count of what you hid), and adding a link on the right. Everything else is in the sidebar.
  *
- * Wide screens get one line. Below that the middle part gets a line of its own under the rest,
- * and on a phone the organization shrinks to its mark and Team moves into the account menu,
- * so the space's name keeps its room.
+ * Wide screens get one line, with the search centered. Below that the search gets a line of its
+ * own under the rest. On a phone a menu button opens the sidebar. A page with nothing for the bar
+ * (Team, Suggestions, settings) has it on phones only, for that button.
  */
 export function TopBar({ children }: { children?: ReactNode }) {
-  const { admin, reviewer, canManage, isSpaceAdmin } = usePermissions()
+  const { isSpaceAdmin } = usePermissions()
   const space = useCurrentSpaceIfLoaded()
+  const onSpace = Boolean(useSpaceParam())
+  const onBoard = Boolean(useMatch({ from: '/$org/$space/', shouldThrow: false }))
+  const boardTools = onBoard && space
   const { addLink } = useLinkDialog()
-  const requests = useRequestsIfLoaded()
-  // A reviewer is told how many suggestions wait for them, in every space they run.
-  const waiting = requests.filter((link) => link.status === 'pending' && canManage(link)).length
+  const openSidebar = useOpenSidebar()
   const publishes = isSpaceAdmin(space?.id)
 
   return (
-    <header className="sticky top-0 z-30 flex flex-wrap items-center gap-x-1.5 gap-y-2.5 px-4 py-3 backdrop-blur-xl sm:gap-x-2 sm:px-5">
-      <OrgSwitcher />
-      <span aria-hidden="true" className="text-quiet/50 -mx-0.5 text-[18px] font-light max-md:hidden">
-        /
-      </span>
-      <div className="flex min-w-0 flex-1 lg:max-w-[240px] lg:flex-none">
-        <SpaceSwitcher />
+    <header className={cn('sticky top-0 z-30 flex min-h-16 flex-wrap items-center gap-x-1.5 gap-y-2.5 px-4 py-3 backdrop-blur-xl sm:gap-x-2 sm:px-5 xl:grid xl:grid-cols-[1fr_auto_1fr]', !onSpace && 'md:hidden')}>
+      <div className="flex min-w-0 flex-1 items-center gap-1.5 xl:flex-none">
+        <button type="button" onClick={openSidebar} aria-label="Spaces and pages" className="text-quiet hover:text-ink hover:bg-ink/6 -ml-1.5 grid size-10 flex-none place-items-center rounded-lg md:hidden">
+          <Menu className="size-5" />
+        </button>
+        {onSpace && space && <SpaceTitle space={space} admin={publishes} />}
       </div>
 
-      {/* The middle (the board's search) stays a comfortable width, centered in the room it has. */}
-      {children && <div className="flex min-w-0 items-center justify-center gap-x-2 max-lg:order-last max-lg:basis-full lg:flex-1">{children}</div>}
+      {/* On a board: the search finds and opens any link of the space. A comfortable width, centered. */}
+      {boardTools && (
+        <div className="flex min-w-0 items-center justify-center gap-2 max-xl:order-last max-xl:basis-full xl:w-[520px]">
+          <QuickFind />
+          {children}
+        </div>
+      )}
 
-      <div className="ml-auto flex flex-none items-center gap-1.5 sm:gap-2">
-        {space && (
-          <Button onClick={() => addLink()} aria-label={publishes ? 'Add link' : 'Suggest link'} className="size-10 gap-2 rounded-xl border-0 px-0 text-[14px] shadow-[0_1px_2px_hsl(var(--shadow)/0.2)] sm:w-auto sm:px-3.5">
+      <div className="ml-auto flex flex-none items-center justify-end gap-1.5 sm:gap-2 xl:col-start-3">
+        {boardTools && (
+          <Button onClick={() => addLink()} aria-label={publishes ? 'Add link' : 'Suggest link'} className="size-10 gap-2 rounded-lg border-0 px-0 text-[14px] shadow-[0_1px_2px_hsl(var(--shadow)/0.2)] sm:w-auto sm:px-3.5">
             <Plus />
             <span className="max-sm:hidden">{publishes ? 'Add' : 'Suggest'}</span>
           </Button>
         )}
-        <NavButton to="/$org/requests" label={reviewer ? 'Review suggestions' : 'Your suggestions'} badge={waiting}>
-          <Inbox className="size-5" />
-        </NavButton>
-        {admin && (
-          <NavButton to="/$org/team" label="Team" className="max-sm:hidden">
-            <Users className="size-5" />
-          </NavButton>
-        )}
-        <UserMenu />
       </div>
     </header>
   )
 }
 
-function NavButton({ to, label, badge = 0, className, children }: { to: '/$org/requests' | '/$org/team'; label: string; badge?: number; className?: string; children: ReactNode }) {
+/** The open space's logo and name, and for its admins a button to its settings. */
+function SpaceTitle({ space, admin }: { space: NonNullable<ReturnType<typeof useCurrentSpaceIfLoaded>>; admin: boolean }) {
   const org = useOrg()
   return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Link
-            to={to}
-            params={{ org: org.slug }}
-            aria-label={badge > 0 ? `${label}, ${badge} waiting` : label}
-            className={cn('bg-surface border-line text-quiet hover:text-ink relative grid size-10 flex-none place-items-center rounded-xl border transition-colors', className)}
-            activeProps={{ className: 'border-brand! text-ink!' }}
-          />
-        }
-      >
-        {children}
-        {badge > 0 && (
-          <span className="bg-brand text-on-brand absolute -top-1.5 -right-1.5 grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-[11px] font-bold tabular-nums [font-family:var(--font-rounded)]">
-            {badge}
-          </span>
-        )}
-      </TooltipTrigger>
-      <TooltipContent side="bottom">{label}</TooltipContent>
-    </Tooltip>
+    <div className="flex min-w-0 items-center gap-2.5">
+      <Link to="/$org/$space" params={{ org: org.slug, space: space.slug }} className="flex min-w-0 items-center gap-2.5 rounded-lg">
+        <SpaceLogo space={space} />
+        <span className="truncate text-[17px] font-[650] tracking-[-0.01em] [font-family:var(--font-rounded)]">{space.name}</span>
+      </Link>
+      {admin && (
+        <Link
+          to="/$org/$space/settings"
+          params={{ org: org.slug, space: space.slug }}
+          aria-label={`${space.name} settings`}
+          className="text-quiet hover:text-ink hover:bg-ink/6 grid size-8 flex-none place-items-center rounded-lg transition-colors"
+          activeProps={{ className: 'text-brand! bg-[color-mix(in_srgb,var(--brand)_11%,transparent)]' }}
+        >
+          <Settings className="size-[18px]" />
+        </Link>
+      )}
+    </div>
   )
 }

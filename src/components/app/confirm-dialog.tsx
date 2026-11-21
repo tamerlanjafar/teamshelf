@@ -1,14 +1,6 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogContent,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 export interface Confirmation {
   title: string
@@ -47,17 +39,20 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   )
 }
 
+/** A question with Cancel and the action. A click outside, or Escape, cancels it. */
 function ConfirmDialog({ open, onOpenChange, title, description, confirmLabel, onConfirm }: Confirmation & { open: boolean; onOpenChange: (open: boolean) => void }) {
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="rounded-[18px] sm:max-w-md">
-        <AlertDialogHeader>
-          <AlertDialogTitle className="[font-family:var(--font-rounded)]">{title}</AlertDialogTitle>
-          <AlertDialogDescription>{description}</AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent showCloseButton={false} className="rounded-xl sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="[font-family:var(--font-rounded)]">{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
             variant="destructive"
             onClick={() => {
               onConfirm()
@@ -65,9 +60,9 @@ function ConfirmDialog({ open, onOpenChange, title, description, confirmLabel, o
             }}
           >
             {confirmLabel}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

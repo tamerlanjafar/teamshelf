@@ -1,19 +1,19 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react'
 import { useBoardLinksIfLoaded, useSetTeamLinkOrder } from '@/api/links'
 import { useSaveBoardPrefs } from '@/api/prefs'
-import { useSetSpaceLayout } from '@/api/spaces'
+import { useSetSpaceCardSizes, useSetSpaceLayout } from '@/api/spaces'
+import { usePermissions } from '@/features/org/permissions'
 import { toastError } from '@/lib/errors'
 import { mergeOrder } from '@/lib/order'
-import type { BoardPrefs, Space } from '@/lib/types'
+import type { BoardPrefs, CardSizes, Space } from '@/lib/types'
 import { orderedLinks } from './board-model'
 import { mergeLayout, type Layout } from './board-layout'
+import { tidyHeight, tidyWidths } from './resize'
 import { useRecordOpen } from '@/features/search/use-record-open'
 import { useEffectiveBoardPrefs, useHasOwnOrder } from './use-board-prefs'
 
 interface BoardActions {
   prefs: BoardPrefs
-  /** The open space's environments, in the order a line shows them. */
-  environments: string[]
   /** Dragging is off while the board is filtered: a place among some of the links isn't a place among all. */
   canReorder: boolean
   /** The board's columns as this person sees them: their own, or the space's. */
@@ -32,6 +32,16 @@ interface BoardActions {
   /** Go back to the space's layout, or to its order of one group's links. */
   useTeamGroupOrder: () => void
   useTeamLinkOrder: (groupId: string) => void
+  /** How tall a card's list may grow before it scrolls (px), or undefined for the usual. */
+  cardHeight: (groupId: string) => number | undefined
+  /** Each column's share of the board's width, when they were set for this many columns. */
+  columnWidths: (count: number) => number[] | undefined
+  /** Whether this card has a size of its own that a reset would undo. */
+  isResized: (groupId: string) => boolean
+  /** Sets a card's height; undefined goes back to the usual (the space's, for people who aren't its admins). */
+  resizeCard: (groupId: string, height: number | undefined) => void
+  /** Sets the columns' widths; undefined makes them equal again (or the space's). */
+  resizeColumns: (widths: number[] | undefined) => void
 }
 
 const BoardActionsContext = createContext<BoardActions | null>(null)
@@ -46,7 +56,10 @@ const toggled = (ids: string[], id: string, on: boolean) => (on ? [...new Set([.
 const without = <Value,>(record: Record<string, Value>, key: string) => Object.fromEntries(Object.entries(record).filter(([other]) => other !== key))
 
 /**
- * Hiding and reordering on the board of one space.
+ * Hiding, reordering and resizing on the board of one space.
+ *
+ * Resizing is for everyone, like reordering by the space's admins: an admin's resize is the
+ * space's, everyone else's is their own and wins over the space's for that card (or the columns).
  *
  * Hiding is always personal. Reordering depends on who drags: the space's admins change the
  * space's order, which everyone follows who hasn't made their own. With personal ordering
@@ -61,6 +74,12 @@ export function BoardActionsProvider({ space, canReorder, children }: { space: S
   const setSpaceLayout = useSetSpaceLayout()
   const setTeamLinkOrder = useSetTeamLinkOrder()
   const recordOpen = useRecordOpen()
+  const { isSpaceAdmin } = usePermissions()
+  const spaceAdmin = isSpaceAdmin(space?.id)
+  const setSpaceCardSizes = useSetSpaceCardSizes()
+  const teamSizes: CardSizes = space?.card_sizes ?? {}
+  // The space's admins see (and change) the space's sizes, never a size of their own.
+  const ownSizes: CardSizes = (!spaceAdmin && space && prefs.card_sizes?.[space.id]) || {}
   const ownLayout = space ? prefs.group_layout[space.id] : undefined
   const layout = (ownOrder && ownLayout?.length ? ownLayout : space?.layout) ?? []
 
@@ -69,7 +88,6 @@ export function BoardActionsProvider({ space, canReorder, children }: { space: S
 
     return {
       prefs,
-      environments: space?.environments ?? [],
       canReorder,
       layout,
       arrangeGroups: (shown) => {
@@ -94,10 +112,33 @@ export function BoardActionsProvider({ space, canReorder, children }: { space: S
       setLinksHidden: (linkIds, hidden) => save({ hidden_links: hidden ? [...new Set([...prefs.hidden_links, ...linkIds])] : prefs.hidden_links.filter((id) => !linkIds.includes(id)) }),
       useTeamGroupOrder: () => space && save({ group_order: [], group_layout: without(prefs.group_layout, space.id) }),
       useTeamLinkOrder: (groupId) => save({ link_order: without(prefs.link_order, groupId) }),
+      cardHeight: (groupId) => ownSizes.heights?.[groupId] ?? teamSizes.heights?.[groupId],
+      columnWidths: (count) => {
+        const widths = ownSizes.widths ?? teamSizes.widths
+        return widths?.length === count ? widths : undefined
+      },
+      isResized: (groupId) => (spaceAdmin ? teamSizes : ownSizes).heights?.[groupId] !== undefined,
+      resizeCard: (groupId, height) => {
+        if (!space) return
+        const sizes = spaceAdmin ? teamSizes : ownSizes
+        const heights = height === undefined ? without(sizes.heights ?? {}, groupId) : { ...sizes.heights, [groupId]: tidyHeight(height) }
+        const next: CardSizes = { ...sizes, heights }
+        if (Object.keys(heights).length === 0) delete next.heights
+        if (spaceAdmin) setSpaceCardSizes.mutate({ id: space.id, sizes: next }, { onError: toastError })
+        else save({ card_sizes: { ...prefs.card_sizes, [space.id]: next } })
+      },
+      resizeColumns: (widths) => {
+        if (!space) return
+        const sizes = spaceAdmin ? teamSizes : ownSizes
+        const next: CardSizes = { ...sizes, widths: widths && tidyWidths(widths) }
+        if (!widths) delete next.widths
+        if (spaceAdmin) setSpaceCardSizes.mutate({ id: space.id, sizes: next }, { onError: toastError })
+        else save({ card_sizes: { ...prefs.card_sizes, [space.id]: next } })
+      },
     }
     // The mutation objects change on every render, their `mutate` functions don't.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ownOrder, links, prefs, canReorder, space, layout])
+  }, [ownOrder, links, prefs, canReorder, space, layout, spaceAdmin])
 
   return <BoardActionsContext value={actions}>{children}</BoardActionsContext>
 }

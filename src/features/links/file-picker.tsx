@@ -11,7 +11,7 @@ export function FilePicker({ id, file, invalid, disabled, onChange }: { id: stri
 
   if (file) {
     return (
-      <div className={cn('bg-well flex min-w-0 items-center gap-3 rounded-[10px] px-3 py-2.5 shadow-[inset_0_0_0_1px_var(--line)]', invalid && 'shadow-[inset_0_0_0_1px_var(--danger)]')}>
+      <div className={cn('bg-well flex min-w-0 items-center gap-3 rounded-md px-3 py-2.5 shadow-[inset_0_0_0_1px_var(--line)]', invalid && 'shadow-[inset_0_0_0_1px_var(--danger)]')}>
         <FileIcon type={file.type} name={file.name} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[14px] font-medium">{file.name}</span>
@@ -39,7 +39,7 @@ export function FilePicker({ id, file, invalid, disabled, onChange }: { id: stri
         if (dropped) onChange(dropped)
       }}
       className={cn(
-        'text-quiet hover:text-ink flex cursor-pointer flex-col items-center gap-1.5 rounded-[12px] border border-dashed px-4 py-6 text-center transition-colors',
+        'text-quiet hover:text-ink flex cursor-pointer flex-col items-center gap-1.5 rounded-lg border border-dashed px-4 py-6 text-center transition-colors',
         over ? 'border-brand bg-brand/5 text-ink' : invalid ? 'border-danger' : 'border-line',
       )}
     >

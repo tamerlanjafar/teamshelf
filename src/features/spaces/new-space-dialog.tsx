@@ -7,14 +7,16 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { toastError } from '@/lib/errors'
 import type { Color } from '@/lib/types'
+import { usePermissions } from '@/features/org/permissions'
 import { useOpenSpace } from './current-space'
-import { LogoPicker } from './logo-picker'
+import { LogoPicker, UploadLogoButton } from './logo-picker'
+import { SpaceLogo } from './space-logo'
 
-/** Starts a space. The organization's admins; whoever creates it is its first admin. */
+/** Starts a space. Anyone in the organization; whoever creates it is its first admin. */
 export function NewSpaceDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-[18px] sm:max-w-[440px]">{open && <NewSpaceForm onDone={() => onOpenChange(false)} />}</DialogContent>
+      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl sm:max-w-[480px]">{open && <NewSpaceForm onDone={() => onOpenChange(false)} />}</DialogContent>
     </Dialog>
   )
 }
@@ -24,6 +26,8 @@ function NewSpaceForm({ onDone }: { onDone: () => void }) {
   const [logo, setLogo] = useState('grid')
   const [color, setColor] = useState<Color>('indigo')
   const createSpace = useCreateSpace()
+  // Only admins of the organization start spaces everyone sees; anyone else's are private.
+  const { admin } = usePermissions()
   const openSpace = useOpenSpace()
 
   function submit(event: FormEvent) {
@@ -47,11 +51,24 @@ function NewSpaceForm({ onDone }: { onDone: () => void }) {
       <DialogHeader>
         <DialogTitle className="text-[20px] font-[650] [font-family:var(--font-rounded)]">New space</DialogTitle>
       </DialogHeader>
-      <Field label="Name" hint="A team or an area, like Design or Data. Everyone in the organization sees it until you make it private.">
-        <TextInput value={name} maxLength={40} autoFocus placeholder="Design" onChange={(event) => setName(event.target.value)} />
+      <Field
+        label="Name"
+        hint={
+          admin
+            ? 'A team or an area of your organization. Everyone in the organization sees it until you make it private.'
+            : 'A team or an area of your organization. It is private: only the people you add see it.'
+        }
+      >
+        <TextInput value={name} maxLength={40} autoFocus placeholder="Team or area" onChange={(event) => setName(event.target.value)} />
       </Field>
       <div className="grid gap-2">
-        <span className="text-[13px] font-medium">Logo</span>
+        <div className="flex items-center justify-between gap-3">
+          <span className="flex items-center gap-2 text-[13px] font-medium">
+            <SpaceLogo space={{ name: name || 'New space', logo, color }} className="size-6 rounded-xs" />
+            Logo
+          </span>
+          <UploadLogoButton onChange={setLogo} className="h-8" />
+        </div>
         <LogoPicker space={{ name: name || 'New space', logo, color }} onChange={setLogo} />
       </div>
       <div className="grid gap-2">

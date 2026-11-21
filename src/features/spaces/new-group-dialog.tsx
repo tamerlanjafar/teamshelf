@@ -12,7 +12,7 @@ import type { Color, Space } from '@/lib/types'
 export function NewGroupDialog({ space, open, onOpenChange }: { space: Space; open: boolean; onOpenChange: (open: boolean) => void }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-[18px] sm:max-w-[420px]">{open && <NewGroupForm space={space} onDone={() => onOpenChange(false)} />}</DialogContent>
+      <DialogContent className="rounded-xl sm:max-w-[480px]">{open && <NewGroupForm space={space} onDone={() => onOpenChange(false)} />}</DialogContent>
     </Dialog>
   )
 }
@@ -35,7 +35,7 @@ function NewGroupForm({ space, onDone }: { space: Space; onDone: () => void }) {
       <DialogHeader>
         <DialogTitle className="text-[20px] font-[650] [font-family:var(--font-rounded)]">New group in {space.name}</DialogTitle>
       </DialogHeader>
-      <Field label="Name" error={taken ? `${space.name} already has a group called ${name.trim()}.` : undefined} hint="A card on the board, like Jenkins or Figma.">
+      <Field label="Name" error={taken ? `${space.name} already has a group called ${name.trim()}.` : undefined} hint="A card on the board that holds related links.">
         <TextInput value={name} maxLength={60} autoFocus aria-invalid={taken} onChange={(event) => setName(event.target.value)} />
       </Field>
       <div className="grid gap-2">

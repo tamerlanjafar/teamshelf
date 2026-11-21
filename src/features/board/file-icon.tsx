@@ -1,8 +1,8 @@
 import { File, FileArchive, FileImage, FileSpreadsheet, FileText, FilePlay } from 'lucide-react'
-import './link-parts.css'
+import { cn } from '@/lib/utils'
 
 /** The icon of a file, by its type, where a link has its site's icon. */
-export function FileIcon({ type, name }: { type: string | null; name: string | null }) {
+export function FileIcon({ type, name, className }: { type: string | null; name: string | null; className?: string }) {
   const kind = `${type ?? ''} ${name ?? ''}`.toLowerCase()
   const Icon = /image\/|\.(png|jpe?g|gif|webp|svg|fig|sketch)\b/.test(kind)
     ? FileImage
@@ -16,7 +16,8 @@ export function FileIcon({ type, name }: { type: string | null; name: string | n
             ? FileText
             : File
   return (
-    <span className="favicon file-icon" aria-hidden="true">
+    // Drawn in the card's color (--c), where a link has its site's icon.
+    <span className={cn('favicon grid size-4 flex-none place-items-center text-[color-mix(in_srgb,var(--c,var(--quiet))_75%,var(--ink))] [&_svg]:size-4', className)} aria-hidden="true">
       <Icon strokeWidth={2} />
     </span>
   )

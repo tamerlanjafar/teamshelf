@@ -7,7 +7,7 @@ import { useBoardPrefsIfLoaded } from '@/api/prefs'
 import { openLink } from '@/features/board/open-link'
 import { useCurrentSpaceIfLoaded } from '@/features/spaces/current-space'
 import { colorValue } from '@/lib/colors'
-import { splitName, withoutGroupName } from '@/lib/environments'
+import { withoutGroupName } from '@/lib/names'
 import type { Group, Link } from '@/lib/types'
 import { LinkOption, MenuKeys, MenuLabel, type LinkChoice } from './link-option'
 import { useRecordOpen } from './use-record-open'
@@ -19,13 +19,11 @@ type Found = LinkChoice & { haystack: string }
 
 /** How a link reads in the list, and the text it is found by. */
 function choiceOf(link: Link, group: Group): Found {
-  const { base, environment } = link.kind === 'file' ? { base: link.title, environment: null } : splitName(link.title)
-  const title = withoutGroupName(base, group.name)
+  const title = withoutGroupName(link.title, group.name)
   return {
     link,
     title,
     groupName: group.name,
-    environment,
     color: colorValue(group.color),
     haystack: `${group.name} ${link.title} ${link.kind === 'file' ? (link.file_name ?? '') : link.url}`.toLowerCase(),
   }
@@ -109,7 +107,7 @@ export function QuickFind() {
   }
 
   return (
-    <div className="relative flex w-full min-w-0 flex-1 items-center lg:max-w-[520px]">
+    <div className="relative flex w-full min-w-0 flex-1 items-center">
       <Search className="text-quiet pointer-events-none absolute left-3.5 size-4" />
       <input
         ref={input}
@@ -151,7 +149,7 @@ export function QuickFind() {
             }
           }
         }}
-        className="peer bg-surface border-line placeholder:text-quiet focus:border-brand h-10 w-full min-w-0 rounded-xl border pr-[72px] pl-10 text-[15px] text-ellipsis outline-none max-sm:pr-10 [&::-webkit-search-cancel-button]:hidden"
+        className="peer bg-surface border-line placeholder:text-quiet focus:border-brand h-10 w-full min-w-0 rounded-lg border pr-[72px] pl-10 text-[15px] text-ellipsis outline-none max-sm:pr-10 [&::-webkit-search-cancel-button]:hidden"
       />
       {/* The shortcut, while the field isn't in use, and an arrow that says (and toggles) the list. */}
       <span className="absolute right-1.5 flex items-center gap-1">
@@ -179,14 +177,14 @@ export function QuickFind() {
 
       {showing && (
         <div
-          className="bg-raised border-line absolute top-[calc(100%+6px)] right-0 left-0 z-40 overflow-hidden rounded-[14px] border p-1 shadow-[0_20px_40px_-18px_hsl(var(--shadow)/0.45),0_2px_6px_-2px_hsl(var(--shadow)/0.1)]"
+          className="bg-raised border-line absolute top-[calc(100%+6px)] right-0 left-0 z-40 overflow-hidden rounded-xl border p-1 shadow-[0_20px_40px_-18px_hsl(var(--shadow)/0.45),0_2px_6px_-2px_hsl(var(--shadow)/0.1)]"
           // Clicking inside keeps the field focused, so the list doesn't close before the click lands.
           onPointerDown={(event) => event.preventDefault()}
         >
           {shown.length > 0 ? (
             <>
               <MenuLabel>{searching ? `${matches.length} ${matches.length === 1 ? 'link' : 'links'}${matches.length > MAX_RESULTS ? `, first ${MAX_RESULTS}` : ''}` : 'Recent'}</MenuLabel>
-              <ul ref={list} id={listId} role="listbox" aria-label={searching ? 'Links found' : 'Recent links'} className="m-0 grid max-h-[min(60dvh,420px)] list-none overflow-y-auto p-0">
+              <ul ref={list} id={listId} role="listbox" aria-label={searching ? 'Links found' : 'Recent links'} className="m-0 grid max-h-[min(60dvh,420px)] list-none gap-0.5 overflow-y-auto p-0">
                 {shown.map((choice, index) => (
                   <LinkOption key={choice.link.id} id={`${listId}-${index}`} choice={choice} selected={index === chosen} onHover={() => setActive(index)} onChoose={() => choose(choice)} />
                 ))}

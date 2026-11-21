@@ -3,10 +3,10 @@ import { COLOR_NAMES, COLORS } from '@/lib/colors'
 import type { Color } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
-/** The ten colors, one chosen. */
-export function ColorPicker({ value, onChange, size = 'default' }: { value: Color; onChange: (color: Color) => void; size?: 'default' | 'small' }) {
+/** The ten colors, one chosen (or none yet). */
+export function ColorPicker({ value, onChange, size = 'default' }: { value: Color | undefined; onChange: (color: Color) => void; size?: 'default' | 'small' }) {
   return (
-    <div role="radiogroup" aria-label="Color" className="flex flex-wrap gap-2">
+    <div role="radiogroup" aria-label="Color" className="flex flex-wrap gap-2 sm:flex-nowrap">
       {COLOR_NAMES.map((option) => (
         <button
           key={option}

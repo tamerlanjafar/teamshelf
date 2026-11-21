@@ -1,3 +1,4 @@
+import { MIN_COLUMN } from './resize'
 import {
   closestCenter,
   closestCorners,
@@ -14,9 +15,11 @@ import {
   type DragEndEvent,
   type DragOverEvent,
   type DragStartEvent,
+  MeasuringStrategy,
 } from '@dnd-kit/core'
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react'
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, type SortingStrategy } from '@dnd-kit/sortable'
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react'
+import { cn } from '@/lib/utils'
 import { colorValue } from '@/lib/colors'
 import { useBoardActions } from './board-actions'
 import { arrangeColumns, columnOf, moveCard, sameLayout, type Layout } from './board-layout'
@@ -31,13 +34,22 @@ const onResize = (listener: () => void) => {
 }
 
 /** The window's height, kept up to date. */
+// Cards are measured again whenever the columns change while one is dragged: moved to another
+// column, the cards there are where they are now, not where they were when the drag started,
+// so the space for the dragged card keeps its gap and nothing jumps.
+/** Cards that don't move by themselves: the page already has them in order. */
+const standStill: SortingStrategy = () => null
+
+const MEASURING = { droppable: { strategy: MeasuringStrategy.Always } }
+
 const useWindowHeight = () => useSyncExternalStore(onResize, () => window.innerHeight)
 
 /** How tall the board's footer (the "New group" tile) is. */
 const FOOTER_HEIGHT = 88
 
 /** What is in your hand: a group, or a link (which only moves within its group). */
-type Held = { type: 'group'; id: string } | { type: 'link'; id: string; groupId: string }
+/** A card in your hand remembers the column it came from (`from`). */
+type Held = { type: 'group'; id: string; from: number } | { type: 'link'; id: string; groupId: string }
 
 /**
  * A link is only dropped among the links of its own group, at the nearest row. A group is
@@ -86,14 +98,19 @@ function usePendingOrder<Scope>(saved: (scope: Scope) => string[]) {
  * the rest makes room. Nothing is saved until you let go.
  */
 export function SortableBoard({ cards, restoring, footer }: { cards: BoardCard[]; restoring: boolean; /** The last thing on the board, after the cards. */ footer?: ReactNode }) {
-  const { arrangeGroups, reorderLinks, environments, layout } = useBoardActions()
+  const { arrangeGroups, reorderLinks, layout, cardHeight, columnWidths } = useBoardActions()
   const container = useRef<HTMLDivElement>(null)
   const columnCount = useColumnCount(container)
   const [held, setHeld] = useState<Held | null>(null)
 
   const byId = new Map(cards.map((card) => [card.group.id, card]))
+  // A resized card is as tall as its header and the height it was given, at most.
+  const heightOf = (card: BoardCard) => {
+    const resized = cardHeight(card.group.id)
+    return resized === undefined ? estimateCardHeight(card) : Math.min(estimateCardHeight(card, Infinity), 62 + resized)
+  }
   const arranged = arrangeColumns(
-    cards.map((card) => ({ id: card.group.id, height: estimateCardHeight(card) })),
+    cards.map((card) => ({ id: card.group.id, height: heightOf(card) })),
     layout,
     columnCount,
     COLUMN_GAP,
@@ -135,7 +152,7 @@ export function SortableBoard({ cards, restoring, footer }: { cards: BoardCard[]
     // A short buzz where the device has one, so a held finger knows the card is picked up.
     if (typeof navigator.vibrate === 'function') navigator.vibrate(12)
     const data = active.data.current as { type: 'group' | 'link'; groupId?: string }
-    setHeld(data.type === 'group' ? { type: 'group', id: String(active.id) } : { type: 'link', id: String(active.id), groupId: data.groupId! })
+    setHeld(data.type === 'group' ? { type: 'group', id: String(active.id), from: columnOf(columns, String(active.id)) } : { type: 'link', id: String(active.id), groupId: data.groupId! })
     if (data.type === 'group') setDragged(columns)
   }
 
@@ -152,11 +169,18 @@ export function SortableBoard({ cards, restoring, footer }: { cards: BoardCard[]
     if (held?.type !== 'group' || !over || over.id === active.id) return
     const to = target(over)
     const from = columnOf(columns, String(active.id))
-    // Within a column the cards make room by themselves. Only a move to another column changes the columns.
-    if (!to || from === -1 || to.column === from) return
+    // In the column it came from, the cards make room by themselves (they slide). Anywhere else
+    // the card is really moved there, also from place to place within that column, so the cards
+    // stand where the page puts them, with their usual gaps.
+    if (!to || from === -1 || (to.column === from && from === held.from)) return
     if (performance.now() - lastMove.current < 160) return
     lastMove.current = performance.now()
-    setDragged(moveCard(columns, String(active.id), to.column, to.beforeId))
+    if (to.column === from) {
+      const column = columns[from]
+      const at = to.beforeId === null ? column.length - 1 : column.indexOf(to.beforeId)
+      if (at === -1 || at === column.indexOf(String(active.id))) return
+      setDragged(columns.map((ids, index) => (index === from ? arrayMove(column, column.indexOf(String(active.id)), at) : ids)))
+    } else setDragged(moveCard(columns, String(active.id), to.column, to.beforeId))
   }
 
   function onDragEnd({ active, over }: DragEndEvent) {
@@ -164,7 +188,8 @@ export function SortableBoard({ cards, restoring, footer }: { cards: BoardCard[]
       let next = columns
       const to = target(over)
       const from = columnOf(columns, String(active.id))
-      if (to && from !== -1 && to.column === from && to.beforeId && to.beforeId !== String(active.id)) {
+      // Only the column it came from still has to be put in order: elsewhere it already is.
+      if (to && from !== -1 && to.column === from && from === held.from && to.beforeId && to.beforeId !== String(active.id)) {
         const column = columns[from]
         next = columns.map((ids, index) => (index === from ? arrayMove(column, column.indexOf(String(active.id)), column.indexOf(to.beforeId!)) : ids))
       }
@@ -175,14 +200,12 @@ export function SortableBoard({ cards, restoring, footer }: { cards: BoardCard[]
       }
     }
     if (held?.type === 'link' && over && over.id !== active.id) {
-      // A line can hold several links (one per environment). The lines change places, and
-      // the links of a line stay together, in their order.
       const card = shown(held.groupId)
-      const rows = card ? rowsOf(card, environments) : []
+      const rows = card ? rowsOf(card) : []
       const from = rows.findIndex((row) => row.id === active.id)
       const to = rows.findIndex((row) => row.id === over.id)
       if (from !== -1 && to !== -1) {
-        const next = arrayMove(rows, from, to).flatMap((row) => row.links.map(({ item }) => item.link.id))
+        const next = arrayMove(rows, from, to).map((row) => row.id)
         setLinkOrder({ scope: held.groupId, ids: next })
         reorderLinks(held.groupId, next)
       }
@@ -195,35 +218,52 @@ export function SortableBoard({ cards, restoring, footer }: { cards: BoardCard[]
     setDragged(null)
   }
 
+  // The card in your hand is as wide as the column it would drop into, also after moving to a
+  // column of another width, so dropping it doesn't snap it to a new size.
+  const heldColumn = held?.type === 'group' ? columnOf(columns, held.id) : -1
+  const [overlayWidth, setOverlayWidth] = useState<number>()
+  useLayoutEffect(() => {
+    const column = heldColumn === -1 ? null : container.current?.querySelectorAll<HTMLElement>('[data-column]')[heldColumn]
+    setOverlayWidth(column ? column.getBoundingClientRect().width : undefined)
+  }, [heldColumn, columns])
+
   const heldCard = held?.type === 'group' ? shown(held.id) : undefined
   const heldRowCard = held?.type === 'link' ? shown(held.groupId) : undefined
-  const heldRow = heldRowCard && rowsOf(heldRowCard, environments).find((row) => row.id === held?.id)
+  const heldRow = heldRowCard && rowsOf(heldRowCard).find((row) => row.id === held?.id)
 
   // The footer (a new group) goes in the first column, from the left, where it still fits on
   // the screen without scrolling. When none has room, at the end of the shortest one.
-  const heights = columns.map((ids) => ids.reduce((sum, id) => sum + (byId.has(id) ? estimateCardHeight(byId.get(id)!) + COLUMN_GAP : 0), 0))
+  const heights = columns.map((ids) => ids.reduce((sum, id) => sum + (byId.has(id) ? heightOf(byId.get(id)!) + COLUMN_GAP : 0), 0))
+  const widths = columnWidths(columns.length)
   // The board starts under the top bar, about 100px down.
   const room = useWindowHeight() - 100 - 24
-  const fitting = heights.findIndex((height) => height + FOOTER_HEIGHT <= room)
-  const footerColumn = fitting !== -1 ? fitting : heights.indexOf(Math.min(...heights))
+  // An empty column narrowed to nothing is left out of the board (and its gap with it), also
+  // while a card is dragged, so the columns keep their widths. Resetting the widths brings it back.
+  const collapsed = (index: number) => widths?.[index] === 0 && !(arranged[index] ?? []).some((id) => byId.has(id))
+  const open = heights.map((height, index) => (collapsed(index) ? Infinity : height))
+  const fitting = open.findIndex((height) => height + FOOTER_HEIGHT <= room)
+  const footerColumn = fitting !== -1 ? fitting : open.indexOf(Math.min(...open))
 
   return (
-    <DndContext sensors={sensors} collisionDetection={sameKind} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd} onDragCancel={onDragCancel}>
+    <DndContext sensors={sensors} measuring={MEASURING} collisionDetection={sameKind} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd} onDragCancel={onDragCancel}>
       <div ref={container} className="flex items-start" style={{ gap: COLUMN_GAP }}>
         {columns.map((ids, index) => (
-          <Column key={index} index={index} ids={ids} dragging={held?.type === 'group'}>
+          <Column key={index} index={index} ids={ids} dragging={held?.type === 'group'} slides={held?.type !== 'group' || held.from === index} hidden={collapsed(index)} width={widths?.[index]}>
             {ids.map((id) => {
               const card = shown(id)
-              return card && <SortableGroupCard key={id} card={card} restoring={restoring} />
+              return card && <SortableGroupCard key={id} card={card} restoring={restoring} resizable={{ left: index > 0, right: index < columns.length - 1 }} />
             })}
             {footer && index === footerColumn && <div>{footer}</div>}
           </Column>
         ))}
       </div>
-      <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(0.2, 0, 0, 1)' }}>
+      <DragOverlay style={overlayWidth ? { width: overlayWidth, height: 'auto' } : undefined} dropAnimation={{ duration: 180, easing: 'cubic-bezier(0.2, 0, 0, 1)' }}>
         {heldCard && <GroupCard card={heldCard} restoring={restoring} lifted />}
         {heldRow && (
-          <div className="room-lifted-row" style={{ '--c': colorValue(heldRowCard!.group.color) } as CSSProperties}>
+          // A line in your hand: a small card of its own.
+          <div
+            className="border-line bg-surface cursor-grabbing rounded-md border shadow-[0_2px_6px_hsl(var(--shadow)/0.1),0_18px_40px_-12px_hsl(var(--shadow)/0.35)]"
+            style={{ '--c': colorValue(heldRowCard!.group.color) } as CSSProperties}>
             <LinkRow row={heldRow} groupId={heldRowCard!.group.id} restoring={false} lifted />
           </div>
         )}
@@ -236,11 +276,24 @@ export function SortableBoard({ cards, restoring, footer }: { cards: BoardCard[]
  * One column of cards. While a card is being dragged, the whole column (also below its last
  * card, down to the bottom of the board) takes it, so it can be dropped at the end of any column.
  */
-function Column({ index, ids, dragging, children }: { index: number; ids: string[]; dragging: boolean; children: ReactNode }) {
-  const { setNodeRef, isOver } = useDroppable({ id: `column:${index}`, data: { type: 'column', column: index } })
+function Column({ index, ids, dragging, slides, hidden, width, children }: { index: number; ids: string[]; dragging: boolean; /** Its cards slide to make room (the column the card came from), or stand where they are. */ slides: boolean; hidden: boolean; /** Its share of the board's width, when the columns were resized. */ width?: number; children: ReactNode }) {
+  const { setNodeRef } = useDroppable({ id: `column:${index}`, data: { type: 'column', column: index } })
   return (
-    <SortableContext id={`column:${index}`} items={ids} strategy={verticalListSortingStrategy}>
-      <div ref={setNodeRef} className={`board-column${dragging ? ' is-dragging' : ''}${isOver ? ' is-over' : ''}`} style={{ gap: COLUMN_GAP }}>
+    <SortableContext id={`column:${index}`} items={ids} strategy={slides ? verticalListSortingStrategy : standStill}>
+      <div
+        ref={setNodeRef}
+        data-column
+        className={cn(
+          'flex min-w-0 flex-1 flex-col',
+          hidden && 'hidden',
+          // While a card is dragged, every column reaches to the bottom of the board, so a card
+          // can be dropped below the last one, or into an empty column.
+          // Nothing is drawn there: the dashed space in the column shows where the card goes.
+          dragging && 'min-h-[calc(100dvh-160px)] self-stretch',
+        )}
+        // A column narrowed to nothing while it was empty still opens up once a card is in it.
+        style={{ gap: COLUMN_GAP, flexGrow: width, minWidth: ids.length > 0 ? MIN_COLUMN : undefined }}
+      >
         {children}
       </div>
     </SortableContext>

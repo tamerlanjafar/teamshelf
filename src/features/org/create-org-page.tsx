@@ -1,19 +1,28 @@
-import { Link, useNavigate } from '@tanstack/react-router'
-import { useState, type FormEvent } from 'react'
+import { useNavigate } from '@tanstack/react-router'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useCreateOrg, useMyOrgs } from '@/api/orgs'
-import { Button, buttonVariants } from '@/components/ui/button'
+import { Button } from '@/components/ui/button'
 import { Field, TextInput } from '@/components/app/form'
-import { AUTH_BUTTON, AuthCard } from '@/features/auth/screens'
+import { backToCreateDenied } from '@/features/auth/login-page'
+import { AUTH_BUTTON, AUTH_INPUT, AuthCard, Splash } from '@/features/auth/screens'
+import { crossTo } from '@/lib/accounts'
 import { errorMessage } from '@/lib/errors'
+import { neon } from '@/lib/neon'
+import { cn } from '@/lib/utils'
 import { slugFrom, slugProblem } from './slug'
 
 /**
- * Start a new organization. Whoever creates it is its super admin. Only for the accounts the
- * database lists as allowed (the app hides the form from everyone else, the database refuses them).
+ * Start a new organization. The email signed in on this page (given on the way here, see
+ * login-page.tsx) creates it and is its first admin. Only for the emails the database lists as
+ * allowed: everyone else goes back to the email step, which says why, and the database refuses
+ * them anyway.
  */
 export function CreateOrgPage() {
   const navigate = useNavigate()
   const { can_create: canCreate } = useMyOrgs()
+  const email = neon.auth.useSession().data?.user.email ?? ''
+  const otherEmail = () => crossTo('/login?intent=create')
+  const toOrgs = { label: 'Your organizations', onClick: () => navigate({ to: '/organizations' }) }
   const createOrg = useCreateOrg()
   const [name, setName] = useState('')
   // Until the address is typed by hand, it follows the name.
@@ -30,43 +39,54 @@ export function CreateOrgPage() {
     createOrg.mutate({ name, slug }, { onSuccess: (org) => navigate({ to: '/$org', params: { org: org.slug } }) })
   }
 
-  if (!canCreate) {
-    return (
-      <AuthCard title="You can't create organizations" description="Creating organizations is limited to a few accounts. Ask an admin of an existing organization to invite you.">
-        <Link to="/organizations" className={buttonVariants({ size: 'lg', className: AUTH_BUTTON })}>
-          Your organizations
-        </Link>
-      </AuthCard>
-    )
-  }
+  // An email that may not create organizations goes back to the email step, which says so.
+  if (!canCreate) return <SendBack email={email} />
 
   const slugError = attempted && problem ? problem : createOrg.isError ? errorMessage(createOrg.error) : undefined
 
   return (
-    <AuthCard title="Create an organization" description="Set up a board for your team's links. You'll manage it and can invite others.">
+    <AuthCard back={toOrgs} title="Create an organization" description="Give it a name and a URL. You can invite your team next.">
       <form onSubmit={submit} noValidate className="flex flex-col gap-4 text-left">
-        <Field label="Name" error={attempted && !name.trim() ? 'Give it a name.' : undefined}>
-          <TextInput autoFocus placeholder="Acme" value={name} maxLength={60} onChange={(event) => setName(event.target.value)} className="h-10" />
-        </Field>
-        <Field label="Address" error={slugError} hint={`${window.location.host}/${slug || 'acme'}`}>
-          <TextInput
-            placeholder="acme"
-            value={slug}
-            maxLength={40}
-            aria-invalid={Boolean(slugError)}
-            onChange={(event) => setTypedSlug(event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-            className="h-10"
-          />
-        </Field>
-        <div className="mt-2 flex flex-col gap-3">
-          <Button type="submit" size="lg" disabled={createOrg.isPending} className={AUTH_BUTTON}>
-            {createOrg.isPending ? 'Creating…' : 'Create organization'}
+        <div className="bg-surface border-line flex h-11 items-center gap-3 rounded-xl border pr-1.5 pl-3.5">
+          <span className="min-w-0 flex-1 truncate text-[15px]">{email}</span>
+          <Button type="button" variant="ghost" size="sm" className="text-primary hover:text-primary h-8 rounded-md px-2.5 text-sm" onClick={otherEmail}>
+            Change
           </Button>
-          <Link to="/organizations" className={buttonVariants({ variant: 'ghost', size: 'lg', className: `${AUTH_BUTTON} text-quiet` })}>
-            Back
-          </Link>
         </div>
+        <Field label="Name" error={attempted && !name.trim() ? 'Give it a name.' : undefined}>
+          <TextInput autoFocus placeholder="Acme" value={name} maxLength={60} onChange={(event) => setName(event.target.value)} className={AUTH_INPUT} />
+        </Field>
+        {/* The site's address stays in front, so the whole link reads as it is typed. */}
+        <Field label="URL" error={slugError}>
+          <span
+            className={cn(
+              'bg-surface flex h-11 items-center rounded-xl border px-3.5 text-[15px] shadow-[0_1px_2px_hsl(var(--shadow)/0.05)] transition-colors focus-within:border-(--brand)',
+              slugError ? 'border-danger' : 'border-line',
+            )}
+          >
+            <span className="text-quiet flex-none select-none">{window.location.host}/</span>
+            <input
+              placeholder="acme"
+              value={slug}
+              maxLength={40}
+              autoComplete="off"
+              spellCheck={false}
+              aria-invalid={Boolean(slugError)}
+              onChange={(event) => setTypedSlug(event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+              className="text-ink placeholder:text-quiet/70 h-full min-w-0 flex-1 bg-transparent outline-none"
+            />
+          </span>
+        </Field>
+        <Button type="submit" size="lg" disabled={createOrg.isPending} className={`${AUTH_BUTTON} mt-2`}>
+          {createOrg.isPending ? 'Creating…' : 'Create organization'}
+        </Button>
       </form>
     </AuthCard>
   )
+}
+
+/** Goes back to the email step, which says this email can't create organizations. */
+function SendBack({ email }: { email: string }) {
+  useEffect(() => backToCreateDenied(email), [email])
+  return <Splash />
 }

@@ -1,0 +1,332 @@
+// Example data for mock mode, and the situations ("scenarios") the screens need.
+// Everything here is made up. Ids are readable so addresses and rows are easy to follow.
+
+import type { Color, Group, Link, Member, Role, Space } from '@/lib/types'
+import { setState, type MockState, type Tables } from './store'
+
+const day = (daysAgo: number) => new Date(Date.now() - daysAgo * 86_400_000).toISOString()
+
+const USERS = {
+  alex: { id: 'user-alex', email: 'alex@northwind.io', name: 'Alex Morgan' },
+  alexLumen: { id: 'user-alex-lumen', email: 'alex.morgan@lumenlabs.dev', name: 'Alex Morgan' },
+  newcomer: { id: 'user-newcomer', email: 'sam.rivera@gmail.com', name: '' },
+  sam: { id: 'user-sam', email: 'sam@northwind.io', name: 'Sam Lee' },
+  priya: { id: 'user-priya', email: 'priya@northwind.io', name: 'Priya Nair' },
+  mina: { id: 'user-mina', email: 'mina@northwind.io', name: 'Mina Park' },
+}
+
+function member(id: string, org_id: string, email: string, name: string, role: Role, user_id: string | null, daysAgo: number, extra: Partial<Member> = {}): Member {
+  return { id, org_id, email, name, role, user_id, invited_by: null, invited_at: day(daysAgo), joined_at: user_id ? day(daysAgo - 1) : null, approved: true, ...extra }
+}
+
+function space(id: string, org_id: string, slug: string, name: string, logo: string, color: Color, position: number, visibility: Space['visibility'] = 'org'): Space {
+  return { id, org_id, slug, name, logo, color, visibility, layout: [], card_sizes: {}, position, created_at: day(90) }
+}
+
+function group(id: string, org_id: string, space_id: string, name: string, color: Color, position: number): Group {
+  return { id, org_id, space_id, name, color, position, created_at: day(80) }
+}
+
+let linkCount = 0
+function link(org_id: string, space_id: string, group_id: string | null, title: string, url: string, extra: Partial<Link> = {}): Link {
+  linkCount += 1
+  return {
+    id: `link-${linkCount}`,
+    org_id,
+    space_id,
+    kind: 'link',
+    group_id,
+    proposed_group: null,
+    title,
+    url,
+    icon_url: null,
+    file_key: null,
+    file_name: null,
+    file_size: null,
+    file_type: null,
+    status: 'approved',
+    visibility: 'everyone',
+    position: linkCount,
+    created_by: 'm-nw-alex',
+    created_at: day(60 - linkCount),
+    reviewed_at: day(59 - linkCount),
+    review_note: '',
+    ...extra,
+  }
+}
+
+/** Northwind (the main organization), Lumen Labs (Alex's other email), Orbit (open to @lumenlabs.dev). */
+function world(): Tables {
+  linkCount = 0
+  const nw = 'org-northwind'
+  const lumen = 'org-lumen'
+  const dev = 'space-nw-dev'
+  const design = 'space-nw-design'
+  const data = 'space-nw-data'
+  const leads = 'space-nw-leads'
+
+  const links: Link[] = [
+    link(nw, dev, 'g-online', 'Customer portal', 'https://portal.example.com'),
+    link(nw, dev, 'g-online', 'Partner portal', 'https://partners.example.com'),
+    link(nw, dev, 'g-online', 'Public API', 'https://api.example.com'),
+    link(nw, dev, 'g-online', 'Payments API (v2)', 'https://payments.example.com'),
+    link(nw, dev, 'g-online', 'Mobile app', 'https://app.example.com'),
+    link(nw, dev, 'g-online', 'Admin console', 'https://admin.example.com', { visibility: 'admins' }),
+    link(nw, dev, 'g-monitoring', 'Grafana', 'https://grafana.com'),
+    link(nw, dev, 'g-monitoring', 'Uptime Kuma', 'https://uptime.kuma.pet'),
+    link(nw, dev, 'g-monitoring', 'Sentry', 'https://sentry.io'),
+    link(nw, dev, 'g-monitoring', 'Status page', 'https://www.atlassian.com/software/statuspage'),
+    link(nw, dev, 'g-cicd', 'GitHub Actions', 'https://github.com/features/actions'),
+    link(nw, dev, 'g-cicd', 'Netlify', 'https://www.netlify.com'),
+    link(nw, dev, 'g-cicd', 'Vercel', 'https://vercel.com'),
+    link(nw, dev, 'g-cicd', 'Docker Hub', 'https://hub.docker.com'),
+    link(nw, dev, 'g-docs', 'Architecture', '/file?key=mock/architecture.pdf', { kind: 'file', file_key: 'mock/architecture.pdf', file_name: 'architecture.pdf', file_size: 2_400_000, file_type: 'application/pdf' }),
+    link(nw, dev, 'g-docs', 'Onboarding guide', 'https://www.notion.so'),
+    link(nw, dev, 'g-docs', 'API reference', 'https://swagger.io'),
+    link(nw, design, 'g-figma', 'Product', 'https://www.figma.com'),
+    link(nw, design, 'g-figma', 'Design system', 'https://www.figma.com'),
+    link(nw, design, 'g-assets', 'Storybook', 'https://storybook.js.org'),
+    link(nw, design, 'g-assets', 'Icon library', 'https://lucide.dev'),
+    link(nw, design, 'g-assets', 'Mobbin', 'https://mobbin.com'),
+    link(nw, data, 'g-dash', 'Metabase', 'https://www.metabase.com'),
+    link(nw, data, 'g-dash', 'Mixpanel', 'https://mixpanel.com'),
+    link(nw, leads, 'g-plans', 'Roadmap', 'https://www.notion.so'),
+    // Waiting for review, and one that was turned down.
+    link(nw, dev, 'g-cicd', 'Jira board', 'https://www.atlassian.com/software/jira', { status: 'pending', created_by: 'm-nw-priya', reviewed_at: null, created_at: day(1) }),
+    link(nw, dev, null, 'Postman', 'https://www.postman.com', { status: 'pending', proposed_group: 'Tools', created_by: 'm-nw-mina', reviewed_at: null, created_at: day(2) }),
+    link(nw, design, 'g-assets', 'Brand kit', 'https://brand.example.com', { status: 'pending', created_by: 'm-nw-alex', reviewed_at: null, created_at: day(3) }),
+    link(nw, data, 'g-dash', 'Old dashboards', 'https://old.example.com', { status: 'rejected', created_by: 'm-nw-alex', review_note: 'We moved everything to Metabase.', created_at: day(9) }),
+    link(lumen, 'space-lumen-research', 'g-lumen-papers', 'Paper drafts', 'https://www.overleaf.com'),
+    link(lumen, 'space-lumen-research', 'g-lumen-papers', 'Lab wiki', 'https://www.notion.so'),
+    link('org-orbit', 'space-orbit-eng', 'g-orbit-tools', 'Issue tracker', 'https://linear.app', { created_by: 'm-orbit-owner' }),
+    link('org-orbit', 'space-orbit-eng', 'g-orbit-tools', 'Team wiki', 'https://www.notion.so', { created_by: 'm-orbit-owner' }),
+    link('org-orbit', 'space-orbit-eng', 'g-orbit-tools', 'Design files', 'https://www.figma.com', { created_by: 'm-orbit-owner' }),
+  ]
+
+  return {
+    users: Object.values(USERS),
+    orgs: [
+      { id: nw, slug: 'northwind', name: 'Northwind', allowed_domains: ['northwind.io'] },
+      { id: lumen, slug: 'lumen', name: 'Lumen Labs', allowed_domains: [] },
+      { id: 'org-orbit', slug: 'orbit', name: 'Orbit', allowed_domains: ['lumenlabs.dev'] },
+    ],
+    members: [
+      member('m-nw-alex', nw, USERS.alex.email, USERS.alex.name, 'admin', USERS.alex.id, 120),
+      member('m-nw-sam', nw, USERS.sam.email, USERS.sam.name, 'admin', USERS.sam.id, 100),
+      member('m-nw-priya', nw, USERS.priya.email, USERS.priya.name, 'member', USERS.priya.id, 60),
+      member('m-nw-mina', nw, USERS.mina.email, USERS.mina.name, 'member', USERS.mina.id, 30),
+      member('m-nw-jo', nw, 'jo@studio.design', '', 'member', null, 2),
+      // Invited to Design by Mina, from a domain Northwind doesn't let in: waits for an admin.
+      member('m-nw-taylor', nw, 'taylor@freelance.example', '', 'member', null, 1, { approved: false, invited_by: 'm-nw-mina' }),
+      member('m-lumen-alex', lumen, USERS.alexLumen.email, USERS.alexLumen.name, 'admin', USERS.alexLumen.id, 50),
+      member('m-orbit-owner', 'org-orbit', 'owner@orbit.example', 'Robin Vale', 'admin', null, 40),
+    ],
+    spaces: [
+      space(dev, nw, 'development', 'Development', 'code', 'indigo', 1),
+      space(design, nw, 'design', 'Design', 'palette', 'pink', 2),
+      space(data, nw, 'data', 'Data', 'chart', 'teal', 3),
+      space(leads, nw, 'leadership', 'Leadership', 'briefcase', 'purple', 4, 'private'),
+      space('space-lumen-research', lumen, 'research', 'Research', 'flask', 'green', 1),
+      space('space-orbit-eng', 'org-orbit', 'engineering', 'Engineering', 'rocket', 'purple', 1),
+    ],
+    space_members: [
+      // Alex created Northwind and its spaces, so runs them; others run the ones given to them.
+      { space_id: dev, member_id: 'm-nw-alex', role: 'admin' },
+      { space_id: design, member_id: 'm-nw-alex', role: 'admin' },
+      { space_id: data, member_id: 'm-nw-alex', role: 'admin' },
+      { space_id: dev, member_id: 'm-nw-sam', role: 'admin' },
+      { space_id: dev, member_id: 'm-nw-priya', role: 'member' },
+      { space_id: design, member_id: 'm-nw-mina', role: 'admin' },
+      { space_id: leads, member_id: 'm-nw-alex', role: 'admin' },
+      { space_id: design, member_id: 'm-nw-taylor', role: 'member' },
+      { space_id: leads, member_id: 'm-nw-sam', role: 'member' },
+      { space_id: 'space-lumen-research', member_id: 'm-lumen-alex', role: 'admin' },
+    ],
+    groups: [
+      group('g-online', nw, dev, 'Web app', 'blue', 1),
+      group('g-monitoring', nw, dev, 'Monitoring', 'green', 2),
+      group('g-cicd', nw, dev, 'CI / CD', 'purple', 3),
+      group('g-docs', nw, dev, 'Docs', 'orange', 4),
+      group('g-figma', nw, design, 'Figma', 'pink', 1),
+      group('g-assets', nw, design, 'Assets', 'yellow', 2),
+      group('g-dash', nw, data, 'Dashboards', 'teal', 1),
+      group('g-plans', nw, leads, 'Plans', 'purple', 1),
+      group('g-lumen-papers', lumen, 'space-lumen-research', 'Papers', 'green', 1),
+      group('g-orbit-tools', 'org-orbit', 'space-orbit-eng', 'Tools', 'purple', 1),
+    ],
+    links,
+    link_access: [],
+    member_prefs: [],
+    org_creators: [USERS.alex.email, USERS.alexLumen.email],
+  }
+}
+
+/** One account as src/lib/accounts.ts keeps it in this browser. */
+interface SavedAccount {
+  userId: string
+  email: string
+  name: string
+  slots: string[]
+  orgs: { slug: string; name: string }[]
+}
+
+interface Setup {
+  db: Tables
+  /** Signed in: which user at which session paths. */
+  sessions: { userId: string; slots: string[] }[]
+  /** What src/lib/accounts.ts remembers, and the session the pages outside an organization use. */
+  accounts: SavedAccount[]
+  last?: string
+}
+
+const northwindAccount: SavedAccount = { userId: USERS.alex.id, email: USERS.alex.email, name: USERS.alex.name, slots: ['northwind'], orgs: [{ slug: 'northwind', name: 'Northwind' }] }
+const lumenAccount: SavedAccount = { userId: USERS.alexLumen.id, email: USERS.alexLumen.email, name: USERS.alexLumen.name, slots: ['lumen'], orgs: [{ slug: 'lumen', name: 'Lumen Labs' }] }
+
+/**
+ * Alex's role in Northwind. As an admin, Alex also runs its spaces. As a member, Alex runs none,
+ * or only Development, and the spaces are run by others: Sam and Mina, with Sam as the admin.
+ */
+function withRole(db: Tables, role: Role, spaceAdmin = false) {
+  const alex = db.members.find((one) => one.id === 'm-nw-alex')!
+  alex.role = role
+  if (role === 'member') {
+    // Sam takes over as an admin of the organization and of the spaces Alex ran (Mina runs Design).
+    db.members.find((one) => one.id === 'm-nw-sam')!.role = 'admin'
+    db.space_members = db.space_members.filter((row) => row.member_id !== alex.id && row.member_id !== 'm-nw-sam')
+    for (const space_id of ['space-nw-dev', 'space-nw-data', 'space-nw-leads']) db.space_members.push({ space_id, member_id: 'm-nw-sam', role: 'admin' })
+    // As a space admin, Alex runs Development (open to everyone) and Leadership (private) with Sam.
+    if (spaceAdmin) for (const space_id of ['space-nw-dev', 'space-nw-leads']) db.space_members.push({ space_id, member_id: alex.id, role: 'admin' })
+  }
+  return db
+}
+
+export interface Scenario {
+  id: string
+  title: string
+  description: string
+  /** Whether Alex's role in Northwind can be changed from the toolbar. */
+  roles: boolean
+  build: (role: Role) => Setup
+}
+
+const inNorthwind = (role: Role): Setup => ({
+  db: withRole(world(), role),
+  sessions: [{ userId: USERS.alex.id, slots: ['northwind'] }],
+  accounts: [northwindAccount],
+  last: 'northwind',
+})
+
+export const SCENARIOS: Scenario[] = [
+  {
+    id: 'signed-out',
+    title: 'Signed out',
+    description: 'Nobody is signed in on this browser.',
+    roles: false,
+    build: () => ({ db: world(), sessions: [], accounts: [] }),
+  },
+  {
+    id: 'northwind',
+    title: 'One organization',
+    description: 'Alex is signed in to Northwind only.',
+    roles: true,
+    build: inNorthwind,
+  },
+  {
+    id: 'space-admin',
+    title: 'Admin of one space',
+    description: 'Alex is a member of Northwind and an admin of Development and Leadership.',
+    roles: false,
+    build: () => ({ ...inNorthwind('member'), db: withRole(world(), 'member', true) }),
+  },
+  {
+    id: 'several',
+    title: 'Two emails',
+    description: 'Northwind with alex@northwind.io, Lumen Labs with alex.morgan@lumenlabs.dev. That email may also join Orbit.',
+    roles: true,
+    build: (role) => ({
+      db: withRole(world(), role),
+      sessions: [
+        { userId: USERS.alex.id, slots: ['northwind'] },
+        { userId: USERS.alexLumen.id, slots: ['lumen'] },
+      ],
+      accounts: [northwindAccount, lumenAccount],
+      last: 'northwind',
+    }),
+  },
+  {
+    id: 'lumen',
+    title: 'Can join by domain',
+    description: 'Signed in as alex.morgan@lumenlabs.dev, whose domain opens Orbit.',
+    roles: false,
+    build: () => ({ db: world(), sessions: [{ userId: USERS.alexLumen.id, slots: ['lumen'] }], accounts: [lumenAccount], last: 'lumen' }),
+  },
+  {
+    id: 'newcomer',
+    title: 'No organization',
+    description: 'Signed in as sam.rivera@gmail.com, who is in no organization and may not create one.',
+    roles: false,
+    build: () => ({ db: world(), sessions: [{ userId: USERS.newcomer.id, slots: ['_new'] }], accounts: [], last: '_new' }),
+  },
+  {
+    id: 'join-domain',
+    title: 'Opens an organization to join',
+    description: "alex.morgan@lumenlabs.dev opens Orbit's address. Orbit lets @lumenlabs.dev in, so it may join.",
+    roles: false,
+    build: () => ({ db: world(), sessions: [{ userId: USERS.alexLumen.id, slots: ['lumen', 'orbit'] }], accounts: [lumenAccount], last: 'lumen' }),
+  },
+  {
+    id: 'no-access',
+    title: 'Not a member',
+    description: "alex@northwind.io opens Orbit's address, where it isn't a member and its domain isn't let in.",
+    roles: false,
+    build: () => ({ ...inNorthwind('admin'), sessions: [{ userId: USERS.alex.id, slots: ['northwind', 'orbit'] }] }),
+  },
+  {
+    id: 'empty-org',
+    title: 'Empty organization',
+    description: 'Northwind without any space yet.',
+    roles: false,
+    build: () => {
+      const setup = inNorthwind('admin')
+      setup.db.spaces = setup.db.spaces.filter((one) => one.org_id !== 'org-northwind')
+      setup.db.groups = setup.db.groups.filter((one) => one.org_id !== 'org-northwind')
+      setup.db.links = setup.db.links.filter((one) => one.org_id !== 'org-northwind')
+      setup.db.space_members = setup.db.space_members.filter((row) => !row.space_id.startsWith('space-nw-'))
+      return setup
+    },
+  },
+  {
+    id: 'empty-space',
+    title: 'Empty space',
+    description: 'Northwind with a single space and nothing in it yet.',
+    roles: false,
+    build: () => {
+      const setup = inNorthwind('admin')
+      setup.db.spaces = setup.db.spaces.filter((one) => one.org_id !== 'org-northwind' || one.slug === 'development')
+      setup.db.groups = setup.db.groups.filter((one) => one.org_id !== 'org-northwind')
+      setup.db.links = setup.db.links.filter((one) => one.org_id !== 'org-northwind')
+      return setup
+    },
+  },
+]
+
+/** Sets a scenario up from scratch: the database, the sessions, and this browser's list of accounts. */
+export function applyScenario(id: string, role: Role = 'admin', screen: string | null = null) {
+  const scenario = SCENARIOS.find((one) => one.id === id) ?? SCENARIOS[1]
+  const setup = scenario.build(role)
+  const state: MockState = { db: setup.db, sessions: {}, tokens: {}, pendingLink: null, scenario: { id: scenario.id, role }, screen, act: screen }
+  for (const { userId, slots } of setup.sessions) {
+    const token = `token-${userId}-${crypto.randomUUID().slice(0, 8)}`
+    state.tokens[token] = userId
+    for (const slot of slots) state.sessions[slot] = token
+  }
+  setState(state)
+  try {
+    localStorage.setItem('teamshelf.accounts', JSON.stringify({ accounts: setup.accounts, last: setup.last }))
+    // Each organization's remembered space: start from its first one.
+    // (Kept per tab in mock mode, see per-tab-storage.js.)
+    for (const key of Object.keys(sessionStorage)) if (key.startsWith('teamshelf:space:')) sessionStorage.removeItem(key)
+  } catch {
+    // Without storage the app forgets which accounts it holds, as it would in a private window.
+  }
+}

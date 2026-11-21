@@ -17,7 +17,7 @@
   # Netlify) is still scanned.
   SECRETS_SCAN_OMIT_KEYS = "VITE_NEON_AUTH_URL,VITE_NEON_DATA_API_URL"
 
-# Every address is handled by the app itself (/caspiantech, /login, …), so they all get index.html.
+# Every address is handled by the app itself (/acme, /login, …), so they all get index.html.
 [[redirects]]
   from = "/*"
   to = "/index.html"

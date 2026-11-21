@@ -11,7 +11,7 @@ import type { Group } from '@/lib/types'
 export function GroupDialog({ group, open, onOpenChange }: { group: Group; open: boolean; onOpenChange: (open: boolean) => void }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-[18px] sm:max-w-[420px]">
+      <DialogContent className="rounded-xl sm:max-w-[480px]">
         {/* Mounted with the dialog, so the form starts from the group as it is now. */}
         <GroupForm group={group} onDone={() => onOpenChange(false)} />
       </DialogContent>

@@ -1,23 +1,24 @@
+import { Navigate } from '@tanstack/react-router'
 import { PageSheet } from '@/components/app/page-sheet'
 import { TopBar } from '@/components/app/top-bar'
 import { useMe, useOrg } from '@/features/org/org-context'
-import { isSuperAdmin } from '@/lib/roles'
-import { OrgForm } from './org-form'
-import { ThemePicker } from './theme-picker'
+import { isAdmin } from '@/lib/roles'
+import { OrgForm, OrgUrl } from './org-form'
 
 /**
- * Settings. Everyone has their own (how Teamshelf looks). The super admin also finds the
- * organization's settings here: its name and who can join. Each space has its own settings.
+ * The organization's settings, for its admins: its name and who can join. Each space has
+ * its own settings, and the theme, being yours, is in the organization menu.
  */
 export function SettingsPage() {
   const org = useOrg()
   const me = useMe()
+  if (!isAdmin(me)) return <Navigate to="/$org" params={{ org: org.slug }} replace />
   return (
     <>
       <TopBar />
-      <PageSheet title="Settings" lead={isSuperAdmin(me) ? `Yours, and those of ${org.name}.` : undefined}>
-        <ThemePicker />
-        {isSuperAdmin(me) && <OrgForm />}
+      <PageSheet title="Organization settings">
+        <OrgForm />
+        <OrgUrl />
       </PageSheet>
     </>
   )

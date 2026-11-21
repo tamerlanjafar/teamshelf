@@ -24,7 +24,7 @@ export function RejectButton({ link }: { link: Link }) {
       <IconButton label="Reject" danger render={<PopoverTrigger />}>
         <X />
       </IconButton>
-      <PopoverContent align="end" className="w-80 rounded-[14px]">
+      <PopoverContent align="end" className="w-80 rounded-xl">
         <form onSubmit={submit} className="grid gap-3">
           <Field label="Reason (optional)" hint="They see it next to their suggestion.">
             <TextInput autoFocus value={reason} maxLength={300} placeholder="Why it isn't going on the board" onChange={(event) => setReason(event.target.value)} />

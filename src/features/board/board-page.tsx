@@ -1,4 +1,4 @@
-import { EyeOff, FolderPlus, SearchX } from 'lucide-react'
+import { EyeOff, FolderPlus, Plus, SearchX } from 'lucide-react'
 import { useState, type CSSProperties, type ReactNode } from 'react'
 import { groupsOf, useGroups, useGroupsIfLoaded } from '@/api/groups'
 import { useBoardLinks, useBoardLinksIfLoaded } from '@/api/links'
@@ -12,16 +12,17 @@ import { useLinkDialog } from '@/features/links/link-dialog'
 import { usePermissions } from '@/features/org/permissions'
 import { useCorrectSpaceAddress, useCurrentSpace, useCurrentSpaceIfLoaded } from '@/features/spaces/current-space'
 import { NewGroupDialog } from '@/features/spaces/new-group-dialog'
+import { NewSpaceDialog } from '@/features/spaces/new-space-dialog'
 import { SpaceLogo } from '@/features/spaces/space-logo'
 import { COLORS } from '@/lib/colors'
 import { FEATURES } from '@/lib/features'
 import type { Link, Space } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { BoardActionsProvider } from './board-actions'
-import './board.css'
+import { CARD, CARD_BODY, CARD_HEAD } from './group-card'
+import { ROW, ROW_OPEN } from './link-row'
 import { buildBoard, countHidden, isFiltering, type BoardFilter, type BoardView } from './board-model'
 import { Masonry } from './masonry'
-import { QuickFind } from '@/features/search/quick-find'
 import { SortableBoard } from './sortable-board'
 import { useEffectiveBoardPrefs } from './use-board-prefs'
 
@@ -76,7 +77,6 @@ function BoardBar({ view, onViewChange }: BoardState) {
 
   return (
     <TopBar>
-      <QuickFind />
       <HiddenToggle count={hiddenCount} active={view === 'hidden'} onToggle={() => onViewChange(view === 'hidden' ? 'board' : 'hidden')} />
     </TopBar>
   )
@@ -95,7 +95,7 @@ function HiddenToggle({ count, active, onToggle }: { count: number; active: bool
             aria-label={`Hidden by you: ${count}`}
             onClick={onToggle}
             className={cn(
-              'bg-surface border-line flex h-10 flex-none items-center gap-2 rounded-xl border px-3.5 tabular-nums transition-colors',
+              'bg-surface border-line flex h-10 flex-none items-center gap-2 rounded-lg border px-3.5 tabular-nums transition-colors',
               active ? 'border-brand text-brand bg-[color-mix(in_srgb,var(--brand)_8%,var(--surface))]' : 'text-quiet hover:text-ink',
             )}
           />
@@ -128,7 +128,7 @@ function BoardCards({ filter, onFilterChange, view, onViewChange }: BoardState) 
   if (view === 'hidden') {
     return (
       <>
-        <div className="border-line mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-dashed px-4 py-3">
+        <div className="border-line mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-dashed px-4 py-3">
           <EyeOff className="text-quiet size-5 flex-none" />
           <div className="min-w-[200px] flex-1">
             <div className="font-medium">Hidden by you</div>
@@ -170,11 +170,11 @@ function EmptySpace({ space, admin }: { space: Space; admin: boolean }) {
   const [creating, setCreating] = useState(false)
   return (
     <Notice
-      icon={<SpaceLogo space={space} className="size-11 rounded-[12px]" />}
+      icon={<SpaceLogo space={space} className="size-11 rounded-lg" />}
       title={`Nothing in ${space.name} yet`}
       text={
         admin
-          ? 'Start with a group, like “Figma” or “Dashboards”, then add links and files to it.'
+          ? 'Start with a group for the tools or topics you use most, then add links and files to it.'
           : `Suggest the first link or file. It appears here once an admin of ${space.name} approves it.`
       }
     >
@@ -198,15 +198,24 @@ function EmptySpace({ space, admin }: { space: Space; admin: boolean }) {
   )
 }
 
-/** For someone who sees no space at all: every space is private and they are in none. */
+/**
+ * For someone who sees no space at all: there are none yet, or the ones there are are private.
+ * Anyone in the organization can start one.
+ */
 function NoSpace() {
-  const { admin } = usePermissions()
+  const [creating, setCreating] = useState(false)
   return (
     <Notice
       icon={<BrandMark className="size-10" />}
-      title="No spaces for you yet"
-      text={admin ? 'Create the first space from the menu at the top, for a team like Development or Design.' : 'Every space here is private. Ask a space’s admin to add you.'}
-    />
+      title="Create a space"
+      text="A space is a board for one team or area of your organization. Or ask a space's admin to add you to theirs."
+    >
+      <Button size="lg" onClick={() => setCreating(true)}>
+        <Plus />
+        New space
+      </Button>
+      <NewSpaceDialog open={creating} onOpenChange={setCreating} />
+    </Notice>
   )
 }
 
@@ -218,7 +227,7 @@ function NewGroupCard({ space }: { space: Space }) {
       <button
         type="button"
         onClick={() => setCreating(true)}
-        className="border-line text-quiet hover:text-ink hover:border-brand/50 flex min-h-[88px] w-full items-center justify-center gap-2 rounded-[18px] border border-dashed text-[14.5px] font-medium transition-colors"
+        className="border-line text-quiet hover:text-ink hover:border-brand/50 flex min-h-[88px] w-full items-center justify-center gap-2 rounded-2xl border border-dashed text-[14.5px] font-medium transition-colors"
       >
         <FolderPlus className="size-[18px]" />
         New group
@@ -230,7 +239,7 @@ function NewGroupCard({ space }: { space: Space }) {
 
 function Notice({ icon, title, text, children }: { icon?: ReactNode; title: string; text: string; children?: ReactNode }) {
   return (
-    <div className="mx-auto flex min-h-[calc(100dvh-140px-2.5rem)] max-w-sm flex-col items-center justify-center gap-2 pb-[72px] text-center lg:min-h-[calc(100dvh-72px-2.5rem)]">
+    <div className="mx-auto flex min-h-[calc(100dvh-140px-2.5rem)] max-w-xl flex-col items-center justify-center gap-2 pb-[72px] text-center lg:min-h-[calc(100dvh-72px-2.5rem)]">
       {icon}
       <h2 className="mt-2 text-[20px] font-[650] [font-family:var(--font-rounded)]">{title}</h2>
       <p className="text-quiet m-0 leading-relaxed">{text}</p>
@@ -250,6 +259,11 @@ const SKELETON = [
   { color: COLORS.yellow, rows: 2 },
 ]
 
+/** A bar in the card's color that stands in for text or an icon while it loads. */
+function SkeletonBar({ style }: { style: CSSProperties }) {
+  return <span className="block flex-none rounded-full bg-[color-mix(in_srgb,var(--c)_28%,transparent)] motion-safe:animate-skeleton" style={style} />
+}
+
 /** Empty cards in the shape of the board, while the links load. */
 export function BoardSkeleton() {
   return (
@@ -259,16 +273,16 @@ export function BoardSkeleton() {
         getKey={(item) => item.color}
         estimateHeight={(item) => 62 + item.rows * 34}
         renderItem={(item) => (
-          <div className="room skeleton" style={{ '--c': item.color } as CSSProperties}>
-            <div className="room-head">
-              <span className="skeleton-bar" style={{ width: '45%', height: 14 }} />
+          <div className={cn(CARD, 'pointer-events-none animate-none')} style={{ '--c': item.color } as CSSProperties}>
+            <div className={CARD_HEAD}>
+              <SkeletonBar style={{ width: '45%', height: 14 }} />
             </div>
-            <div className="room-body">
+            <div className={CARD_BODY}>
               {Array.from({ length: item.rows }, (_, index) => (
-                <div key={index} className="tab">
-                  <span className="open">
-                    <span className="skeleton-bar" style={{ width: 16, height: 16, borderRadius: 4 }} />
-                    <span className="skeleton-bar" style={{ width: `${40 + ((index * 23) % 40)}%`, height: 10 }} />
+                <div key={index} className={ROW}>
+                  <span className={ROW_OPEN}>
+                    <SkeletonBar style={{ width: 16, height: 16, borderRadius: 4 }} />
+                    <SkeletonBar style={{ width: `${40 + ((index * 23) % 40)}%`, height: 10 }} />
                   </span>
                 </div>
               ))}

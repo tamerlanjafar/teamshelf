@@ -45,7 +45,7 @@ export function Section({ skeleton, compact = false, children }: { skeleton: Rea
 
 function SectionError({ error, compact, onRetry }: { error: unknown; compact: boolean; onRetry: () => void }) {
   return (
-    <div role="alert" className={compact ? 'bg-raised border-line flex flex-wrap items-center gap-3 rounded-[14px] border px-4 py-3.5' : 'mx-auto flex min-h-[calc(100dvh-72px-2.5rem)] max-w-sm flex-col items-center justify-center gap-2 pb-[72px] text-center'}>
+    <div role="alert" className={compact ? 'bg-raised border-line flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3.5' : 'mx-auto flex min-h-[calc(100dvh-72px-2.5rem)] max-w-xl flex-col items-center justify-center gap-2 pb-[72px] text-center'}>
       <TriangleAlert className={compact ? 'text-danger size-5 flex-none' : 'text-danger size-9'} strokeWidth={1.6} />
       <div className={compact ? 'min-w-[180px] flex-1' : ''}>
         <div className={compact ? 'font-medium' : 'mt-2 text-[20px] font-[650] [font-family:var(--font-rounded)]'}>This part couldn't be loaded</div>
@@ -72,7 +72,7 @@ export function ScreenBoundary({ loading, failed, children }: { loading: ReactNo
 /** Rows of a list on a sheet, while they load. */
 export function ListSkeleton({ rows = 3 }: { rows?: number }) {
   return (
-    <div aria-busy="true" aria-label="Loading" className="bg-raised border-line divide-line divide-y overflow-hidden rounded-[14px] border">
+    <div aria-busy="true" aria-label="Loading" className="bg-raised border-line divide-line divide-y overflow-hidden rounded-xl border">
       {Array.from({ length: rows }, (_, index) => (
         <div key={index} className="flex items-center gap-3 px-4 py-3.5">
           <span className="bg-ink/8 size-8 flex-none animate-pulse rounded-full" />

@@ -1,6 +1,6 @@
 // Rows as the Data API returns them. The tables are defined in db/migrations.
 
-export type Role = 'super_admin' | 'admin' | 'member'
+export type Role = 'admin' | 'member'
 
 export interface Org {
   id: string
@@ -27,6 +27,13 @@ export interface Member {
   role: Role
   /** Set the first time the person signs in. Until then they are only invited. */
   user_id: string | null
+  /**
+   * False for someone invited from a space, from outside what the organization lets in: they wait
+   * for an admin of the organization to approve, and can't sign in to it until then.
+   */
+  approved: boolean
+  /** Who invited them, if someone did. */
+  invited_by: string | null
   invited_at: string
   joined_at: string | null
 }
@@ -59,9 +66,10 @@ export interface Space {
   color: Color
   visibility: SpaceVisibility
   /** What may follow " - " in a link's name, in the order the board shows them. */
-  environments: string[]
   /** The board's columns, each a list of group ids from top to bottom, as its admins arranged them. */
   layout: string[][]
+  /** Card heights and column widths, as its admins set them. */
+  card_sizes: CardSizes
   position: number | null
   created_at: string
 }
@@ -110,6 +118,15 @@ export interface Link {
   review_note: string
 }
 
+/**
+ * How big cards are drawn. `heights`: per group, how tall its list may grow (px) before it
+ * scrolls. `widths`: each column's share of the board's width, for as many columns as there are.
+ */
+export interface CardSizes {
+  heights?: Record<string, number>
+  widths?: number[]
+}
+
 /** One person's own arrangement of the board. It never affects anyone else. */
 export interface BoardPrefs {
   /** Their own order of the groups. Empty: they follow the team's order. */
@@ -122,6 +139,8 @@ export interface BoardPrefs {
   hidden_links: string[]
   /** The links they opened lately, per space, newest first. Shown in the search box's launcher. */
   recent_links: Record<string, string[]>
+  /** The cards and columns they resized themselves, per space. The rest follows the space's sizes. */
+  card_sizes: Record<string, CardSizes>
 }
 
-export const NO_PREFS: BoardPrefs = { group_order: [], group_layout: {}, link_order: {}, hidden_groups: [], hidden_links: [], recent_links: {} }
+export const NO_PREFS: BoardPrefs = { group_order: [], group_layout: {}, link_order: {}, hidden_groups: [], hidden_links: [], recent_links: {}, card_sizes: {} }

@@ -4,8 +4,8 @@ import { useSpaces, useSpacesIfLoaded } from '@/api/spaces'
 import { useOrg } from '@/features/org/org-context'
 import type { Space } from '@/lib/types'
 
-// The open space is in the address (/caspiantech/design), so a reload or a shared address shows
-// the same one. On pages without one (/caspiantech/team), it is the space you had open last in
+// The open space is in the address (/acme/design), so a reload or a shared address shows
+// the same one. On pages without one (/acme/team), it is the space you had open last in
 // this browser, or else the first one.
 
 const rememberedKey = (orgId: string) => `teamshelf:space:${orgId}`
@@ -62,7 +62,7 @@ export function useOpenSpace() {
 }
 
 /**
- * Sends the organization's own address (/caspiantech) to a space's board. When nobody can see
+ * Sends the organization's own address (/acme) to a space's board. When nobody can see
  * a space, the board shows that instead (under a space name that matches none).
  */
 export function OpenRememberedSpace() {

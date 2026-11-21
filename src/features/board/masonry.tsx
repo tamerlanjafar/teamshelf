@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 
 /** The board's column width and gap. */
-export const COLUMN_WIDTH = 340
+export const COLUMN_WIDTH = 260
 export const COLUMN_GAP = 10
 
 /** How many columns of at least `minColumnWidth` fit in the element. 0 until it is measured. */

@@ -64,7 +64,7 @@ export const isImageLogo = (logo: string) => logo.startsWith('data:image/')
 
 /** A space's logo: its uploaded image, or one of the app's logos on the space's color. */
 export function SpaceLogo({ space, className }: { space: Pick<Space, 'logo' | 'color' | 'name'>; className?: string }) {
-  const base = cn('grid size-7 flex-none place-items-center overflow-hidden rounded-[8px]', className)
+  const base = cn('grid size-7 flex-none place-items-center overflow-hidden rounded-sm', className)
   if (isImageLogo(space.logo)) return <img src={space.logo} alt="" className={cn(base, 'bg-surface object-cover')} draggable={false} />
 
   const Icon = SPACE_LOGOS[space.logo]?.icon ?? LayoutGrid

@@ -13,7 +13,6 @@ import { usePermissions } from '@/features/org/permissions'
 import { useCurrentSpaceIfLoaded } from '@/features/spaces/current-space'
 import { SpaceLogo } from '@/features/spaces/space-logo'
 import { toastError } from '@/lib/errors'
-import { isSuperAdmin } from '@/lib/roles'
 import type { Link, LinkKind } from '@/lib/types'
 import { AudiencePicker } from './audience-picker'
 import { FilePicker } from './file-picker'
@@ -62,7 +61,7 @@ export function LinkDialogProvider({ children }: { children: ReactNode }) {
     <LinkDialogContext value={api}>
       {children}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-[18px] sm:max-w-[460px]">
+        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl sm:max-w-[460px]">
           {request && <LinkForm key={request.count} request={request.value} onDone={() => setOpen(false)} />}
         </DialogContent>
       </Dialog>
@@ -96,12 +95,12 @@ function LinkForm({ request, onDone }: { request: Request; onDone: () => void })
   const publishes = isSpaceAdmin(space?.id)
 
   // Who a link can be shown to: people who can see the space (only its members, for a private one).
-  const choosable = space?.visibility === 'private' ? members.filter((member) => isSuperAdmin(member) || spaceMembers.some((row) => row.space_id === space.id && row.member_id === member.id)) : members
+  const choosable = space?.visibility === 'private' ? members.filter((member) => spaceMembers.some((row) => row.space_id === space.id && row.member_id === member.id)) : members
 
   const group = groups.find((candidate) => candidate.name.toLowerCase() === draft.groupName.trim().toLowerCase())
   const siblings = boardLinks.filter((link) => group && link.group_id === group.id && link.id !== editing?.id).map((link) => link.title)
   const memberIds = draft.memberIds ?? savedAccess.data ?? []
-  const errors = validate(draft, memberIds, { siblings, environments: space?.environments ?? [] }, Boolean(editing))
+  const errors = validate(draft, memberIds, { siblings }, Boolean(editing))
   const shown = attempted ? errors : { ...(nameTouched && draft.title.trim() ? { title: errors.title } : {}) }
 
   const formId = useId()
@@ -175,7 +174,7 @@ function LinkForm({ request, onDone }: { request: Request; onDone: () => void })
       <DialogHeader className="min-w-0">
         <DialogTitle className="text-[20px] font-[650] [font-family:var(--font-rounded)]">{title}</DialogTitle>
         <span className="text-quiet flex min-w-0 items-center gap-2 text-[13px]">
-          <SpaceLogo space={space} className="size-5 rounded-[6px]" />
+          <SpaceLogo space={space} className="size-5 rounded-xs" />
           <span className="truncate">in {space.name}</span>
         </span>
       </DialogHeader>
@@ -201,10 +200,10 @@ function LinkForm({ request, onDone }: { request: Request; onDone: () => void })
         <FormRow id={ids.group} label="Group" error={shown.groupName}>
           <GroupCombobox id={ids.group} groups={groups} value={draft.groupName} invalid={Boolean(shown.groupName)} autoFocus={!draft.groupName} onChange={(groupName) => change({ groupName })} />
         </FormRow>
-        <FormRow id={ids.title} label="Name" error={shown.title} hint={space.environments.length ? `For one environment, end with “ - ” and one of: ${space.environments.join(', ')}.` : undefined}>
+        <FormRow id={ids.title} label="Name" error={shown.title}>
           <Input
             id={ids.title}
-            placeholder={draft.kind === 'file' ? 'Brand Guidelines' : 'Online - Staging'}
+            placeholder={draft.kind === 'file' ? 'Brand guidelines' : 'Team wiki'}
             autoComplete="off"
             autoFocus={Boolean(draft.groupName) && !editing}
             value={draft.title}
@@ -233,6 +232,7 @@ function LinkForm({ request, onDone }: { request: Request; onDone: () => void })
         )}
         {publishes && (
           <AudiencePicker
+            space={space}
             visibility={draft.visibility}
             memberIds={memberIds}
             members={choosable}

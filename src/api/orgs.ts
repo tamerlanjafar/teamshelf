@@ -1,4 +1,5 @@
 import { queryOptions, useMutation, useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
+import { crossTo, moveOrgSession } from '@/lib/accounts'
 import { neon } from '@/lib/neon'
 import type { Member, Org, OrgSummary } from '@/lib/types'
 import { isUniqueViolation, unwrap } from './db'
@@ -96,12 +97,31 @@ export function useCreateOrg() {
   })
 }
 
-/** Super admin only. */
+/** Admins of the organization. */
 export function useUpdateOrg() {
   const refreshAccount = useRefreshAccount()
   return useMutation({
     mutationFn: ({ org, changes }: { org: Org; changes: Partial<Pick<Org, 'name' | 'allowed_domains'>> }) =>
       unwrap(neon.from('orgs').update(changes).eq('id', org.id)),
     onSuccess: refreshAccount,
+  })
+}
+
+/**
+ * Changes the organization's address, then opens its settings at the new one. Admins of the
+ * organization. Sessions are kept per address, so this one moves with it. Old links stop working.
+ */
+export function useChangeOrgSlug() {
+  return useMutation({
+    mutationFn: async ({ org, slug }: { org: Org; slug: string }) => {
+      try {
+        await unwrap(neon.from('orgs').update({ slug }).eq('id', org.id))
+      } catch (error) {
+        if (isUniqueViolation(error)) throw new Error('That URL is taken. Try another one.')
+        throw error
+      }
+      await moveOrgSession(org.slug, slug)
+      crossTo(`/${slug}/settings`)
+    },
   })
 }
