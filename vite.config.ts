@@ -134,5 +134,10 @@ export default defineConfig(({ command, mode }) => {
     },
     // The ports are assigned in ~/Documents/DEV_PORTS.md.
     server: { port: mock ? 3012 : 3011, strictPort: true },
+    // The server the build starts to draw the public pages (Start's prerender, on a free port). On
+    // IPv4 itself: as "localhost" it may listen on ::1 only, and a busy build machine then misses
+    // it (Node gives ::1 250ms, then tries 127.0.0.1, where nothing listens). pnpm preview is
+    // scripts/preview.mjs, not this.
+    preview: { host: '127.0.0.1' },
   }
 })
