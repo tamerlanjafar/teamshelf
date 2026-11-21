@@ -1,9 +1,10 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
-import { tanstackRouter } from '@tanstack/router-plugin/vite'
+import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vite'
+import { SITE_URL } from './src/lib/site.ts'
 
 /**
  * On Netlify, /api/icon is a function (netlify/functions/icon.mjs). This gives the dev server
@@ -51,8 +52,12 @@ const authProxy = (): Plugin => ({
 })
 
 // Unique per build: baked into the bundle as `__APP_VERSION__` and served as /version.json,
-// so an open tab can tell that a newer deploy is live (src/lib/app-version.ts).
-const appVersion = Date.now().toString(36)
+// so an open tab can tell that a newer deploy is live (src/lib/app-version.ts). The same for the
+// whole build: TanStack Start reads this file more than once (and in more than one process), and
+// a version that differed between the bundle and version.json made open tabs reload over and
+// over. So it is the deploy's commit on Netlify, and otherwise one time kept in the environment.
+process.env.TEAMSHELF_BUILD_ID ??= process.env.COMMIT_REF?.slice(0, 12) ?? Date.now().toString(36)
+const appVersion = process.env.TEAMSHELF_BUILD_ID
 
 const appVersionFile = (): Plugin => ({
   name: 'teamshelf-app-version-file',
@@ -60,15 +65,6 @@ const appVersionFile = (): Plugin => ({
   generateBundle() {
     this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ version: appVersion }) })
   },
-})
-
-/**
- * Link previews (Slack, Teams, WhatsApp) need full addresses for the page and its picture.
- * Netlify gives the site's address as URL when it builds. Elsewhere the tags stay relative.
- */
-const siteAddress = (): Plugin => ({
-  name: 'teamshelf-site-address',
-  transformIndexHtml: (html) => html.replaceAll('%SITE_URL%', (process.env.URL ?? '').replace(/\/$/, '')),
 })
 
 /**
@@ -80,20 +76,42 @@ const mockAliases = [
   { find: /^@neondatabase\/neon-js\/auth\/react\/adapters$/, replacement: fileURLToPath(new URL('./src/mock/neon-adapters.ts', import.meta.url)) },
 ]
 
-/** Mock mode: gives each tab its own mock world (src/mock/per-tab-storage.js), before the app's code runs. */
-const perTabStorage = (): Plugin => ({
-  name: 'teamshelf-mock-per-tab-storage',
-  transformIndexHtml: {
-    order: 'pre',
-    handler: (html) => html.replace('<head>', `<head><script>${readFileSync(new URL('./src/mock/per-tab-storage.js', import.meta.url), 'utf8')}</script>`),
-  },
-})
+/**
+ * The pages people find on Google: drawn at build time into plain HTML (fast, and readable
+ * without running the app), and listed in the sitemap. Every other page is drawn in the
+ * browser, from one shared shell (_shell.html).
+ */
+const PUBLIC_PAGES = [
+  { path: '/', sitemap: { priority: 1, changefreq: 'weekly' as const } },
+  { path: '/signup', sitemap: { priority: 0.8, changefreq: 'monthly' as const } },
+  { path: '/login', sitemap: { priority: 0.6, changefreq: 'monthly' as const } },
+]
 
 export default defineConfig(({ mode }) => {
   const mock = mode === 'mock'
   return {
-    define: { __APP_VERSION__: JSON.stringify(appVersion) },
-    plugins: [tanstackRouter({ target: 'react', autoCodeSplitting: true }), react(), tailwindcss(), ...(mock ? [perTabStorage()] : [iconLookup(), authProxy()]), appVersionFile(), siteAddress()],
+    define: {
+      __APP_VERSION__: JSON.stringify(appVersion),
+      // Mock mode: gives each tab its own mock world (src/mock/per-tab-storage.js), as a script
+      // the page runs before the app's code (src/routes/__root.tsx). Empty in every other build.
+      __MOCK_TAB_SCRIPT__: JSON.stringify(mock ? readFileSync(new URL('./src/mock/per-tab-storage.js', import.meta.url), 'utf8') : ''),
+    },
+    plugins: [
+      tanstackStart({
+        // Mock mode starts its made-up backend before the app (src/client.tsx).
+        client: { entry: 'client.tsx' },
+        // The shell for every other page: drawn from an app page (not "/", which is a page of its own).
+        spa: { enabled: true, maskPath: '/open', prerender: { outputPath: '/_shell', crawlLinks: false } },
+        // Only the pages listed: no others found on their own, none followed from links.
+        prerender: { enabled: true, crawlLinks: false, autoStaticPathsDiscovery: false, autoSubfolderIndex: true, failOnError: true },
+        pages: PUBLIC_PAGES.map((page) => ({ ...page, prerender: { enabled: true } })),
+        sitemap: { enabled: true, host: SITE_URL },
+      }),
+      react(),
+      tailwindcss(),
+      ...(mock ? [] : [iconLookup(), authProxy()]),
+      appVersionFile(),
+    ],
     resolve: {
       alias: [...(mock ? mockAliases : []), { find: '@', replacement: fileURLToPath(new URL('./src', import.meta.url)) }],
     },

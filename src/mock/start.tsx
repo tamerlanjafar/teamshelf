@@ -34,32 +34,37 @@ export function startMock(): boolean {
     return true
   }
 
-  // The steps of the screen just opened, once its page is there, behind the app's splash screen
-  // so they don't show: it lifts when the page is in the state the screen is about.
-  const acting = findScreen(getState().act ?? '')
-  if (getState().act) update((draft) => void (draft.act = null))
-  if (acting?.act) {
-    const cover = document.createElement('div')
-    cover.className = 'bg-page fixed inset-0 z-[999]'
-    document.body.append(cover)
-    const root = createRoot(cover)
-    root.render(<Splash />)
-    acting
-      .act()
-      .catch((problem: unknown) => console.warn(problem))
-      .finally(() => {
-        root.unmount()
-        cover.remove()
-      })
-  }
+  // Mock mode's own React roots wait until the app has started on the page: a root made first
+  // marks the document as listened to, and the app (src/client.tsx, which renders into the whole
+  // document) would then get no events at all.
+  setTimeout(() => {
+    // The steps of the screen just opened, once its page is there, behind the app's splash screen
+    // so they don't show: it lifts when the page is in the state the screen is about.
+    const acting = findScreen(getState().act ?? '')
+    if (getState().act) update((draft) => void (draft.act = null))
+    if (acting?.act) {
+      const cover = document.createElement('div')
+      cover.className = 'bg-page fixed inset-0 z-[999]'
+      document.body.append(cover)
+      const root = createRoot(cover)
+      root.render(<Splash />)
+      acting
+        .act()
+        .catch((problem: unknown) => console.warn(problem))
+        .finally(() => {
+          root.unmount()
+          cover.remove()
+        })
+    }
 
-  const holder = document.createElement('div')
-  holder.id = 'mock-toolbar'
-  document.body.append(holder)
-  createRoot(holder).render(
-    <StrictMode>
-      <Toolbar />
-    </StrictMode>,
-  )
+    const holder = document.createElement('div')
+    holder.id = 'mock-toolbar'
+    document.body.append(holder)
+    createRoot(holder).render(
+      <StrictMode>
+        <Toolbar />
+      </StrictMode>,
+    )
+  })
   return false
 }

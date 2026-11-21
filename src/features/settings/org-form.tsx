@@ -90,12 +90,13 @@ function ChangeUrl({ onDone }: { onDone: () => void }) {
       <DialogHeader>
         <DialogTitle className="text-[20px] font-[650] [font-family:var(--font-rounded)]">Change {org.name}'s URL</DialogTitle>
       </DialogHeader>
-      <Field label="New URL" error={error}>
+      <Field label="New URL" id="new-org-url" error={error}>
         <span className={cn('bg-well flex h-10 items-center rounded-md px-3 shadow-[inset_0_0_0_1px_var(--line)] focus-within:shadow-[inset_0_0_0_1px_var(--brand)]', error && 'shadow-[inset_0_0_0_1px_var(--danger)]')}>
           <span className="text-quiet flex-none select-none">{window.location.host}/</span>
           <input
             // oxlint-disable-next-line jsx-a11y/no-autofocus
             autoFocus
+            id="new-org-url"
             value={slug}
             maxLength={40}
             autoComplete="off"

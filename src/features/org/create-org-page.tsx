@@ -21,7 +21,7 @@ export function CreateOrgPage() {
   const navigate = useNavigate()
   const { can_create: canCreate } = useMyOrgs()
   const email = neon.auth.useSession().data?.user.email ?? ''
-  const otherEmail = () => crossTo('/login?intent=create')
+  const otherEmail = () => crossTo('/signup')
   const toOrgs = { label: 'Your organizations', onClick: () => navigate({ to: '/organizations' }) }
   const createOrg = useCreateOrg()
   const [name, setName] = useState('')
@@ -57,7 +57,7 @@ export function CreateOrgPage() {
           <TextInput autoFocus placeholder="Acme" value={name} maxLength={60} onChange={(event) => setName(event.target.value)} className={AUTH_INPUT} />
         </Field>
         {/* The site's address stays in front, so the whole link reads as it is typed. */}
-        <Field label="URL" error={slugError}>
+        <Field label="URL" id="org-url" error={slugError}>
           <span
             className={cn(
               'bg-surface flex h-11 items-center rounded-xl border px-3.5 text-[15px] shadow-[0_1px_2px_hsl(var(--shadow)/0.05)] transition-colors focus-within:border-(--brand)',
@@ -67,6 +67,7 @@ export function CreateOrgPage() {
             <span className="text-quiet flex-none select-none">{window.location.host}/</span>
             <input
               placeholder="acme"
+              id="org-url"
               value={slug}
               maxLength={40}
               autoComplete="off"

@@ -1,7 +1,7 @@
 /** Addresses that are pages of the app itself, so no organization can have them. The database refuses them too. */
-const RESERVED = ['login', 'new', 'join', 'assets', 'api', 'settings', 'organizations']
+const RESERVED = ['login', 'signup', 'open', 'new', 'join', 'assets', 'api', 'settings', 'organizations', 'file']
 
-/** An address made from a name: "Caspian Tech!" → "caspian-tech". */
+/** An address made from a name: "Acme Corp!" → "acme-corp". */
 export const slugFrom = (name: string) =>
   name
     .toLowerCase()

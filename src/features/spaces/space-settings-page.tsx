@@ -1,4 +1,4 @@
-import { Navigate } from '@tanstack/react-router'
+import { Link, Navigate } from '@tanstack/react-router'
 import { Check, FolderPlus, Globe, Lock, Mail, MoreHorizontal, Pencil, Plus, Search, Shield, ShieldOff, Trash2, UserMinus, UserPlus } from 'lucide-react'
 import { useState, type CSSProperties, type FormEvent, type ReactNode } from 'react'
 import { toast } from 'sonner'
@@ -10,7 +10,7 @@ import { Avatar } from '@/components/app/avatar'
 import { ColorPicker } from '@/components/app/color-picker'
 import { useConfirm } from '@/components/app/confirm-dialog'
 import { TextInput } from '@/components/app/form'
-import { PageSheet } from '@/components/app/page-sheet'
+import { BACK_LINK, BackArrow, PageSheet } from '@/components/app/page-sheet'
 import { ListSkeleton, Section } from '@/components/app/section'
 import { TopBar } from '@/components/app/top-bar'
 import { Button } from '@/components/ui/button'
@@ -53,7 +53,15 @@ function SpaceSettings() {
   if (!isSpaceAdmin(space.id)) return <Navigate to="/$org/$space" params={{ org: org.slug, space: space.slug }} replace />
 
   return (
-    <PageSheet title={`${space.name} settings`}>
+    <PageSheet
+      title={`${space.name} settings`}
+      back={
+        <Link to="/$org/$space" params={{ org: org.slug, space: space.slug }} className={BACK_LINK}>
+          <BackArrow />
+          {space.name}
+        </Link>
+      }
+    >
       {/* Keyed by space, so each form starts from the space it shows. */}
       <Identity key={`identity-${space.id}`} space={space} />
       <Visibility space={space} />

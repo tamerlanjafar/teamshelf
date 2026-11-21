@@ -97,11 +97,16 @@ Data hooks come in two kinds. `useGroups()` suspends until the data is there, an
 
 When the app opens, the splash screen stays until everything the organization's pages show has loaded. After that, moving around shows pages at once, with skeletons where data is missing.
 
-### Feature flags
+### Pages and search engines
 
-`src/lib/features.ts`. Off unless set in `.env`:
+The app is built with TanStack Start in SPA mode (`vite.config.ts`, `src/router.tsx`, `src/routes/__root.tsx`):
 
-- `VITE_PERSONAL_ORDER=true`: everyone can arrange a space's board and its links for themselves. The space's layout stays the default for everyone who hasn't.
+- **The public pages** (`/`, `/login`, `/signup`) are drawn at build time into plain HTML (`PUBLIC_PAGES` in `vite.config.ts`). They show at once, read fully without scripts, and carry their own title, description, canonical address, link preview tags, and (the front page) structured data (`src/lib/site.ts`, each route's `head`).
+- **The app's pages** (an organization's spaces and settings, `/organizations`, `/new`, `/file`, `/open`) say `ssr: false` and `noindex`: they are drawn in the browser from one shared shell, `_shell.html`.
+- The build writes `sitemap.xml` with the public pages, next to `public/robots.txt`.
+- Creating an organization has its own address, `/signup`, so it can be found on its own. `/login?intent=create` still works and goes there.
+
+Code that runs while those pages are drawn at build time must not need a browser: `window`, `localStorage` and the like only inside effects and event handlers, or behind `typeof window` checks (`src/lib/accounts.ts`, `src/lib/theme.ts`).
 
 ## Run it
 
@@ -111,13 +116,15 @@ cp .env.example .env    # fill in the values
 pnpm dev                # http://localhost:3011
 ```
 
-Other commands: `pnpm build`, `pnpm lint`, `pnpm db:migrate`.
+Other commands: `pnpm build`, `pnpm lint`, `pnpm test`, `pnpm db:migrate`, and `pnpm preview` (http://localhost:3013), which serves the build the way Netlify does: the pages drawn at build time as files, the shell for every other address, compressed.
+
+Tests: `pnpm test` (rules in plain code), `pnpm test:e2e` (end to end in a browser, against mock mode on port 3014, started by Playwright; plan in `specs/teamshelf.md`), and `pnpm build && pnpm test:build` (what search engines get from the build). The first time, install the browser: `pnpm exec playwright install chromium`. How tests are kept up to date as the app changes is in `CLAUDE.md`.
 
 `pnpm db:migrate` applies new files in `db/migrations`. Afterwards, refresh the Data API's copy of the schema: Neon Console → Data API → "Refresh schema cache". Until then it doesn't know new tables and functions.
 
 ## Before the team uses it
 
-1. **Host it.** The repo is set up for Netlify (`netlify.toml`): connect the repository there and it builds and serves the site, with the two public Neon addresses already set. Any other static host works too: `pnpm build` gives the site in `dist/`, and every path must be sent to `index.html`.
+1. **Host it.** The repo is set up for Netlify (`netlify.toml`): connect the repository there and it builds and serves the site, with the two public Neon addresses already set. Any other static host works too: `pnpm build` gives the site in `dist/client/`. Files are served as they are (`/login` is `login/index.html`), and every other path must be sent to `_shell.html`.
 2. **Trust the address.** In the Neon Console, under Auth → Configuration → Domains, add the site's address (`https://teamshelf.app`), and turn "Allow localhost" off once you no longer develop against this database. Sign-in links only return to trusted addresses.
 3. **Use your own email sender.** Sign-in emails now come from Neon's shared sender, which is for development. Set an SMTP provider under Auth → Configuration → Email.
 

@@ -6,10 +6,10 @@ import { cn } from '@/lib/utils'
  * control (it is linked to it by id, given to the control here unless it has one), so clicking
  * the hint, or hovering anywhere in the field, doesn't reach a button inside the control.
  */
-export function Field({ label, hint, error, children, className }: { label: string; hint?: ReactNode; error?: string; children: ReactNode; className?: string }) {
+export function Field({ label, hint, error, children, className, id: given }: { label: string; hint?: ReactNode; error?: string; children: ReactNode; className?: string; /** The control's id, when it sits inside a wrapper (the label can't find it by itself then). */ id?: string }) {
   const generated = useId()
-  const control = isValidElement<{ id?: string }>(children) ? children : null
-  const id = control?.props.id ?? generated
+  const control = !given && isValidElement<{ id?: string }>(children) ? children : null
+  const id = given ?? control?.props.id ?? generated
   return (
     <div className={cn('flex flex-col gap-1.5', className)}>
       <label htmlFor={id} className="w-fit text-[13px] font-medium">

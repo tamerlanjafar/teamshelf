@@ -58,16 +58,21 @@ export function useLoop<T extends Element>(steps: number, interval: number, stil
   return { ref, step: reduced ? still : tick % steps }
 }
 
-/** Rises into place the first time it comes into view; `delay` in steps of 80ms. */
+/**
+ * Rises into place the first time it comes into view; `delay` in steps of 80ms. The page drawn at
+ * build time shows it as it is: it starts out of sight only once the page can bring it back (the
+ * `js` class, set before the first paint in src/routes/__root.tsx; see index.css).
+ */
 export function Reveal({ children, delay = 0, className, as: Tag = 'div' }: { children: ReactNode; delay?: number; className?: string; as?: 'div' | 'li' | 'section' }) {
   const { ref, inView } = useInView<HTMLDivElement>({ amount: 0.15, once: true })
   const reduced = useReducedMotion()
-  const shown = inView || reduced
   return (
     <Tag
       ref={ref as never}
+      data-reveal=""
+      data-shown={inView || reduced ? '' : undefined}
       style={{ transitionDelay: `${delay * 80}ms` } as CSSProperties}
-      className={cn('transition-[opacity,translate] duration-700 ease-[cubic-bezier(0.2,0.7,0.2,1)]', shown ? 'translate-y-0 opacity-100' : 'translate-y-5 opacity-0', className)}
+      className={cn('transition-[opacity,translate] duration-700 ease-[cubic-bezier(0.2,0.7,0.2,1)]', className)}
     >
       {children}
     </Tag>

@@ -20,7 +20,7 @@ export function BrandMark({ className, loading = false }: { className?: string; 
 /** The name as the logo: team/shelf in Space Grotesk, with the slash in the brand orange. */
 export function Wordmark({ className }: { className?: string }) {
   return (
-    <span aria-label="Teamshelf" className={cn('inline-block text-[30px] leading-none font-bold tracking-[-0.045em] whitespace-nowrap [font-family:\'Space_Grotesk\',ui-sans-serif,system-ui]', className)}>
+    <span role="img" aria-label="Teamshelf" className={cn('inline-block text-[30px] leading-none font-bold tracking-[-0.045em] whitespace-nowrap [font-family:\'Space_Grotesk\',ui-sans-serif,system-ui]', className)}>
       <span aria-hidden="true">
         team<span className="text-[#fa8c29]">/</span>shelf
       </span>

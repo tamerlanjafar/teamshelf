@@ -57,7 +57,7 @@ export const SCREENS: ScreenGroup[] = [
       { id: 'check-email', title: 'Check your email', note: 'The toolbar opens the link.', scenario: 'signed-out', path: '/login', act: () => sendSignIn('sam.rivera@gmail.com') },
       // Opened the way Neon Auth sends someone whose link no longer works. The app takes the error out of the address.
       { id: 'link-expired', title: 'Link expired', scenario: 'signed-out', path: '/login?error=INVALID_TOKEN', shownAt: '/login' },
-      { id: 'login-create', title: 'Create: which email', scenario: 'acme', path: '/login?intent=create' },
+      { id: 'login-create', title: 'Create: which email', scenario: 'acme', path: '/signup' },
     ],
   },
   {
@@ -74,7 +74,7 @@ export const SCREENS: ScreenGroup[] = [
     title: 'Creating an organization',
     screens: [
       { id: 'create', title: 'Name and address', scenario: 'acme', path: '/new' },
-      { id: 'create-denied', title: "Create: email can't create", scenario: 'newcomer', path: '/new', shownAt: '/login?intent=create' },
+      { id: 'create-denied', title: "Create: email can't create", scenario: 'newcomer', path: '/new', shownAt: '/signup' },
       { id: 'empty-org', title: 'Organization without spaces', scenario: 'empty-org', path: '/acme', shownAt: '/acme/none' },
       { id: 'empty-space', title: 'Space without groups', scenario: 'empty-space', path: '/acme/development' },
     ],

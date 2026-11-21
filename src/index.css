@@ -212,3 +212,14 @@
 @media (prefers-reduced-motion: reduce) {
     [class*='animate-['] { animation: none !important; }
 }
+
+/* Parts of the front page that rise into view (Reveal in src/features/landing/motion.tsx): out
+   of sight until they come into view, only when the page runs (html.js), never in the page as
+   it was drawn at build time, which search engines and people without scripts get as it is. */
+html.js [data-reveal]:not([data-shown]) {
+    opacity: 0;
+    translate: 0 20px;
+}
+@media (prefers-reduced-motion: reduce) {
+    html.js [data-reveal]:not([data-shown]) { opacity: 1; translate: none; }
+}

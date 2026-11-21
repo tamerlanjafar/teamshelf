@@ -80,7 +80,7 @@ export function OrgsPage() {
 
       <div className="grid gap-2.5 sm:grid-cols-2">
         <Action icon={<LogIn />} title="Sign in to an organization" detail="With the email you use there." onClick={() => crossTo('/login?intent=join')} />
-        <Action icon={<Plus />} title="Create an organization" detail="A new board for a team." onClick={() => crossTo('/login?intent=create')} />
+        <Action icon={<Plus />} title="Create an organization" detail="A new board for a team." onClick={() => crossTo('/signup')} />
       </div>
 
     </AuthCard>

@@ -149,9 +149,9 @@ const ORGS = [
 function OrgsDemo() {
   const { ref, step } = useLoop<HTMLDivElement>(ORGS.length, 1700, 0)
   return (
-    <div ref={ref} aria-hidden="true" className="bg-surface border-line grid gap-0.5 rounded-xl border p-1.5 shadow-[0_8px_24px_-12px_hsl(var(--shadow)/0.35)]">
+    <div ref={ref} aria-hidden="true" className="bg-surface border-line grid grid-cols-[minmax(0,1fr)] gap-0.5 rounded-xl border p-1.5 shadow-[0_8px_24px_-12px_hsl(var(--shadow)/0.35)]">
       {ORGS.map((org, index) => (
-        <div key={org.name} className={cn('flex items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors duration-300', index === step && 'bg-[color-mix(in_srgb,var(--brand)_9%,transparent)]')}>
+        <div key={org.name} className={cn('flex min-w-0 items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors duration-300', index === step && 'bg-[color-mix(in_srgb,var(--brand)_9%,transparent)]')}>
           <span className="grid size-7 place-items-center rounded-md text-[11px] font-bold text-white" style={{ background: org.color }}>
             {org.name[0]}
           </span>
@@ -159,7 +159,7 @@ function OrgsDemo() {
             <span className="block text-[13px] font-semibold">{org.name}</span>
             <span className="text-quiet block truncate text-[11.5px]">{org.email}</span>
           </span>
-          <Check className={cn('text-brand size-4 transition-opacity', index === step ? 'opacity-100' : 'opacity-0')} strokeWidth={3} />
+          <Check className={cn('text-brand size-4 flex-none transition-opacity', index === step ? 'opacity-100' : 'opacity-0')} strokeWidth={3} />
         </div>
       ))}
     </div>

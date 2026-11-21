@@ -16,6 +16,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as NewRouteImport } from './routes/new'
 import { Route as OpenRouteImport } from './routes/open'
 import { Route as OrganizationsRouteImport } from './routes/organizations'
+import { Route as SignupRouteImport } from './routes/signup'
 import { Route as OrgIndexRouteImport } from './routes/$org/index'
 import { Route as OrgRequestsRouteImport } from './routes/$org/requests'
 import { Route as OrgSettingsRouteImport } from './routes/$org/settings'
@@ -58,6 +59,11 @@ const OrganizationsRoute = OrganizationsRouteImport.update({
   path: '/organizations',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OrgIndexRoute = OrgIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -97,6 +103,7 @@ export interface FileRoutesByFullPath {
   '/new': typeof NewRoute
   '/open': typeof OpenRoute
   '/organizations': typeof OrganizationsRoute
+  '/signup': typeof SignupRoute
   '/$org/requests': typeof OrgRequestsRoute
   '/$org/settings': typeof OrgSettingsRoute
   '/$org/team': typeof OrgTeamRoute
@@ -111,6 +118,7 @@ export interface FileRoutesByTo {
   '/new': typeof NewRoute
   '/open': typeof OpenRoute
   '/organizations': typeof OrganizationsRoute
+  '/signup': typeof SignupRoute
   '/$org/requests': typeof OrgRequestsRoute
   '/$org/settings': typeof OrgSettingsRoute
   '/$org/team': typeof OrgTeamRoute
@@ -127,6 +135,7 @@ export interface FileRoutesById {
   '/new': typeof NewRoute
   '/open': typeof OpenRoute
   '/organizations': typeof OrganizationsRoute
+  '/signup': typeof SignupRoute
   '/$org/requests': typeof OrgRequestsRoute
   '/$org/settings': typeof OrgSettingsRoute
   '/$org/team': typeof OrgTeamRoute
@@ -144,6 +153,7 @@ export interface FileRouteTypes {
     | '/new'
     | '/open'
     | '/organizations'
+    | '/signup'
     | '/$org/requests'
     | '/$org/settings'
     | '/$org/team'
@@ -158,6 +168,7 @@ export interface FileRouteTypes {
     | '/new'
     | '/open'
     | '/organizations'
+    | '/signup'
     | '/$org/requests'
     | '/$org/settings'
     | '/$org/team'
@@ -173,6 +184,7 @@ export interface FileRouteTypes {
     | '/new'
     | '/open'
     | '/organizations'
+    | '/signup'
     | '/$org/requests'
     | '/$org/settings'
     | '/$org/team'
@@ -189,6 +201,7 @@ export interface RootRouteChildren {
   NewRoute: typeof NewRoute
   OpenRoute: typeof OpenRoute
   OrganizationsRoute: typeof OrganizationsRoute
+  SignupRoute: typeof SignupRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -240,6 +253,13 @@ declare module '@tanstack/react-router' {
       path: '/organizations'
       fullPath: '/organizations'
       preLoaderRoute: typeof OrganizationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$org/': {
@@ -315,7 +335,17 @@ const rootRouteChildren: RootRouteChildren = {
   NewRoute: NewRoute,
   OpenRoute: OpenRoute,
   OrganizationsRoute: OrganizationsRoute,
+  SignupRoute: SignupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}

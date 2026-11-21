@@ -1,8 +1,9 @@
-# Netlify: builds the static site and serves it. There is no server code.
+# Netlify: builds the static site and serves it. The front page, /login and /signup are plain
+# HTML drawn at build time; every other page loads the app from one shell (_shell.html).
 
 [build]
   command = "pnpm build"
-  publish = "dist"
+  publish = "dist/client"
 
 [build.environment]
   NODE_VERSION = "22"
@@ -17,10 +18,11 @@
   # Netlify) is still scanned.
   SECRETS_SCAN_OMIT_KEYS = "VITE_NEON_AUTH_URL,VITE_NEON_DATA_API_URL"
 
-# Every address is handled by the app itself (/acme, /login, …), so they all get index.html.
+# Pages drawn at build time are files (/, /login/index.html, /signup/index.html) and Netlify
+# serves them as they are. Every other address is the app's (/acme, /organizations, …): the shell.
 [[redirects]]
   from = "/*"
-  to = "/index.html"
+  to = "/_shell.html"
   status = 200
 
 [[headers]]
@@ -36,3 +38,14 @@
   for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
+
+# The pages drawn at build time change with each deploy: always checked again.
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/landing/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800, stale-while-revalidate=86400"

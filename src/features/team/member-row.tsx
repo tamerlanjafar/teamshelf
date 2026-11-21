@@ -17,8 +17,8 @@ import { SpaceLogo } from '@/features/spaces/space-logo'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 /**
- * A person on the team, in one calm line: who they are, the spaces they run (as small logos), an
- * Org Admin badge, and a menu for the rest. Your own row has no menu.
+ * A person on the team, in one calm line: who they are (an Org Admin is marked by the name), how
+ * many spaces they are in, and a menu for the rest. Your own row has no menu.
  */
 export function MemberRow({ member }: { member: Member }) {
   const me = useMe()
@@ -31,18 +31,16 @@ export function MemberRow({ member }: { member: Member }) {
         <div className="flex min-w-0 items-center gap-2">
           <span className="truncate font-medium">{displayName(member)}</span>
           {member.id === me.id && <span className="text-quiet flex-none text-[13px]">(you)</span>}
+          {member.role === 'admin' && (
+            <span className="text-brand flex-none rounded-sm bg-[color-mix(in_srgb,var(--brand)_11%,transparent)] px-1.5 text-[11.5px] leading-5 font-semibold whitespace-nowrap">{ROLE_LABELS.admin}</span>
+          )}
           {invited && <span className="bg-well text-quiet flex-none rounded-xs px-1.5 text-[11.5px] leading-5 font-medium">Invited {timeAgo(member.invited_at)}</span>}
         </div>
         <div className="text-quiet truncate text-[13px]">{member.email}</div>
       </div>
-      {/* Fixed slots, so the counts and badges line up from row to row. */}
+      {/* A fixed slot, so the counts line up from row to row. */}
       <span className="flex w-24 flex-none justify-end max-sm:hidden">
         <SpacesRun member={member} />
-      </span>
-      <span className="flex w-[84px] flex-none justify-end">
-        {member.role === 'admin' && (
-          <span className="text-brand rounded-sm bg-[color-mix(in_srgb,var(--brand)_11%,transparent)] px-2 text-[12px] leading-6 font-semibold whitespace-nowrap">{ROLE_LABELS.admin}</span>
-        )}
       </span>
       {member.id === me.id ? <span className="w-8 flex-none" aria-hidden="true" /> : <MemberMenu member={member} />}
     </div>

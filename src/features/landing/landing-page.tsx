@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { ArrowRight, Check, Command, Inbox, Search, ShieldCheck, Users } from 'lucide-react'
-import type { MouseEvent, ReactNode } from 'react'
+import { useSyncExternalStore, type MouseEvent, type ReactNode } from 'react'
 import { Wordmark } from '@/components/app/brand'
 import { savedAccounts } from '@/lib/accounts'
 import { cn } from '@/lib/utils'
@@ -16,6 +16,14 @@ const signedIn = () => {
     return false
   }
 }
+
+const noChanges = () => () => {}
+
+/**
+ * Signed in, as the page knows once it runs. The page drawn at build time is for someone signed
+ * out, and switches to "Open Teamshelf" in the browser when it applies.
+ */
+const useReturning = () => useSyncExternalStore(noChanges, signedIn, () => false)
 
 const YEAR = new Date().getFullYear()
 
@@ -42,7 +50,7 @@ const GUTTER = 'px-[max(16px,env(safe-area-inset-left))]'
  * Signed out it offers creating an organization and signing in; signed in, opening the app.
  */
 export function LandingPage() {
-  const returning = signedIn()
+  const returning = useReturning()
   return (
     <div className="text-ink min-h-dvh overflow-x-clip">
       <Header returning={returning} />
@@ -81,7 +89,7 @@ function Actions({ returning, small = false }: { returning: boolean; small?: boo
   return (
     // Stacked to full width on a phone, side by side from there.
     <div className="grid w-full gap-2.5 sm:flex sm:w-auto sm:items-center">
-      <Link to="/login" search={{ intent: 'create' }} className={cn(PRIMARY, size, 'group')}>
+      <Link to="/signup" className={cn(PRIMARY, size, 'group')}>
         Create an organization
         {!small && <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />}
       </Link>
@@ -121,7 +129,7 @@ function Header({ returning }: { returning: boolean }) {
               <Link to="/login" className="text-ink hover:text-brand rounded-lg px-3.5 py-2 text-[14.5px] font-medium transition-colors hover:bg-[color-mix(in_srgb,var(--brand)_9%,transparent)]">
                 Sign in
               </Link>
-              <Link to="/login" search={{ intent: 'create' }} className={cn(PRIMARY, 'h-9 rounded-lg px-3.5 text-[14px] whitespace-nowrap sm:px-4')}>
+              <Link to="/signup" className={cn(PRIMARY, 'h-9 rounded-lg px-3.5 text-[14px] whitespace-nowrap sm:px-4')}>
                 Get started
               </Link>
             </>
@@ -144,6 +152,34 @@ function Shot({ name, alt, className, eager = false }: { name: string; alt: stri
 }
 
 /**
+ * The app itself, the page's largest picture: in the theme the system uses, at a size that fits
+ * the screen (1440 or 2880 pixels wide, or the app on a phone for a phone), and loaded first.
+ */
+function HeroShot() {
+  const alt = "A team's space in Teamshelf: the spaces and the organization switcher in a sidebar, and cards of links grouped by topic."
+  const sizes = '(min-width: 1200px) 1130px, calc(100vw - 48px)'
+  return (
+    <picture>
+      {/* On a phone: the app as a phone shows it. */}
+      <source media="(max-width: 639px) and (prefers-color-scheme: dark)" type="image/webp" srcSet="/landing/board-dark-phone.webp" width={1170} height={2160} />
+      <source media="(max-width: 639px)" type="image/webp" srcSet="/landing/board-light-phone.webp" width={1170} height={2160} />
+      <source media="(prefers-color-scheme: dark)" type="image/webp" srcSet="/landing/board-dark-1440.webp 1440w, /landing/board-dark.webp 2880w" sizes={sizes} />
+      <img
+        src="/landing/board-light.webp"
+        srcSet="/landing/board-light-1440.webp 1440w, /landing/board-light.webp 2880w"
+        sizes={sizes}
+        width={2880}
+        height={1800}
+        alt={alt}
+        fetchPriority="high"
+        decoding="async"
+        className="block h-auto w-full"
+      />
+    </picture>
+  )
+}
+
+/**
  * The top of the page: a faint grid behind a centered title, the way in, and the app itself.
  */
 function Hero({ returning }: { returning: boolean }) {
@@ -154,7 +190,8 @@ function Hero({ returning }: { returning: boolean }) {
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 h-[760px] [background-image:linear-gradient(var(--line)_1px,transparent_1px),linear-gradient(90deg,var(--line)_1px,transparent_1px)] [background-size:44px_44px] [mask-image:radial-gradient(70%_60%_at_50%_30%,black,transparent)]"
       />
-      <Reveal className="relative mx-auto flex max-w-3xl flex-col items-center text-center">
+      {/* Above the fold: shown at once, without rising into view, so it paints as early as it can. */}
+      <div className="relative mx-auto flex max-w-3xl flex-col items-center text-center">
         <h1 className={cn(HEADING, 'm-0 text-[clamp(40px,6.6vw,72px)] leading-[1.02]')}>
           Every link your team needs,{' '}
           <span className="relative whitespace-nowrap">
@@ -170,12 +207,10 @@ function Hero({ returning }: { returning: boolean }) {
         <div className="mt-9 w-full sm:w-auto">
           <Actions returning={returning} />
         </div>
-      </Reveal>
+      </div>
 
       <div id="product" className="relative mx-auto mt-14 max-w-6xl scroll-mt-6 pb-8 sm:mt-16">
-        <Reveal delay={2} className="relative">
-          <Showcase shot={<Shot name="board" eager alt="A team's space in Teamshelf: the spaces and the organization switcher in a sidebar, and cards of links grouped by topic." />} />
-        </Reveal>
+        <Showcase shot={<HeroShot />} />
       </div>
     </section>
   )
@@ -318,7 +353,7 @@ function Closing({ returning }: { returning: boolean }) {
               </Link>
             ) : (
               <>
-                <Link to="/login" search={{ intent: 'create' }} className="group inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 text-[15px] font-semibold text-[#16184a] transition-transform active:scale-[0.98]">
+                <Link to="/signup" className="group inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 text-[15px] font-semibold text-[#16184a] transition-transform active:scale-[0.98]">
                   Create an organization
                   <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
                 </Link>

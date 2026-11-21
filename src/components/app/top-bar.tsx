@@ -31,7 +31,7 @@ export function TopBar({ children }: { children?: ReactNode }) {
   const publishes = isSpaceAdmin(space?.id)
 
   return (
-    <header className={cn('flex min-h-16 flex-wrap items-center gap-x-1.5 gap-y-2.5 px-4 py-3 sm:gap-x-2 sm:px-5 xl:grid xl:grid-cols-[1fr_auto_1fr]', !onBoard && 'md:hidden')}>
+    <header className={cn('relative z-30 flex min-h-16 flex-wrap items-center gap-x-1.5 gap-y-2.5 px-4 py-3 sm:gap-x-2 sm:px-5 xl:grid xl:grid-cols-[1fr_auto_1fr]', !onBoard && 'md:hidden!')}>
       <div className="flex min-w-0 flex-1 items-center gap-1.5 xl:flex-none">
         <button type="button" onClick={openSidebar} aria-label="Spaces and pages" className="text-quiet hover:text-ink hover:bg-ink/6 -ml-1.5 grid size-10 flex-none place-items-center rounded-lg md:hidden">
           <Menu className="size-5" />

@@ -1,0 +1,7 @@
+# Teamshelf. The public pages are the front page, signing in, and creating an organization; the
+# app's own pages (an organization's spaces and settings) say noindex on each page.
+User-agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: https://teamshelf.app/sitemap.xml

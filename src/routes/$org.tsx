@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
+import { privateHead } from '@/lib/site'
 import { ScreenBoundary } from '@/components/app/section'
 import { AppShell } from '@/components/app/sidebar'
 import { RequireSession } from '@/features/auth/require-session'
@@ -8,7 +9,7 @@ import { hasStarted, OrgGate } from '@/features/org/org-gate'
 import { errorMessage } from '@/lib/errors'
 
 /** Everything of one organization lives under its address: /<org>/… */
-export const Route = createFileRoute('/$org')({ component: OrgLayout })
+export const Route = createFileRoute('/$org')({ ssr: false, head: () => privateHead(), component: OrgLayout })
 
 function OrgLayout() {
   const { org } = Route.useParams()

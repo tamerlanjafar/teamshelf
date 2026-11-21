@@ -13,6 +13,7 @@
 // This browser's list of accounts is remembered here, to show them in the menus. The cookies are
 // what counts: losing the list only loses the menus, not the sessions.
 
+import { SITE_URL } from './site'
 import type { OrgSummary } from './types'
 
 /** Where the sessions are served. Keep in step with netlify/lib/auth-proxy.mjs. */
@@ -22,7 +23,7 @@ const AUTH_PATH = '/api/auth'
 export const NEW_SLOT = '_new'
 
 /** Paths of the app that aren't an organization. */
-const APP_PAGES = new Set(['', 'login', 'new', 'organizations', 'file'])
+const APP_PAGES = new Set(['', 'login', 'signup', 'open', 'new', 'organizations', 'file'])
 
 const ORG_SLUG = /^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/
 
@@ -72,8 +73,11 @@ function save(saved: Saved) {
 
 /** The session this page uses, chosen once when it loads. */
 export const ACTIVE_SLOT: string = (() => {
+  // On the server (pages drawn at build time) there is no session to choose.
+  if (typeof window === 'undefined') return NEW_SLOT
   const { pathname } = window.location
-  if (pathname === '/login' || pathname.startsWith('/login/')) return NEW_SLOT
+  // Signing in (or giving the email for a new organization) starts a new session.
+  if (/^\/(login|signup)(\/|$)/.test(pathname)) return NEW_SLOT
   const org = orgOfPath(pathname)
   if (org) {
     save({ ...load(), last: org })
@@ -83,7 +87,9 @@ export const ACTIVE_SLOT: string = (() => {
 })()
 
 /** The address of Neon Auth for this page: its session's path on this site. */
-export const authUrl = (slot = ACTIVE_SLOT) => `${window.location.origin}${AUTH_PATH}/${slot}`
+// On the server (pages drawn at build time) it is the public site's, so the client can be made;
+// nothing is signed in there.
+export const authUrl = (slot = ACTIVE_SLOT) => `${typeof window === 'undefined' ? SITE_URL : window.location.origin}${AUTH_PATH}/${slot}`
 
 export const savedAccounts = (): Account[] => load().accounts
 

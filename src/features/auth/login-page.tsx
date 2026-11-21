@@ -37,7 +37,7 @@ export function backToCreateDenied(email: string) {
   } catch {
     // Without storage the form comes back without the message.
   }
-  crossTo('/login?intent=create')
+  crossTo('/signup')
 }
 
 function readCreateDenied() {
@@ -55,15 +55,23 @@ function readCreateDenied() {
  */
 export function LoginPage({ linkExpired = false, returnPath, intent }: { linkExpired?: boolean; returnPath: string; intent?: LoginIntent }) {
   // The email the create page sent back, if it did: filled in, with the reason under it.
-  const [denied] = useState(() => (intent === 'create' ? readCreateDenied() : null))
+  // Read once the page runs (the build-time page has no tab to read from), then cleared.
+  const [denied, setDenied] = useState<string | null>(null)
+  const [email, setEmail] = useState('')
   useEffect(() => {
+    const kept = intent === 'create' ? readCreateDenied() : null
+    if (kept) {
+      // From this tab's storage, which only exists once the page runs (not at build time).
+      // oxlint-disable-next-line react/set-state-in-effect
+      setDenied(kept)
+      setEmail(kept)
+    }
     try {
       sessionStorage.removeItem(CREATE_DENIED)
     } catch {
       // Nothing to clear.
     }
-  }, [])
-  const [email, setEmail] = useState(denied ?? '')
+  }, [intent])
   const [invalid, setInvalid] = useState(false)
   const send = useMutation({ mutationFn: (address: string) => sendSignInLink(address, returnPath) })
   const wording = WORDING[intent ?? 'first']
