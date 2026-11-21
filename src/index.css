@@ -243,3 +243,13 @@ html.signed-in .if-signed-out {
         font-size: 16px !important;
     }
 }
+
+/* Every scroll area the same: a thin, rounded thumb on no track, faint, and darker while the
+   pointer is over the area. */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--ink) 14%, transparent) transparent;
+}
+*:hover {
+    scrollbar-color: color-mix(in srgb, var(--ink) 26%, transparent) transparent;
+}

@@ -86,6 +86,7 @@ export const SCREENS: ScreenGroup[] = [
       { id: 'board-space-admin', title: 'Board, as an admin of this space', scenario: 'space-admin', path: '/acme/development' },
       { id: 'board-member', title: 'Board, as a member', note: 'No private spaces, Suggest instead of Add.', scenario: 'acme', role: 'member', path: '/acme/development' },
       { id: 'private-space', title: 'Private space', scenario: 'acme', path: '/acme/leadership' },
+      { id: 'many-spaces', title: 'Many spaces', note: 'More than the sidebar fits: the spaces scroll, the rest stays.', scenario: 'many-spaces', path: '/acme/development' },
       { id: 'switcher', title: 'Organization menu, two emails', scenario: 'several', path: '/acme/development', act: async () => {
           ;(await element<HTMLButtonElement>('[aria-label$="Switch organization"]')).click()
           await element('[role="menu"]')

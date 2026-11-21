@@ -48,3 +48,26 @@ test('a hidden tab doesn’t reload itself when nothing new was deployed', async
   await page.waitForTimeout(500)
   expect(await page.evaluate(() => (window as unknown as { marker?: boolean }).marker)).toBe(true)
 })
+
+test('a new space starts from the + by the Spaces heading, in the same place however many spaces there are', async ({ page }) => {
+  await openScreen(page, 'board')
+  const sidebar = page.getByRole('navigation', { name: 'Acme' })
+  // The spaces come first in the list; starting one isn't a line among them.
+  await expect(sidebar.getByRole('listitem').first()).toContainText('Data')
+  await expect(sidebar.getByRole('button', { name: 'New space' })).toHaveCount(1)
+  await sidebar.getByRole('button', { name: 'New space' }).click()
+  await expect(page.getByRole('dialog', { name: 'New space' })).toBeVisible()
+})
+
+test('with more spaces than fit, the spaces scroll and the organization’s pages stay in view', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 700 })
+  await openScreen(page, 'many-spaces')
+  const sidebar = page.getByRole('navigation', { name: 'Acme' })
+  await expect(sidebar.getByRole('link', { name: 'Organization settings' })).toBeInViewport()
+  await expect(sidebar.getByRole('link', { name: 'Suggestions' })).toBeInViewport()
+  const last = sidebar.getByRole('link', { name: 'Support' })
+  await expect(last).not.toBeInViewport()
+  await last.scrollIntoViewIfNeeded()
+  await expect(last).toBeInViewport()
+  await expect(sidebar.getByRole('link', { name: 'Organization settings' })).toBeInViewport()
+})

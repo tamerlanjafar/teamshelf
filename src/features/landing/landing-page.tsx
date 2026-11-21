@@ -310,7 +310,7 @@ function Spotlights() {
             icon={<Users />}
             eyebrow="People"
             title="The right people in every space"
-            text="Invite by email, or let anyone with your company's domain join on their own. Each space has its own admins and members."
+            text="Invite by email, or let anyone with your company's domain join on their own. Each space has its own admins, and stays private until you open it."
             points={[
               { title: 'Guests need approval', text: 'People from outside your domain wait for an Org Admin.' },
               { title: 'Always an admin', text: 'An organization and each space always keep one.' },

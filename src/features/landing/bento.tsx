@@ -254,7 +254,7 @@ export function Bento({ actions }: { actions: ReactNode }) {
           </div>
         </div>
       </Reveal>
-      <Tile delay={1} tint={COLORS.indigo} title="A space for every team" text="Open to everyone, or private to the people you add.">
+      <Tile delay={1} tint={COLORS.indigo} title="A space for every team" text="Private to its people at first, or open to everyone in your organization.">
         <SpacesDemo />
       </Tile>
       <Tile delay={2} tint={COLORS.green} title="Anyone suggests" text="Admins of each space approve, so boards stay clean.">

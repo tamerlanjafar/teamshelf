@@ -74,34 +74,53 @@ function Sidebar() {
         </Link>
       </div>
 
-      {/* Scrolls on its own when there are many spaces. The negative margin keeps the items' focus rings unclipped. */}
-      <nav aria-label={org.name} className="-mx-1 flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-1 pt-1 pb-4">
-        <div>
-          <Heading>Spaces</Heading>
-          <ul className="m-0 flex list-none flex-col gap-1 p-0">
-            {spaces.map((space) => (
-              <li key={space.id}>
-                <Link to="/$org/$space" params={{ org: org.slug, space: space.slug }} activeOptions={{ includeSearch: false }} className={ITEM}>
-                  <SpaceLogo space={space} className="size-[22px] rounded-xs transition-transform duration-200 ease-out group-hover:scale-[1.08]" />
-                  <span className="min-w-0 flex-1 truncate">{space.name}</span>
-                  {space.visibility === 'private' && <Lock className="text-quiet size-3.5" aria-label="Private" />}
-                </Link>
-              </li>
-            ))}
-            {/* Anyone in the organization can start a space. */}
-            <li>
-              <button type="button" onClick={() => setCreating(true)} className={cn(ITEM, 'text-quiet w-full')}>
-                <span className="group-hover:border-brand group-hover:text-brand grid size-[22px] place-items-center rounded-xs border border-dashed border-[color-mix(in_srgb,var(--quiet)_55%,transparent)] transition-colors duration-150">
-                  <Plus className="size-3.5" />
-                </span>
-                New space
+      {/* The spaces take the room there is, and scroll on their own when there are many; the
+          organization's pages stay at the bottom, always in reach. */}
+      <nav aria-label={org.name} className="flex min-h-0 flex-1 flex-col pt-1">
+        <div className="flex min-h-0 flex-1 flex-col">
+          {/* Anyone in the organization can start a space: a + by the heading, in the same place however many spaces there are. */}
+          <Heading
+            action={
+              <button
+                type="button"
+                aria-label="New space"
+                onClick={() => setCreating(true)}
+                className="text-quiet hover:text-ink hover:bg-ink/[0.07] focus-visible:ring-brand/50 -my-1 grid size-7 flex-none place-items-center rounded-md outline-none transition-colors focus-visible:ring-2"
+              >
+                <Plus className="size-[18px]" />
               </button>
-            </li>
-          </ul>
+            }
+          >
+            Spaces
+          </Heading>
+          {/* The negative margin keeps the items' focus rings unclipped by the scrolling. */}
+          <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1 py-0.5">
+            <ul className="m-0 flex list-none flex-col gap-1 p-0">
+              {spaces.map((space) => (
+                <li key={space.id}>
+                  <Link to="/$org/$space" params={{ org: org.slug, space: space.slug }} activeOptions={{ includeSearch: false }} className={ITEM}>
+                    <SpaceLogo space={space} className="size-[22px] rounded-xs transition-transform duration-200 ease-out group-hover:scale-[1.08]" />
+                    <span className="min-w-0 flex-1 truncate">{space.name}</span>
+                    {space.visibility === 'private' && <Lock className="text-quiet size-3.5" aria-label="Private" />}
+                  </Link>
+                </li>
+              ))}
+              {/* With no spaces yet, a line of its own says how to start. */}
+              {spaces.length === 0 && (
+                <li>
+                  <button type="button" onClick={() => setCreating(true)} className={cn(ITEM, 'text-quiet w-full')}>
+                    <span className="group-hover:border-brand group-hover:text-brand grid size-[22px] place-items-center rounded-xs border border-dashed border-[color-mix(in_srgb,var(--quiet)_55%,transparent)] transition-colors duration-150">
+                      <Plus className="size-3.5" />
+                    </span>
+                    New space
+                  </button>
+                </li>
+              )}
+            </ul>
+          </div>
         </div>
 
-        <div>
-          <Heading>{org.name}</Heading>
+        <div className="border-line mt-3 flex-none border-t pt-3 pb-3">
           <ul className="m-0 flex list-none flex-col gap-1 p-0">
             <li>
               <Link to="/$org/requests" params={{ org: org.slug }} className={ITEM}>
@@ -151,11 +170,19 @@ const ITEM = cn(
   'transition-[background-color,color,box-shadow] duration-150 ease-out',
   'hover:bg-ink/[0.055] hover:text-ink focus-visible:ring-brand/50 focus-visible:ring-2 focus-visible:ring-inset',
   'aria-[current=page]:bg-surface aria-[current=page]:text-ink aria-[current=page]:font-semibold aria-[current=page]:shadow-[0_1px_2px_hsl(var(--shadow)/0.1),0_0_0_1px_var(--line)]',
+  // On the dark sidebar a surface chip would sink: a lighter tint stands out instead.
+  'dark:aria-[current=page]:bg-[color-mix(in_srgb,var(--ink)_11%,transparent)] dark:aria-[current=page]:shadow-[0_0_0_1px_color-mix(in_srgb,var(--ink)_10%,transparent)]',
 )
 
 /** An item's icon: quiet, darker on hover, the brand color when open. */
 const ICON = 'text-quiet group-hover:text-ink group-aria-[current=page]:text-brand size-[18px] flex-none transition-colors duration-150'
 
-function Heading({ children }: { children: ReactNode }) {
-  return <h2 className="text-quiet/85 m-0 mb-1 truncate px-2.5 text-[11px] font-semibold tracking-[0.06em] uppercase">{children}</h2>
+/** A section's name, with an optional small button at its right. */
+function Heading({ children, action }: { children: ReactNode; action?: ReactNode }) {
+  return (
+    <div className="mb-1.5 flex items-center gap-2 pr-1 pl-2.5">
+      <h2 className="text-quiet m-0 min-w-0 flex-1 truncate text-[12px] font-semibold tracking-[0.07em] uppercase">{children}</h2>
+      {action}
+    </div>
+  )
 }

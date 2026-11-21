@@ -308,6 +308,31 @@ export const SCENARIOS: Scenario[] = [
     build: () => ({ ...inAcme('admin'), sessions: [{ userId: USERS.alex.id, slots: ['acme', 'orbit'] }] }),
   },
   {
+    id: 'many-spaces',
+    title: 'Many spaces',
+    description: 'Acme with 30 spaces, so the sidebar has more than fits.',
+    roles: false,
+    build: () => {
+      const setup = inAcme('admin')
+      const teams: [string, string, Color][] = [
+        ['Marketing', 'megaphone', 'orange'], ['Sales', 'target', 'green'], ['Support', 'headset', 'teal'], ['Finance', 'chart', 'yellow'],
+        ['People', 'users', 'pink'], ['Legal', 'book', 'graphite'], ['Security', 'shield', 'red'], ['Platform', 'server', 'indigo'],
+        ['Mobile', 'smartphone', 'blue'], ['Infrastructure', 'cloud', 'blue'], ['Data science', 'flask', 'purple'], ['Research', 'lightbulb', 'yellow'],
+        ['Brand', 'swatches', 'pink'], ['Growth', 'rocket', 'green'], ['Partnerships', 'globe', 'teal'], ['Operations', 'box', 'orange'],
+        ['Quality', 'target', 'red'], ['Hardware', 'cpu', 'graphite'], ['Analytics', 'database', 'indigo'], ['Product', 'layers', 'purple'],
+        ['Customer success', 'headset', 'green'], ['Recruiting', 'users', 'blue'], ['Events', 'megaphone', 'pink'], ['Documentation', 'book', 'teal'],
+        ['Design systems', 'shapes', 'purple'], ['Board', 'briefcase', 'graphite'],
+      ]
+      teams.forEach(([name, logo, color], index) => {
+        const id = `space-nw-many-${index}`
+        // Every fifth one private, to show the lock among them.
+        setup.db.spaces.push(space(id, 'org-acme', name.toLowerCase().replace(/[^a-z0-9]+/g, '-'), name, logo, color, 10 + index, index % 5 === 4 ? 'private' : 'org'))
+        setup.db.space_members.push({ space_id: id, member_id: 'm-nw-alex', role: 'admin' })
+      })
+      return setup
+    },
+  },
+  {
     id: 'empty-org',
     title: 'Empty organization',
     description: 'Acme without any space yet.',

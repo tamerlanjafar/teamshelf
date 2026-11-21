@@ -370,8 +370,8 @@ export function runRpc(name: string, args: Args, user: User | null): Answer {
         name: String(args.space_name),
         logo: String(args.space_logo),
         color: args.space_color as Space['color'],
-        // Only admins of the organization start spaces everyone sees.
-        visibility: member.role === 'admin' ? 'org' : 'private',
+        // As create_space: a new space starts private, for everyone.
+        visibility: 'private',
         layout: [],
         card_sizes: {},
         position: null,

@@ -196,3 +196,14 @@ test.describe('your own view', () => {
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('https://grafana.com')
   })
 })
+
+test('a new space starts private, even for an Org Admin, and opens', async ({ page }) => {
+  await openScreen(page, 'board')
+  await page.getByRole('navigation', { name: 'Acme' }).getByRole('button', { name: 'New space' }).click()
+  const dialog = page.getByRole('dialog', { name: 'New space' })
+  await expect(dialog).toContainText('Only you see it until you add people or open it to everyone.')
+  await dialog.getByLabel('Name').fill('Marketing')
+  await dialog.getByRole('button', { name: 'Create space' }).click()
+  await page.waitForURL('**/acme/marketing')
+  await expect(page.getByRole('navigation', { name: 'Acme' }).getByRole('link', { name: 'Marketing' }).getByLabel('Private')).toBeVisible()
+})

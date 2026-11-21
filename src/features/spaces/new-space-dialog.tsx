@@ -4,15 +4,18 @@ import { useCreateSpace } from '@/api/spaces'
 import { ColorPicker } from '@/components/app/color-picker'
 import { Field, TextInput } from '@/components/app/form'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { toastError } from '@/lib/errors'
 import type { Color } from '@/lib/types'
-import { usePermissions } from '@/features/org/permissions'
+import { cn } from '@/lib/utils'
 import { useOpenSpace } from './current-space'
 import { LogoPicker, UploadLogoButton } from './logo-picker'
-import { SpaceLogo } from './space-logo'
+import { isImageLogo, SpaceLogo } from './space-logo'
 
-/** Starts a space. Anyone in the organization; whoever creates it is its first admin. */
+/**
+ * Starts a space. Anyone in the organization; whoever creates it is its first admin, and it starts
+ * private (the database's create_space): only they see it until they add people or open it.
+ */
 export function NewSpaceDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -26,9 +29,9 @@ function NewSpaceForm({ onDone }: { onDone: () => void }) {
   const [logo, setLogo] = useState('grid')
   const [color, setColor] = useState<Color>('indigo')
   const createSpace = useCreateSpace()
-  // Only admins of the organization start spaces everyone sees; anyone else's are private.
-  const { admin } = usePermissions()
   const openSpace = useOpenSpace()
+  const image = isImageLogo(logo)
+  const preview = { name: name || 'New space', logo, color }
 
   function submit(event: FormEvent) {
     event.preventDefault()
@@ -38,7 +41,7 @@ function NewSpaceForm({ onDone }: { onDone: () => void }) {
       {
         onError: toastError,
         onSuccess: (space) => {
-          toast.success(`${space.name} is ready. Add its people and groups in its settings.`)
+          toast.success(`${space.name} is ready. Add groups to it, and its people in its settings.`)
           onDone()
           openSpace(space)
         },
@@ -50,29 +53,38 @@ function NewSpaceForm({ onDone }: { onDone: () => void }) {
     <form onSubmit={submit} className="grid gap-5">
       <DialogHeader>
         <DialogTitle className="text-[20px] font-[650] [font-family:var(--font-rounded)]">New space</DialogTitle>
+        <DialogDescription>Only you see it until you add people or open it to everyone.</DialogDescription>
       </DialogHeader>
-      <Field
-        label="Name"
-        hint={
-          admin
-            ? 'A team or an area of your organization. Everyone in the organization sees it until you make it private.'
-            : 'A team or an area of your organization. It is private: only the people you add see it.'
-        }
-      >
+      <Field label="Name">
         <TextInput value={name} maxLength={40} autoFocus placeholder="Team or area" onChange={(event) => setName(event.target.value)} />
       </Field>
-      <div className="grid gap-2">
-        <div className="flex items-center justify-between gap-3">
-          <span className="flex items-center gap-2 text-[13px] font-medium">
-            <SpaceLogo space={{ name: name || 'New space', logo, color }} className="size-6 rounded-xs" />
-            Logo
-          </span>
-          <UploadLogoButton onChange={setLogo} className="h-8" />
+
+      {/* The space as it will look, as in its settings' Logo and color. */}
+      <div className="bg-well flex flex-wrap items-center gap-4 rounded-lg p-4">
+        <SpaceLogo space={preview} className="size-14 rounded-lg shadow-[0_2px_8px_hsl(var(--shadow)/0.12)]" />
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[16px] font-[650] [font-family:var(--font-rounded)]">{preview.name}</div>
+          <div className="text-quiet text-[12.5px]">{image ? 'Using your uploaded image' : 'Pick an icon and a color, or upload an image'}</div>
         </div>
-        <LogoPicker space={{ name: name || 'New space', logo, color }} onChange={setLogo} />
+        <div className="flex flex-wrap gap-2">
+          {image && (
+            <Button type="button" variant="ghost" onClick={() => setLogo('grid')}>
+              Use an icon
+            </Button>
+          )}
+          <UploadLogoButton onChange={setLogo} />
+        </div>
       </div>
+
       <div className="grid gap-2">
-        <span className="text-[13px] font-medium">Color</span>
+        <span className="text-[13px] font-medium">Icon</span>
+        <LogoPicker space={preview} onChange={setLogo} />
+      </div>
+      {/* Colors tint icons only, so with an image they are dimmed. */}
+      <div className={cn('grid gap-2 transition-opacity', image && 'opacity-45')}>
+        <span className="text-[13px] font-medium">
+          Color{image && <span className="text-quiet font-normal"> · tints icons, not images</span>}
+        </span>
         <ColorPicker value={color} onChange={setColor} />
       </div>
       <DialogFooter>
