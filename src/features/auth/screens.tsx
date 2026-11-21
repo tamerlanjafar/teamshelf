@@ -2,6 +2,7 @@ import { ArrowLeft } from 'lucide-react'
 import type { CSSProperties, ReactNode } from 'react'
 import { BrandMark, Wordmark } from '@/components/app/brand'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 /**
  * The frame of every screen you see outside an organization: signing in, choosing or creating
@@ -21,7 +22,7 @@ export function AuthCard({
   icon?: ReactNode
   title: string
   description?: ReactNode
-  back?: { label: string; onClick: () => void }
+  back?: { label: string; onClick: () => void; /** Only for a browser signed in to an organization (the `signed-in` class, index.css). */ signedInOnly?: boolean }
   children?: ReactNode
 }) {
   return (
@@ -33,7 +34,7 @@ export function AuthCard({
             {/* Wide screens show the logo in the panel instead. */}
             <Wordmark className="mb-14 block w-fit text-[32px] lg:hidden" />
             {back && (
-              <button type="button" onClick={back.onClick} className="text-quiet hover:text-ink -ml-1 mb-6 inline-flex items-center gap-1.5 rounded-lg px-1 py-0.5 text-[13.5px] font-medium transition-colors">
+              <button type="button" onClick={back.onClick} className={cn('text-quiet hover:text-ink -ml-1 mb-6 inline-flex items-center gap-1.5 rounded-lg px-1 py-0.5 text-[13.5px] font-medium transition-colors', back.signedInOnly && 'if-signed-in')}>
                 <ArrowLeft className="size-4" />
                 {back.label}
               </button>

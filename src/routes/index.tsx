@@ -46,10 +46,10 @@ export const Route = createFileRoute('/')({
       // The largest picture, asked for before anything else: the one for the system's theme, at a size that fits.
       links: [
         ...head.links,
-        { rel: 'preload', as: 'image', type: 'image/webp', href: '/landing/board-light-phone.webp', media: '(max-width: 639px) and (prefers-color-scheme: light)', fetchPriority: 'high' },
-        { rel: 'preload', as: 'image', type: 'image/webp', href: '/landing/board-dark-phone.webp', media: '(max-width: 639px) and (prefers-color-scheme: dark)', fetchPriority: 'high' },
-        { rel: 'preload', as: 'image', type: 'image/webp', imageSrcSet: '/landing/board-light-1440.webp 1440w, /landing/board-light.webp 2880w', imageSizes: '(min-width: 1200px) 1130px, calc(100vw - 48px)', media: '(min-width: 640px) and (prefers-color-scheme: light)', fetchPriority: 'high' },
-        { rel: 'preload', as: 'image', type: 'image/webp', imageSrcSet: '/landing/board-dark-1440.webp 1440w, /landing/board-dark.webp 2880w', imageSizes: '(min-width: 1200px) 1130px, calc(100vw - 48px)', media: '(min-width: 640px) and (prefers-color-scheme: dark)', fetchPriority: 'high' },
+        { rel: 'preload', as: 'image', type: 'image/avif', href: '/landing/board-light-phone.avif', media: '(max-width: 639px) and (prefers-color-scheme: light)', fetchPriority: 'high' },
+        { rel: 'preload', as: 'image', type: 'image/avif', href: '/landing/board-dark-phone.avif', media: '(max-width: 639px) and (prefers-color-scheme: dark)', fetchPriority: 'high' },
+        { rel: 'preload', as: 'image', type: 'image/avif', imageSrcSet: '/landing/board-light-1200.avif 1200w, /landing/board-light-2240.avif 2240w', imageSizes: '(min-width: 1200px) 1130px, calc(100vw - 48px)', media: '(min-width: 640px) and (prefers-color-scheme: light)', fetchPriority: 'high' },
+        { rel: 'preload', as: 'image', type: 'image/avif', imageSrcSet: '/landing/board-dark-1200.avif 1200w, /landing/board-dark-2240.avif 2240w', imageSizes: '(min-width: 1200px) 1130px, calc(100vw - 48px)', media: '(min-width: 640px) and (prefers-color-scheme: dark)', fetchPriority: 'high' },
       ],
       scripts: [{ type: 'application/ld+json', children: JSON.stringify(STRUCTURED_DATA) }],
     }

@@ -2,7 +2,7 @@
 
 Your team's links and files, in one place, at [teamshelf.app](https://teamshelf.app). An organization is split into spaces, one per team (Development, Design, Data…). In each space, groups of links and files are cards in a Pinterest-style grid.
 
-- **Front page.** teamshelf.app is a landing page for everyone, with screenshots from mock mode (`public/landing/`, light and dark). Signed out it offers signing in and creating an organization; signed in on this browser, opening the app (`/open`).
+- **Front page.** teamshelf.app is a landing page for everyone, with screenshots from mock mode (`public/landing/`, light and dark). Signed out it offers signing in and creating an organization; signed in on this browser, opening the app at the organization used last.
 - **Organizations.** Only emails listed in the database can create one (see [Who can create organizations](#who-can-create-organizations)). Everything of an organization lives under its address, `/<org>/`, and a space's board under `/<org>/<space>`. One sign-in covers every organization an email is in.
 - **A sidebar per organization.** Inside an organization there are only its spaces (the ones you can see), its pages (Suggestions, Team, Organization settings) and, at the bottom, the organization switcher: the organizations signed in on this browser, your theme, and signing out of this organization.
 - **Sign-in by email link.** No passwords.
@@ -102,7 +102,7 @@ When the app opens, the splash screen stays until everything the organization's 
 The app is built with TanStack Start in SPA mode (`vite.config.ts`, `src/router.tsx`, `src/routes/__root.tsx`):
 
 - **The public pages** (`/`, `/login`, `/signup`) are drawn at build time into plain HTML (`PUBLIC_PAGES` in `vite.config.ts`). They show at once, read fully without scripts, and carry their own title, description, canonical address, link preview tags, and (the front page) structured data (`src/lib/site.ts`, each route's `head`).
-- **The app's pages** (an organization's spaces and settings, `/organizations`, `/new`, `/file`, `/open`) say `ssr: false` and `noindex`: they are drawn in the browser from one shared shell, `_shell.html`.
+- **The app's pages** (an organization's spaces and settings, `/organizations`, `/new`, `/file`) say `ssr: false` and `noindex`: they are drawn in the browser from one shared shell, `_shell.html`.
 - The build writes `sitemap.xml` with the public pages, next to `public/robots.txt`.
 - Creating an organization has its own address, `/signup`, so it can be found on its own. `/login?intent=create` still works and goes there.
 
@@ -120,7 +120,7 @@ Other commands: `pnpm build`, `pnpm lint`, `pnpm test`, `pnpm db:migrate`, and `
 
 Tests: `pnpm test` (rules in plain code), `pnpm test:e2e` (end to end in a browser, against mock mode on port 3014, started by Playwright; plan in `specs/teamshelf.md`), and `pnpm build && pnpm test:build` (what search engines get from the build). The first time, install the browser: `pnpm exec playwright install chromium`. How tests are kept up to date as the app changes is in `CLAUDE.md`.
 
-`pnpm db:migrate` applies new files in `db/migrations`. Afterwards, refresh the Data API's copy of the schema: Neon Console → Data API → "Refresh schema cache". Until then it doesn't know new tables and functions.
+`pnpm db:migrate` applies new files in `db/migrations`. `000_baseline.sql` is the whole schema as one starting point (the earlier migrations were squashed into it); new changes go in files after it (`001_…`). Afterwards, refresh the Data API's copy of the schema: Neon Console → Data API → "Refresh schema cache". Until then it doesn't know new tables and functions.
 
 ## Before the team uses it
 

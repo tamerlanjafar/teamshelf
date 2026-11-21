@@ -1,6 +1,6 @@
 // The rules a link's name follows. A name that breaks one can't be saved, by anyone: the form
 // shows the first broken rule under the name, and the database checks the same rules again
-// (app.link_name_error in db/migrations/021_remove_environments.sql), except the two that
+// (app.link_name_error in db/migrations/000_baseline.sql), except the two that
 // compare a name with the other links of its group.
 //
 // The aim: every card reads the same way. The thing spelled like its siblings spell it, extra

@@ -24,7 +24,7 @@ export function TopBar({ children }: { children?: ReactNode }) {
   const { isSpaceAdmin } = usePermissions()
   const space = useCurrentSpaceIfLoaded()
   const onSpace = Boolean(useSpaceParam())
-  const onBoard = Boolean(useMatch({ from: '/$org/$space/', shouldThrow: false }))
+  const onBoard = Boolean(useMatch({ from: '/_app/$org/$space/', shouldThrow: false }))
   const boardTools = onBoard && space
   const { addLink } = useLinkDialog()
   const openSidebar = useOpenSidebar()

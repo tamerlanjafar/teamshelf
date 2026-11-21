@@ -223,3 +223,23 @@ html.js [data-reveal]:not([data-shown]) {
 @media (prefers-reduced-motion: reduce) {
     html.js [data-reveal]:not([data-shown]) { opacity: 1; translate: none; }
 }
+
+/* Parts drawn for both cases, signed in to an organization or not (the `signed-in` class, set
+   before the first paint in src/routes/__root.tsx): only the one that applies shows, from the
+   start, so nothing changes size once the page runs. Signed out is what the page drawn at build
+   time shows without scripts. */
+html:not(.signed-in) .if-signed-in,
+html.signed-in .if-signed-out {
+    display: none !important;
+}
+
+/* iOS zooms the whole page into a field whose text is under 16px when it gets focus. Only on iOS
+   (the only browsers with -webkit-touch-callout), every field's text is 16px, whatever its design. */
+@supports (-webkit-touch-callout: none) {
+    input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"]),
+    textarea,
+    select,
+    [contenteditable="true"] {
+        font-size: 16px !important;
+    }
+}

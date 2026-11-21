@@ -1,8 +1,8 @@
 import { Link } from '@tanstack/react-router'
 import { ArrowRight, Check, Command, Inbox, Search, ShieldCheck, Users } from 'lucide-react'
-import { useSyncExternalStore, type MouseEvent, type ReactNode } from 'react'
+import { useEffect, useSyncExternalStore, type MouseEvent, type ReactNode } from 'react'
 import { Wordmark } from '@/components/app/brand'
-import { savedAccounts } from '@/lib/accounts'
+import { lastOrg, savedAccounts } from '@/lib/accounts'
 import { cn } from '@/lib/utils'
 import { Bento } from './bento'
 import { Reveal } from './motion'
@@ -17,13 +17,36 @@ const signedIn = () => {
   }
 }
 
+/**
+ * The page has both ways in, for someone signed out (`if-signed-out`) and signed in
+ * (`if-signed-in`), and shows one by a class on the page set before its first paint
+ * (src/routes/__root.tsx, index.css): no swap once it runs. Coming here from within the app,
+ * without loading the page, the class is brought up to date.
+ */
+const useSignedInClass = () =>
+  useEffect(() => {
+    document.documentElement.classList.toggle('signed-in', signedIn())
+  }, [])
+
 const noChanges = () => () => {}
+const openPath = () => {
+  const org = lastOrg()
+  return org ? `/${org}` : '/organizations'
+}
 
 /**
- * Signed in, as the page knows once it runs. The page drawn at build time is for someone signed
- * out, and switches to "Open Teamshelf" in the browser when it applies.
+ * Where "Open Teamshelf" goes: the organization used last on this browser, or the list of them.
+ * Known once the page runs; the text stays the same, so only the address changes. A plain link,
+ * not the router's: the organization's page loads with its own session (src/lib/accounts.ts).
  */
-const useReturning = () => useSyncExternalStore(noChanges, signedIn, () => false)
+function OpenLink({ className, children }: { className: string; children: ReactNode }) {
+  const href = useSyncExternalStore(noChanges, openPath, () => '/organizations')
+  return (
+    <a href={href} className={className}>
+      {children}
+    </a>
+  )
+}
 
 const YEAR = new Date().getFullYear()
 
@@ -50,12 +73,12 @@ const GUTTER = 'px-[max(16px,env(safe-area-inset-left))]'
  * Signed out it offers creating an organization and signing in; signed in, opening the app.
  */
 export function LandingPage() {
-  const returning = useReturning()
+  useSignedInClass()
   return (
     <div className="text-ink min-h-dvh overflow-x-clip">
-      <Header returning={returning} />
+      <Header />
       <main>
-        <Hero returning={returning} />
+        <Hero />
         <Spotlights />
         {/* Everything else, in a band of its own, so it reads apart from the panels above. */}
         <section id="features" className={cn(GUTTER, 'bg-surface border-line scroll-mt-0 border-y py-20 sm:py-28')}>
@@ -65,11 +88,11 @@ export function LandingPage() {
               <h2 className={cn(HEADING, 'm-0 mt-5 text-[clamp(30px,4vw,46px)] leading-[1.08]')}>Everything a shared shelf needs</h2>
               <p className="text-quiet m-0 mt-4 text-[17px] leading-relaxed">Small things that keep a team's links in order, and out of the way.</p>
             </Reveal>
-            <Bento actions={<Actions returning={returning} />} />
+            <Bento actions={<Actions />} />
           </div>
         </section>
         <Steps />
-        <Closing returning={returning} />
+        <Closing />
       </main>
       <Footer />
     </div>
@@ -77,18 +100,16 @@ export function LandingPage() {
 }
 
 /** The way in: open the app when signed in, otherwise create an organization or sign in. */
-function Actions({ returning, small = false }: { returning: boolean; small?: boolean }) {
+function Actions({ small = false }: { small?: boolean }) {
   const size = small && 'h-9 rounded-lg px-4 text-[14px]'
-  if (returning)
-    return (
-      <Link to="/open" className={cn(PRIMARY, size, 'group')}>
+  return (
+    <>
+      <OpenLink className={cn(PRIMARY, size, 'if-signed-in group')}>
         Open Teamshelf
         <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-      </Link>
-    )
-  return (
-    // Stacked to full width on a phone, side by side from there.
-    <div className="grid w-full gap-2.5 sm:flex sm:w-auto sm:items-center">
+      </OpenLink>
+      {/* Stacked to full width on a phone, side by side from there. */}
+      <div className="if-signed-out grid w-full gap-2.5 sm:flex sm:w-auto sm:items-center">
       <Link to="/signup" className={cn(PRIMARY, size, 'group')}>
         Create an organization
         {!small && <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />}
@@ -96,11 +117,12 @@ function Actions({ returning, small = false }: { returning: boolean; small?: boo
       <Link to="/login" className={cn(SECONDARY, size, small && 'border-transparent bg-transparent px-3 hover:border-transparent hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]')}>
         Sign in
       </Link>
-    </div>
+      </div>
+    </>
   )
 }
 
-function Header({ returning }: { returning: boolean }) {
+function Header() {
   return (
     <header className={GUTTER}>
       <div className="mx-auto flex h-[72px] max-w-6xl items-center gap-4 sm:gap-8">
@@ -119,62 +141,60 @@ function Header({ returning }: { returning: boolean }) {
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-1">
-          {returning ? (
-            <Link to="/open" className={cn(PRIMARY, 'group h-9 rounded-lg px-4 text-[14px]')}>
-              Open Teamshelf
-              <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-            </Link>
-          ) : (
-            <>
+          <OpenLink className={cn(PRIMARY, 'if-signed-in group h-9 rounded-lg px-4 text-[14px]')}>
+            Open Teamshelf
+            <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+          </OpenLink>
+          <div className="if-signed-out flex items-center gap-1">
               <Link to="/login" className="text-ink hover:text-brand rounded-lg px-3.5 py-2 text-[14.5px] font-medium transition-colors hover:bg-[color-mix(in_srgb,var(--brand)_9%,transparent)]">
                 Sign in
               </Link>
               <Link to="/signup" className={cn(PRIMARY, 'h-9 rounded-lg px-3.5 text-[14px] whitespace-nowrap sm:px-4')}>
                 Get started
               </Link>
-            </>
-          )}
+          </div>
         </div>
       </div>
     </header>
   )
 }
 
-/** A screenshot in both themes: the one for the viewer's theme shows. */
+/** A screenshot in both themes, the one for the viewer's theme showing: AVIF where the browser takes it, WebP otherwise. */
 function Shot({ name, alt, className, eager = false }: { name: string; alt: string; className?: string; eager?: boolean }) {
   const loading = eager ? 'eager' : 'lazy'
   return (
     <>
-      <img src={`/landing/${name}-light.webp`} alt={alt} className={cn('block w-full dark:hidden', className)} loading={loading} decoding="async" />
-      <img src={`/landing/${name}-dark.webp`} alt={alt} className={cn('hidden w-full dark:block', className)} loading={loading} decoding="async" />
+      <picture className="contents dark:hidden">
+        <source type="image/avif" srcSet={`/landing/${name}-light.avif`} />
+        <img src={`/landing/${name}-light.webp`} alt={alt} className={cn('block w-full dark:hidden', className)} loading={loading} decoding="async" />
+      </picture>
+      <picture className="hidden dark:contents">
+        <source type="image/avif" srcSet={`/landing/${name}-dark.avif`} />
+        <img src={`/landing/${name}-dark.webp`} alt={alt} className={cn('hidden w-full dark:block', className)} loading={loading} decoding="async" />
+      </picture>
     </>
   )
 }
 
 /**
  * The app itself, the page's largest picture: in the theme the system uses, at a size that fits
- * the screen (1440 or 2880 pixels wide, or the app on a phone for a phone), and loaded first.
+ * the screen (1200 or 2240 pixels wide, or the app on a phone for a phone), and loaded first.
  */
 function HeroShot() {
   const alt = "A team's space in Teamshelf: the spaces and the organization switcher in a sidebar, and cards of links grouped by topic."
   const sizes = '(min-width: 1200px) 1130px, calc(100vw - 48px)'
+  const wide = (theme: string, type: string) => `/landing/board-${theme}-1200.${type} 1200w, /landing/board-${theme}-2240.${type} 2240w`
   return (
     <picture>
-      {/* On a phone: the app as a phone shows it. */}
-      <source media="(max-width: 639px) and (prefers-color-scheme: dark)" type="image/webp" srcSet="/landing/board-dark-phone.webp" width={1170} height={2160} />
-      <source media="(max-width: 639px)" type="image/webp" srcSet="/landing/board-light-phone.webp" width={1170} height={2160} />
-      <source media="(prefers-color-scheme: dark)" type="image/webp" srcSet="/landing/board-dark-1440.webp 1440w, /landing/board-dark.webp 2880w" sizes={sizes} />
-      <img
-        src="/landing/board-light.webp"
-        srcSet="/landing/board-light-1440.webp 1440w, /landing/board-light.webp 2880w"
-        sizes={sizes}
-        width={2880}
-        height={1800}
-        alt={alt}
-        fetchPriority="high"
-        decoding="async"
-        className="block h-auto w-full"
-      />
+      {/* On a phone: the app as a phone shows it. AVIF where the browser takes it, WebP otherwise. */}
+      <source media="(max-width: 639px) and (prefers-color-scheme: dark)" type="image/avif" srcSet="/landing/board-dark-phone.avif" />
+      <source media="(max-width: 639px) and (prefers-color-scheme: dark)" type="image/webp" srcSet="/landing/board-dark-phone.webp" />
+      <source media="(max-width: 639px)" type="image/avif" srcSet="/landing/board-light-phone.avif" />
+      <source media="(max-width: 639px)" type="image/webp" srcSet="/landing/board-light-phone.webp" />
+      <source media="(prefers-color-scheme: dark)" type="image/avif" srcSet={wide('dark', 'avif')} sizes={sizes} />
+      <source media="(prefers-color-scheme: dark)" type="image/webp" srcSet={wide('dark', 'webp')} sizes={sizes} />
+      <source type="image/avif" srcSet={wide('light', 'avif')} sizes={sizes} />
+      <img src="/landing/board-light-1200.webp" srcSet={wide('light', 'webp')} sizes={sizes} width={2240} height={1400} alt={alt} fetchPriority="high" decoding="async" className="block h-auto w-full" />
     </picture>
   )
 }
@@ -182,7 +202,7 @@ function HeroShot() {
 /**
  * The top of the page: a faint grid behind a centered title, the way in, and the app itself.
  */
-function Hero({ returning }: { returning: boolean }) {
+function Hero() {
   return (
     <section className={cn(GUTTER, 'relative pt-12 sm:pt-20')}>
       {/* The grid, fading out toward the edges and the bottom. */}
@@ -205,7 +225,7 @@ function Hero({ returning }: { returning: boolean }) {
           Teamshelf gives each team a space for its tools, docs and files. Anyone finds what they need in a keystroke, and admins keep it tidy.
         </p>
         <div className="mt-9 w-full sm:w-auto">
-          <Actions returning={returning} />
+          <Actions />
         </div>
       </div>
 
@@ -337,7 +357,7 @@ function Steps() {
   )
 }
 
-function Closing({ returning }: { returning: boolean }) {
+function Closing() {
   return (
     <section className={cn(GUTTER, 'py-16 sm:py-24')}>
       <Reveal className="relative mx-auto max-w-6xl overflow-hidden rounded-[28px] bg-[#16184a] px-6 py-14 text-center sm:px-12 sm:py-20">
@@ -346,13 +366,11 @@ function Closing({ returning }: { returning: boolean }) {
           <h2 className={cn(HEADING, 'm-0 max-w-2xl text-[clamp(30px,4.4vw,50px)] leading-[1.06] text-white')}>Give your team one place for every link</h2>
           <p className="m-0 mt-4 max-w-lg text-[16.5px] leading-relaxed text-white/70">Set up your first space today. The next time someone asks for a link, it's already there.</p>
           <div className="mt-8 grid w-full gap-2.5 sm:flex sm:w-auto sm:justify-center">
-            {returning ? (
-              <Link to="/open" className="group inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 text-[15px] font-semibold text-[#16184a] transition-transform active:scale-[0.98]">
+              <OpenLink className="if-signed-in group inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 text-[15px] font-semibold text-[#16184a] transition-transform active:scale-[0.98]">
                 Open Teamshelf
                 <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-              </Link>
-            ) : (
-              <>
+              </OpenLink>
+              <div className="if-signed-out contents">
                 <Link to="/signup" className="group inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-white px-5 text-[15px] font-semibold text-[#16184a] transition-transform active:scale-[0.98]">
                   Create an organization
                   <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
@@ -360,8 +378,7 @@ function Closing({ returning }: { returning: boolean }) {
                 <Link to="/login" className="inline-flex h-11 items-center justify-center rounded-xl border border-white/25 px-5 text-[15px] font-semibold text-white transition-colors hover:bg-white/10">
                   Sign in
                 </Link>
-              </>
-            )}
+              </div>
           </div>
         </div>
       </Reveal>

@@ -34,12 +34,24 @@ test.describe('front page', () => {
       await expect(page.getByRole('heading', { name: new RegExp(feature) })).toHaveCount(1)
   })
 
-  test('someone signed in on this browser is offered to open the app', async ({ page }) => {
+  test('someone signed in on this browser is offered to open the app, at the organization used last', async ({ page }) => {
     await goto(page, '/__screens/go/board')
     await page.waitForURL('**/acme/development')
     await goto(page, '/')
-    await expect(page.getByRole('link', { name: 'Open Teamshelf' }).first()).toHaveAttribute('href', '/open')
+    await expect(page.getByRole('link', { name: 'Open Teamshelf' }).first()).toHaveAttribute('href', '/acme')
     await expect(page.getByRole('link', { name: 'Create an organization' })).toHaveCount(0)
+  })
+
+  test('both ways in are in the page as drawn, so nothing moves when it starts', async ({ page, request }) => {
+    // The page drawn on the server has both; a class set before the first paint shows one.
+    const html = await (await request.get('/')).text()
+    expect(html).toContain('Open Teamshelf')
+    expect(html).toContain('Create an organization')
+    await goto(page, '/__screens/go/board')
+    await page.waitForURL('**/acme/development')
+    await page.goto('/', { waitUntil: 'domcontentloaded' })
+    await expect(page.locator('html')).toHaveClass(/\bsigned-in\b/)
+    await expect(page.getByRole('link', { name: 'Get started' })).toBeHidden()
   })
 })
 

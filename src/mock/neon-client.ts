@@ -110,6 +110,8 @@ export function createClient({ auth }: { auth: { url: string }; dataApi?: unknow
     return answer
   }
 
+  const ON_SERVER: SessionAnswer = { data: null, isPending: false, error: null, refetch: () => {} }
+
   return {
     from: (table: string) => new QueryBuilder(table, user),
     rpc: (name: string, args: Record<string, unknown> = {}) => ({
@@ -117,7 +119,8 @@ export function createClient({ auth }: { auth: { url: string }; dataApi?: unknow
         later(() => runRpc(name, args, user())).then(onFulfilled, onRejected),
     }),
     auth: {
-      useSession: () => useSyncExternalStore(subscribe, session),
+      // On the server (public pages drawn there) nobody is signed in yet.
+      useSession: () => useSyncExternalStore(subscribe, session, () => ON_SERVER),
       getSession: async () => ({ data: session().data, error: null }),
       signIn: {
         // Nothing is emailed: the toolbar offers to open the link instead.

@@ -32,7 +32,7 @@ export const safePath = (path: string | undefined) => (path && /^\/(?!\/)/.test(
 export async function sendSignInLink(email: string, returnPath = '/') {
   const { error } = await neon.auth.signIn.magicLink({
     email: email.trim().toLowerCase(),
-    callbackURL: `${window.location.origin}/login?redirect=${encodeURIComponent(safePath(returnPath))}`,
+    callbackURL: `${window.location.origin}/login?via=link&redirect=${encodeURIComponent(safePath(returnPath))}`,
     errorCallbackURL: `${window.location.origin}/login`,
   })
   if (error) throw new Error(error.message ?? 'The email could not be sent.')

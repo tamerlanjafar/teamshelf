@@ -1,5 +1,5 @@
 // Once a day: deletes from R2 the files whose link was deleted (or whose space or group was).
-// The database lists them in public.file_trash (see db/migrations/012_spaces.sql).
+// The database lists them in public.file_trash (see db/migrations/000_baseline.sql).
 //
 // It connects as a role that can only read and clear that list: FILE_CLEANUP_DATABASE_URL.
 

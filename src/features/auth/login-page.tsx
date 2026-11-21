@@ -106,7 +106,7 @@ export function LoginPage({ linkExpired = false, returnPath, intent }: { linkExp
           : undefined
 
   return (
-    <AuthCard title={wording.title} description={wording.description} back={intent ? { label: 'Your organizations', onClick: () => crossTo('/organizations') } : undefined}>
+    <AuthCard title={wording.title} description={wording.description} back={intent ? { label: 'Your organizations', onClick: () => crossTo('/organizations'), signedInOnly: true } : undefined}>
       <form onSubmit={submit} noValidate>
         <FieldGroup className="gap-6">
           <Field className="gap-1.5" data-invalid={Boolean(error)}>

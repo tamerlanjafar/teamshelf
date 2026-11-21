@@ -10,138 +10,135 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as OrgRouteImport } from './routes/$org'
-import { Route as FileRouteImport } from './routes/file'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as NewRouteImport } from './routes/new'
-import { Route as OpenRouteImport } from './routes/open'
-import { Route as OrganizationsRouteImport } from './routes/organizations'
-import { Route as SignupRouteImport } from './routes/signup'
-import { Route as OrgIndexRouteImport } from './routes/$org/index'
-import { Route as OrgRequestsRouteImport } from './routes/$org/requests'
-import { Route as OrgSettingsRouteImport } from './routes/$org/settings'
-import { Route as OrgTeamRouteImport } from './routes/$org/team'
-import { Route as OrgSpaceIndexRouteImport } from './routes/$org/$space.index'
-import { Route as OrgSpaceSettingsRouteImport } from './routes/$org/$space.settings'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as AppOrgRouteImport } from './routes/_app/$org'
+import { Route as AppFileRouteImport } from './routes/_app/file'
+import { Route as AppLoginRouteImport } from './routes/_app/login'
+import { Route as AppNewRouteImport } from './routes/_app/new'
+import { Route as AppOrganizationsRouteImport } from './routes/_app/organizations'
+import { Route as AppSignupRouteImport } from './routes/_app/signup'
+import { Route as AppOrgIndexRouteImport } from './routes/_app/$org/index'
+import { Route as AppOrgRequestsRouteImport } from './routes/_app/$org/requests'
+import { Route as AppOrgSettingsRouteImport } from './routes/_app/$org/settings'
+import { Route as AppOrgTeamRouteImport } from './routes/_app/$org/team'
+import { Route as AppOrgSpaceIndexRouteImport } from './routes/_app/$org/$space.index'
+import { Route as AppOrgSpaceSettingsRouteImport } from './routes/_app/$org/$space.settings'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OrgRoute = OrgRouteImport.update({
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppOrgRoute = AppOrgRouteImport.update({
   id: '/$org',
   path: '/$org',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const FileRoute = FileRouteImport.update({
+const AppFileRoute = AppFileRouteImport.update({
   id: '/file',
   path: '/file',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const LoginRoute = LoginRouteImport.update({
+const AppLoginRoute = AppLoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const NewRoute = NewRouteImport.update({
+const AppNewRoute = AppNewRouteImport.update({
   id: '/new',
   path: '/new',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const OpenRoute = OpenRouteImport.update({
-  id: '/open',
-  path: '/open',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OrganizationsRoute = OrganizationsRouteImport.update({
+const AppOrganizationsRoute = AppOrganizationsRouteImport.update({
   id: '/organizations',
   path: '/organizations',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const SignupRoute = SignupRouteImport.update({
+const AppSignupRoute = AppSignupRouteImport.update({
   id: '/signup',
   path: '/signup',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
-const OrgIndexRoute = OrgIndexRouteImport.update({
+const AppOrgIndexRoute = AppOrgIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => OrgRoute,
+  getParentRoute: () => AppOrgRoute,
 } as any)
-const OrgRequestsRoute = OrgRequestsRouteImport.update({
+const AppOrgRequestsRoute = AppOrgRequestsRouteImport.update({
   id: '/requests',
   path: '/requests',
-  getParentRoute: () => OrgRoute,
+  getParentRoute: () => AppOrgRoute,
 } as any)
-const OrgSettingsRoute = OrgSettingsRouteImport.update({
+const AppOrgSettingsRoute = AppOrgSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
-  getParentRoute: () => OrgRoute,
+  getParentRoute: () => AppOrgRoute,
 } as any)
-const OrgTeamRoute = OrgTeamRouteImport.update({
+const AppOrgTeamRoute = AppOrgTeamRouteImport.update({
   id: '/team',
   path: '/team',
-  getParentRoute: () => OrgRoute,
+  getParentRoute: () => AppOrgRoute,
 } as any)
-const OrgSpaceIndexRoute = OrgSpaceIndexRouteImport.update({
+const AppOrgSpaceIndexRoute = AppOrgSpaceIndexRouteImport.update({
   id: '/$space/',
   path: '/$space/',
-  getParentRoute: () => OrgRoute,
+  getParentRoute: () => AppOrgRoute,
 } as any)
-const OrgSpaceSettingsRoute = OrgSpaceSettingsRouteImport.update({
+const AppOrgSpaceSettingsRoute = AppOrgSpaceSettingsRouteImport.update({
   id: '/$space/settings',
   path: '/$space/settings',
-  getParentRoute: () => OrgRoute,
+  getParentRoute: () => AppOrgRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/$org': typeof OrgRouteWithChildren
-  '/file': typeof FileRoute
-  '/login': typeof LoginRoute
-  '/new': typeof NewRoute
-  '/open': typeof OpenRoute
-  '/organizations': typeof OrganizationsRoute
-  '/signup': typeof SignupRoute
-  '/$org/requests': typeof OrgRequestsRoute
-  '/$org/settings': typeof OrgSettingsRoute
-  '/$org/team': typeof OrgTeamRoute
-  '/$org/': typeof OrgIndexRoute
-  '/$org/$space/settings': typeof OrgSpaceSettingsRoute
-  '/$org/$space/': typeof OrgSpaceIndexRoute
+  '/$org': typeof AppOrgRouteWithChildren
+  '/file': typeof AppFileRoute
+  '/login': typeof AppLoginRoute
+  '/new': typeof AppNewRoute
+  '/organizations': typeof AppOrganizationsRoute
+  '/signup': typeof AppSignupRoute
+  '/$org/requests': typeof AppOrgRequestsRoute
+  '/$org/settings': typeof AppOrgSettingsRoute
+  '/$org/team': typeof AppOrgTeamRoute
+  '/$org/': typeof AppOrgIndexRoute
+  '/$org/$space/settings': typeof AppOrgSpaceSettingsRoute
+  '/$org/$space/': typeof AppOrgSpaceIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/file': typeof FileRoute
-  '/login': typeof LoginRoute
-  '/new': typeof NewRoute
-  '/open': typeof OpenRoute
-  '/organizations': typeof OrganizationsRoute
-  '/signup': typeof SignupRoute
-  '/$org/requests': typeof OrgRequestsRoute
-  '/$org/settings': typeof OrgSettingsRoute
-  '/$org/team': typeof OrgTeamRoute
-  '/$org': typeof OrgIndexRoute
-  '/$org/$space/settings': typeof OrgSpaceSettingsRoute
-  '/$org/$space': typeof OrgSpaceIndexRoute
+  '/file': typeof AppFileRoute
+  '/login': typeof AppLoginRoute
+  '/new': typeof AppNewRoute
+  '/organizations': typeof AppOrganizationsRoute
+  '/signup': typeof AppSignupRoute
+  '/$org/requests': typeof AppOrgRequestsRoute
+  '/$org/settings': typeof AppOrgSettingsRoute
+  '/$org/team': typeof AppOrgTeamRoute
+  '/$org': typeof AppOrgIndexRoute
+  '/$org/$space/settings': typeof AppOrgSpaceSettingsRoute
+  '/$org/$space': typeof AppOrgSpaceIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/$org': typeof OrgRouteWithChildren
-  '/file': typeof FileRoute
-  '/login': typeof LoginRoute
-  '/new': typeof NewRoute
-  '/open': typeof OpenRoute
-  '/organizations': typeof OrganizationsRoute
-  '/signup': typeof SignupRoute
-  '/$org/requests': typeof OrgRequestsRoute
-  '/$org/settings': typeof OrgSettingsRoute
-  '/$org/team': typeof OrgTeamRoute
-  '/$org/': typeof OrgIndexRoute
-  '/$org/$space/settings': typeof OrgSpaceSettingsRoute
-  '/$org/$space/': typeof OrgSpaceIndexRoute
+  '/_app': typeof AppRouteWithChildren
+  '/_app/$org': typeof AppOrgRouteWithChildren
+  '/_app/file': typeof AppFileRoute
+  '/_app/login': typeof AppLoginRoute
+  '/_app/new': typeof AppNewRoute
+  '/_app/organizations': typeof AppOrganizationsRoute
+  '/_app/signup': typeof AppSignupRoute
+  '/_app/$org/requests': typeof AppOrgRequestsRoute
+  '/_app/$org/settings': typeof AppOrgSettingsRoute
+  '/_app/$org/team': typeof AppOrgTeamRoute
+  '/_app/$org/': typeof AppOrgIndexRoute
+  '/_app/$org/$space/settings': typeof AppOrgSpaceSettingsRoute
+  '/_app/$org/$space/': typeof AppOrgSpaceIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -151,7 +148,6 @@ export interface FileRouteTypes {
     | '/file'
     | '/login'
     | '/new'
-    | '/open'
     | '/organizations'
     | '/signup'
     | '/$org/requests'
@@ -166,7 +162,6 @@ export interface FileRouteTypes {
     | '/file'
     | '/login'
     | '/new'
-    | '/open'
     | '/organizations'
     | '/signup'
     | '/$org/requests'
@@ -178,30 +173,24 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/$org'
-    | '/file'
-    | '/login'
-    | '/new'
-    | '/open'
-    | '/organizations'
-    | '/signup'
-    | '/$org/requests'
-    | '/$org/settings'
-    | '/$org/team'
-    | '/$org/'
-    | '/$org/$space/settings'
-    | '/$org/$space/'
+    | '/_app'
+    | '/_app/$org'
+    | '/_app/file'
+    | '/_app/login'
+    | '/_app/new'
+    | '/_app/organizations'
+    | '/_app/signup'
+    | '/_app/$org/requests'
+    | '/_app/$org/settings'
+    | '/_app/$org/team'
+    | '/_app/$org/'
+    | '/_app/$org/$space/settings'
+    | '/_app/$org/$space/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  OrgRoute: typeof OrgRouteWithChildren
-  FileRoute: typeof FileRoute
-  LoginRoute: typeof LoginRoute
-  NewRoute: typeof NewRoute
-  OpenRoute: typeof OpenRoute
-  OrganizationsRoute: typeof OrganizationsRoute
-  SignupRoute: typeof SignupRoute
+  AppRoute: typeof AppRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -213,129 +202,144 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/$org': {
-      id: '/$org'
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/$org': {
+      id: '/_app/$org'
       path: '/$org'
       fullPath: '/$org'
-      preLoaderRoute: typeof OrgRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppOrgRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/file': {
-      id: '/file'
+    '/_app/file': {
+      id: '/_app/file'
       path: '/file'
       fullPath: '/file'
-      preLoaderRoute: typeof FileRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppFileRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/login': {
-      id: '/login'
+    '/_app/login': {
+      id: '/_app/login'
       path: '/login'
       fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppLoginRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/new': {
-      id: '/new'
+    '/_app/new': {
+      id: '/_app/new'
       path: '/new'
       fullPath: '/new'
-      preLoaderRoute: typeof NewRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppNewRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/open': {
-      id: '/open'
-      path: '/open'
-      fullPath: '/open'
-      preLoaderRoute: typeof OpenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/organizations': {
-      id: '/organizations'
+    '/_app/organizations': {
+      id: '/_app/organizations'
       path: '/organizations'
       fullPath: '/organizations'
-      preLoaderRoute: typeof OrganizationsRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppOrganizationsRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/signup': {
-      id: '/signup'
+    '/_app/signup': {
+      id: '/_app/signup'
       path: '/signup'
       fullPath: '/signup'
-      preLoaderRoute: typeof SignupRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppSignupRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/$org/': {
-      id: '/$org/'
+    '/_app/$org/': {
+      id: '/_app/$org/'
       path: '/'
       fullPath: '/$org/'
-      preLoaderRoute: typeof OrgIndexRouteImport
-      parentRoute: typeof OrgRoute
+      preLoaderRoute: typeof AppOrgIndexRouteImport
+      parentRoute: typeof AppOrgRoute
     }
-    '/$org/requests': {
-      id: '/$org/requests'
+    '/_app/$org/requests': {
+      id: '/_app/$org/requests'
       path: '/requests'
       fullPath: '/$org/requests'
-      preLoaderRoute: typeof OrgRequestsRouteImport
-      parentRoute: typeof OrgRoute
+      preLoaderRoute: typeof AppOrgRequestsRouteImport
+      parentRoute: typeof AppOrgRoute
     }
-    '/$org/settings': {
-      id: '/$org/settings'
+    '/_app/$org/settings': {
+      id: '/_app/$org/settings'
       path: '/settings'
       fullPath: '/$org/settings'
-      preLoaderRoute: typeof OrgSettingsRouteImport
-      parentRoute: typeof OrgRoute
+      preLoaderRoute: typeof AppOrgSettingsRouteImport
+      parentRoute: typeof AppOrgRoute
     }
-    '/$org/team': {
-      id: '/$org/team'
+    '/_app/$org/team': {
+      id: '/_app/$org/team'
       path: '/team'
       fullPath: '/$org/team'
-      preLoaderRoute: typeof OrgTeamRouteImport
-      parentRoute: typeof OrgRoute
+      preLoaderRoute: typeof AppOrgTeamRouteImport
+      parentRoute: typeof AppOrgRoute
     }
-    '/$org/$space/': {
-      id: '/$org/$space/'
+    '/_app/$org/$space/': {
+      id: '/_app/$org/$space/'
       path: '/$space'
       fullPath: '/$org/$space/'
-      preLoaderRoute: typeof OrgSpaceIndexRouteImport
-      parentRoute: typeof OrgRoute
+      preLoaderRoute: typeof AppOrgSpaceIndexRouteImport
+      parentRoute: typeof AppOrgRoute
     }
-    '/$org/$space/settings': {
-      id: '/$org/$space/settings'
+    '/_app/$org/$space/settings': {
+      id: '/_app/$org/$space/settings'
       path: '/$space/settings'
       fullPath: '/$org/$space/settings'
-      preLoaderRoute: typeof OrgSpaceSettingsRouteImport
-      parentRoute: typeof OrgRoute
+      preLoaderRoute: typeof AppOrgSpaceSettingsRouteImport
+      parentRoute: typeof AppOrgRoute
     }
   }
 }
 
-interface OrgRouteChildren {
-  OrgRequestsRoute: typeof OrgRequestsRoute
-  OrgSettingsRoute: typeof OrgSettingsRoute
-  OrgTeamRoute: typeof OrgTeamRoute
-  OrgIndexRoute: typeof OrgIndexRoute
-  OrgSpaceSettingsRoute: typeof OrgSpaceSettingsRoute
-  OrgSpaceIndexRoute: typeof OrgSpaceIndexRoute
+interface AppOrgRouteChildren {
+  AppOrgRequestsRoute: typeof AppOrgRequestsRoute
+  AppOrgSettingsRoute: typeof AppOrgSettingsRoute
+  AppOrgTeamRoute: typeof AppOrgTeamRoute
+  AppOrgIndexRoute: typeof AppOrgIndexRoute
+  AppOrgSpaceSettingsRoute: typeof AppOrgSpaceSettingsRoute
+  AppOrgSpaceIndexRoute: typeof AppOrgSpaceIndexRoute
 }
 
-const OrgRouteChildren: OrgRouteChildren = {
-  OrgRequestsRoute: OrgRequestsRoute,
-  OrgSettingsRoute: OrgSettingsRoute,
-  OrgTeamRoute: OrgTeamRoute,
-  OrgIndexRoute: OrgIndexRoute,
-  OrgSpaceSettingsRoute: OrgSpaceSettingsRoute,
-  OrgSpaceIndexRoute: OrgSpaceIndexRoute,
+const AppOrgRouteChildren: AppOrgRouteChildren = {
+  AppOrgRequestsRoute: AppOrgRequestsRoute,
+  AppOrgSettingsRoute: AppOrgSettingsRoute,
+  AppOrgTeamRoute: AppOrgTeamRoute,
+  AppOrgIndexRoute: AppOrgIndexRoute,
+  AppOrgSpaceSettingsRoute: AppOrgSpaceSettingsRoute,
+  AppOrgSpaceIndexRoute: AppOrgSpaceIndexRoute,
 }
 
-const OrgRouteWithChildren = OrgRoute._addFileChildren(OrgRouteChildren)
+const AppOrgRouteWithChildren =
+  AppOrgRoute._addFileChildren(AppOrgRouteChildren)
+
+interface AppRouteChildren {
+  AppOrgRoute: typeof AppOrgRouteWithChildren
+  AppFileRoute: typeof AppFileRoute
+  AppLoginRoute: typeof AppLoginRoute
+  AppNewRoute: typeof AppNewRoute
+  AppOrganizationsRoute: typeof AppOrganizationsRoute
+  AppSignupRoute: typeof AppSignupRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppOrgRoute: AppOrgRouteWithChildren,
+  AppFileRoute: AppFileRoute,
+  AppLoginRoute: AppLoginRoute,
+  AppNewRoute: AppNewRoute,
+  AppOrganizationsRoute: AppOrganizationsRoute,
+  AppSignupRoute: AppSignupRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  OrgRoute: OrgRouteWithChildren,
-  FileRoute: FileRoute,
-  LoginRoute: LoginRoute,
-  NewRoute: NewRoute,
-  OpenRoute: OpenRoute,
-  OrganizationsRoute: OrganizationsRoute,
-  SignupRoute: SignupRoute,
+  AppRoute: AppRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

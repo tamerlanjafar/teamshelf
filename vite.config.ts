@@ -87,7 +87,7 @@ const PUBLIC_PAGES = [
   { path: '/login', sitemap: { priority: 0.6, changefreq: 'monthly' as const } },
 ]
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ command, mode }) => {
   const mock = mode === 'mock'
   return {
     define: {
@@ -101,7 +101,9 @@ export default defineConfig(({ mode }) => {
         // Mock mode starts its made-up backend before the app (src/client.tsx).
         client: { entry: 'client.tsx' },
         // The shell for every other page: drawn from an app page (not "/", which is a page of its own).
-        spa: { enabled: true, maskPath: '/open', prerender: { outputPath: '/_shell', crawlLinks: false } },
+        // Only in the build: with it on, the dev server sends every page as the bare shell, so the
+        // public pages wouldn't be drawn on the server in development the way they are in production.
+        spa: { enabled: command === 'build', maskPath: '/organizations', prerender: { outputPath: '/_shell', crawlLinks: false } },
         // Only the pages listed: no others found on their own, none followed from links.
         prerender: { enabled: true, crawlLinks: false, autoStaticPathsDiscovery: false, autoSubfolderIndex: true, failOnError: true },
         pages: PUBLIC_PAGES.map((page) => ({ ...page, prerender: { enabled: true } })),
@@ -112,6 +114,21 @@ export default defineConfig(({ mode }) => {
       ...(mock ? [] : [iconLookup(), authProxy()]),
       appVersionFile(),
     ],
+    // Fewer, larger files for the browser: the framework every page needs in one chunk, the icons in
+    // one, and the app's tiny shared modules in one, instead of a dozen files of 1 or 2 KB each.
+    build: {
+      rolldownOptions: {
+        output: {
+          codeSplitting: {
+            groups: [
+              { name: 'framework', test: /node_modules[\\/](?:\.pnpm[\\/][^\\/]+[\\/]node_modules[\\/])?(?:react|react-dom|scheduler|seroval|seroval-plugins|@tanstack[\\/](?:react-router|router-core|history|store|react-store|start-[\w-]+|react-start[\w-]*))[\\/]/, priority: 30 },
+              { name: 'icons', test: /node_modules[\\/].*lucide-react/, priority: 20 },
+              { name: 'shared', test: /src[\\/](?:lib[\\/](?:site|colors|utils|theme|accounts|app-version)|components[\\/]app[\\/](?:brand|kbd))\.tsx?$/, priority: 10 },
+            ],
+          },
+        },
+      },
+    },
     resolve: {
       alias: [...(mock ? mockAliases : []), { find: '@', replacement: fileURLToPath(new URL('./src', import.meta.url)) }],
     },

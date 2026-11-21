@@ -1,4 +1,4 @@
-import { Link, Navigate, useNavigate } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { ChevronRight, LogIn, LogOut, Plus } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useSignedInOrgs, useSignOutEverywhere } from '@/api/accounts'
@@ -149,15 +149,4 @@ function OrgName({ name, detail }: { name: string; detail: string }) {
       <span className="text-muted-foreground block truncate text-[12.5px]">{detail}</span>
     </span>
   )
-}
-
-/**
- * Where "/" sends you: straight into your organization when you have exactly one and nothing
- * else to choose, otherwise to the list.
- */
-export function HomeRedirect() {
-  const { orgs, joinable } = useMyOrgs()
-  const signedIn = useSignedInOrgs()
-  if (orgs.length === 1 && joinable.length === 0 && signedIn.length <= 1) return <Navigate to="/$org" params={{ org: orgs[0].slug }} replace />
-  return <Navigate to="/organizations" replace />
 }

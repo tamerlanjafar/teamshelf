@@ -7,6 +7,12 @@ import { goto, openScreen, signedOut } from './helpers'
 test.describe('sign in', () => {
   test.beforeEach(async ({ page }) => signedOut(page))
 
+  test('sent here by a page that needs signing in, shows the form, with the way back to it kept', async ({ page }) => {
+    await goto(page, '/organizations')
+    await page.waitForURL(/\/login\?redirect=%2Forganizations$/)
+    await expect(page.getByLabel('Email')).toBeVisible()
+  })
+
   test('asks for an email and nothing else', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Welcome to Teamshelf' })).toBeVisible()
     await expect(page.getByLabel('Email')).toBeVisible()
@@ -59,6 +65,22 @@ test('a link that expired says so, without an error in the address', async ({ pa
   await openScreen(page, 'link-expired')
   expect(new URL(page.url()).search).toBe('')
   await expect(page.getByText('That link has expired. Sign in again to get a new one.')).toBeVisible()
+})
+
+test.describe('the way back to your organizations', () => {
+  test('is not offered on a browser with no organizations', async ({ page }) => {
+    await signedOut(page)
+    await goto(page, '/signup')
+    await expect(page.getByRole('heading', { name: 'Create an organization' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Your organizations' })).toHaveCount(0)
+  })
+
+  test('is offered when signing in to another organization', async ({ page }) => {
+    await openScreen(page, 'board')
+    await goto(page, '/login?intent=join')
+    await page.getByRole('button', { name: 'Your organizations' }).click()
+    await page.waitForURL('**/organizations')
+  })
 })
 
 test.describe('create an organization', () => {

@@ -18,7 +18,7 @@ export const AUTH_PATH = '/api/auth'
 /** The session of a sign-in that isn't tied to an organization yet. Not a valid organization address. */
 export const NEW_SLOT = '_new'
 
-// The shape of an organization's address (db/migrations/002_organizations.sql), or _new.
+// The shape of an organization's address (db/migrations/000_baseline.sql), or _new.
 const SLOT = /^(?:[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?|_new)$/
 const isSlot = (value) => typeof value === 'string' && value.length >= 2 && SLOT.test(value)
 

@@ -1,16 +1,14 @@
-import { QueryClientProvider } from '@tanstack/react-query'
 import { createRootRoute, HeadContent, Outlet, Scripts } from '@tanstack/react-router'
 import { useEffect, type ReactNode } from 'react'
-import { Toaster } from 'sonner'
-import { TooltipProvider } from '@/components/ui/tooltip'
 import { watchAppVersion } from '@/lib/app-version'
-import { queryClient } from '@/lib/query-client'
 import { OG_IMAGE, SITE_NAME, TAGLINE } from '@/lib/site'
-import { useTheme } from '@/lib/theme'
+// Follows the system's theme while a page is open (src/lib/theme.ts).
+import '@/lib/theme'
 import '@/index.css'
 
 /**
- * Before the first paint: the theme (src/lib/theme.ts keeps it up to date afterwards), and a
+ * Before the first paint: the theme (src/lib/theme.ts keeps it up to date afterwards), whether
+ * this browser is signed in (a `signed-in` class), and a
  * `js` class, so parts that rise into view as you scroll start out of sight only when the page
  * can bring them back (src/features/landing/motion.tsx).
  */
@@ -20,6 +18,11 @@ const BEFORE_PAINT = `try {
   var choice = localStorage.getItem('teamshelf-theme')
   var dark = choice === 'dark' || (choice !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)
   root.dataset.theme = dark ? 'dark' : 'light'
+  // Signed in to an organization (the list in src/lib/accounts.ts): the parts drawn for either
+  // case show the right one from the first paint (index.css), so nothing jumps when it runs.
+  var saved = JSON.parse(localStorage.getItem('teamshelf.accounts') || 'null')
+  if (saved && saved.accounts && saved.accounts.some(function (a) { return a.slots && a.slots.length }))
+    root.classList.add('signed-in')
 } catch (error) {}`
 
 export const Route = createRootRoute({
@@ -30,6 +33,9 @@ export const Route = createRootRoute({
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       { title: SITE_NAME },
       { name: 'description', content: TAGLINE },
+      // Not listed unless the page says so: the public pages do (pageHead in src/lib/site.ts). The
+      // shell the app's pages load in (drawn from this route alone) keeps it.
+      { name: 'robots', content: 'noindex, nofollow' },
       { name: 'theme-color', content: '#f2f3f7', media: '(prefers-color-scheme: light)' },
       { name: 'theme-color', content: '#0d0e13', media: '(prefers-color-scheme: dark)' },
       { name: 'application-name', content: SITE_NAME },
@@ -72,17 +78,10 @@ function Document({ children }: { children: ReactNode }) {
   )
 }
 
+/** Every page. What the app's pages share (data, tooltips, toasts) is in src/routes/_app.tsx. */
 function Root() {
-  const theme = useTheme()
   useEffect(() => {
     watchAppVersion()
   }, [])
-  return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider delay={400}>
-        <Outlet />
-        <Toaster theme={theme} position="bottom-center" toastOptions={{ style: { borderRadius: 12 } }} />
-      </TooltipProvider>
-    </QueryClientProvider>
-  )
+  return <Outlet />
 }

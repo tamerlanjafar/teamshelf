@@ -17,14 +17,15 @@ import { neon, safePath } from '@/lib/neon'
  * also what it shows until the page is running. Then, coming back from a sign-in link, it
  * finishes signing in.
  */
-export function SignInScreen({ intent, back, linkExpired = false }: { intent?: LoginIntent; back?: string; linkExpired?: boolean }) {
+export function SignInScreen({ intent, back, fromLink = false, linkExpired = false }: { intent?: LoginIntent; back?: string; fromLink?: boolean; linkExpired?: boolean }) {
   const hydrated = useHydrated()
   const session = neon.auth.useSession()
   const returnPath = intent === 'create' ? '/new' : safePath(back)
 
   if (hydrated) {
-    // Back from a sign-in link: wait for its session rather than showing the form again.
-    if (session.isPending && back) return <Splash />
+    // Back from a sign-in link: wait for its session rather than showing the form again. Sent
+    // here by a page that needs signing in, the form shows at once: that page already waited.
+    if (session.isPending && fromLink) return <Splash />
     if (session.data && !intent) return <FinishSignIn user={session.data.user} returnPath={returnPath} />
   }
   return <LoginPage linkExpired={linkExpired} returnPath={returnPath} intent={intent} />

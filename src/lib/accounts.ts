@@ -51,6 +51,7 @@ interface Saved {
   last?: string
 }
 
+/** Also read before the first paint, in src/routes/__root.tsx: keep in step. */
 const STORE = 'teamshelf.accounts'
 
 function load(): Saved {
@@ -92,6 +93,12 @@ export const ACTIVE_SLOT: string = (() => {
 export const authUrl = (slot = ACTIVE_SLOT) => `${typeof window === 'undefined' ? SITE_URL : window.location.origin}${AUTH_PATH}/${slot}`
 
 export const savedAccounts = (): Account[] => load().accounts
+
+/** The organization used last on this browser, if it is still signed in to it. */
+export function lastOrg(): string | null {
+  const { accounts, last } = load()
+  return last && last !== NEW_SLOT && accounts.some((account) => account.slots.includes(last)) ? last : null
+}
 
 /** Makes this session the one the pages outside an organization use. */
 export const setLastSlot = (slot: string) => save({ ...load(), last: slot })

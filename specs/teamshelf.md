@@ -8,7 +8,8 @@ What the end-to-end tests cover, by area. Each line is a test in `e2e/<area>.spe
 - The hero shows the app itself, loaded.
 - Header section links glide to their section without changing the address.
 - Every feature is named on the page.
-- Someone signed in on this browser is offered "Open Teamshelf" (→ /open) instead.
+- Someone signed in on this browser is offered "Open Teamshelf" instead, going straight to the organization used last (or /organizations).
+- Both ways in are in the page as drawn on the server; a class set before the first paint shows the right one, so nothing moves.
 - `/`, `/login`, `/signup`: own title, description, `index` robots, canonical address, Open Graph and Twitter tags.
 - The front page has its structured data (WebSite, Organization, SoftwareApplication).
 - The app's pages say `noindex, nofollow`.
@@ -18,6 +19,8 @@ What the end-to-end tests cover, by area. Each line is a test in `e2e/<area>.spe
 ## Signing in and signing up (`auth.spec.ts`)
 
 - Sign-in asks for an email only, no password.
+- Sent to sign in by a page that needs it: the form shows (no waiting screen), and the address keeps where to go back.
+- "Your organizations" isn't offered on a browser with no organizations; it is when signing in to another one, and goes there.
 - An address that isn't an email is refused under the field; typing again clears the message.
 - An empty field is refused.
 - Enter sends the link, like the button.
