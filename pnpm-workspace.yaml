@@ -1,3 +1,7 @@
+packages:
+  - apps/*
+  - packages/*
+
 # Which dependencies may run their install scripts. pnpm refuses to install until each one
 # that has such a script is listed here, allowed or not.
 allowBuilds:

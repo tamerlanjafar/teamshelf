@@ -26,7 +26,12 @@ dist-ssr
 .env
 
 # Playwright
-/test-results/
-/playwright-report/
-/blob-report/
-/playwright/.cache/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Tools
+.turbo
+.netlify
+.tanstack

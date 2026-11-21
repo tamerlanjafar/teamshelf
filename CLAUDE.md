@@ -1,6 +1,8 @@
 # Teamshelf
 
-How the app is built, run and deployed is in README.md. This file is the working rules.
+How it is set up is in SETUP.md, how it works in docs/HOW_IT_WORKS.md. This file is the working rules.
+
+The repository holds two apps (`apps/web`, `apps/back-office`) and one shared package (`packages/auth-proxy`). The rules below are written for `apps/web`, where paths start unless they say otherwise. The back office follows the same rules on a smaller scale: its demo mode (`pnpm --filter @teamshelf/back-office dev:demo`) is its mock mode, and its tests are in `apps/back-office/e2e`.
 
 ## Tests are part of every change
 
@@ -8,7 +10,7 @@ Three layers, each run with one command:
 
 | What | Where | Command |
 | --- | --- | --- |
-| Rules in plain code (link names, board layout, auth proxy) | `src/**/*.test.ts`, `netlify/lib/*.test.mjs` | `pnpm test` |
+| Rules in plain code (link names, board layout, file kinds, icon lookup) | `src/**/*.test.ts`, `netlify/lib/*.test.mjs` | `pnpm test` |
 | End to end, in a browser, against mock mode | `e2e/*.spec.ts`, plan in `specs/teamshelf.md` | `pnpm test:e2e` |
 | What search engines get from the build | `scripts/check-build.mjs` | `pnpm build && pnpm test:build` |
 
@@ -34,11 +36,12 @@ Tests find things the way people do: by role and visible name (`getByRole('butto
 
 ## Public pages and search engines
 
-`/`, `/login` and `/signup` are drawn at build time (`PUBLIC_PAGES` in `vite.config.ts`). Code that runs while drawing them must not need a browser: `window`, `localStorage` and the like only in effects, event handlers, or behind `typeof window` checks. Every other route says `ssr: false` and gets `privateHead()` (noindex). A new public page needs: a `PUBLIC_PAGES` entry, `pageHead()` in its route, a line in `public/robots.txt` if it isn't under `/`, and cases in `e2e/public.spec.ts` and `scripts/check-build.mjs`.
+`/`, `/login` and `/signup` are drawn at build time (`PUBLIC_PAGES` in `vite.config.ts`). Code that runs while drawing them must not need a browser: `window`, `localStorage` and the like only in effects, event handlers, or behind `typeof window` checks. Every other route says `ssr: false` and gets `privateHead()` (noindex). A new public page needs: a `PUBLIC_PAGES` entry, `pageHead()` in its route, and cases in `e2e/public.spec.ts` and `scripts/check-build.mjs`.
 
 ## Other rules
 
-- Images and other files that change go in `src/` and are imported (Vite names them by a hash of their content, served from `/assets/` with a year-long cache, see `netlify.toml`). `public/` is only for files that must keep a fixed address (favicon, `og.png`, `robots.txt`): browsers and Cloudflare may keep an old copy of a changed file there.
-- Dev server ports come from `~/Documents/DEV_PORTS.md`: 3011 dev, 3012 mock mode, 3013 build preview, 3014 end-to-end tests.
+- Images and other files that change go in `src/` and are imported (Vite names them by a hash of their content, served from `/assets/` with a year-long cache, see `netlify.toml`). `public/` is only for files that must keep a fixed address (favicon, `og.png`): browsers and Cloudflare may keep an old copy of a changed file there.
+- Ports: 3011 dev, 3012 mock mode, 3013 build preview, 3014 end-to-end tests; the back office: 3015 dev, 3016 demo mode and its tests.
 - Example data is made up (Acme, Lumen Labs, Orbit; `example.com` addresses). Never real company names or emails, in the app, tests or screenshots.
-- Database changes are migrations in `db/migrations`, applied with `pnpm db:migrate` only when asked.
+- Database changes are migrations in `db/migrations` (at the top of the repository), applied with `pnpm db:migrate` only when asked. What the database enforces is the protection; the app's checks only decide what to show.
+- Nothing of one installation is written in the code: addresses and keys come from `.env` (one file, at the top) and the host's variables.

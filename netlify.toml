@@ -1,21 +1,22 @@
-# Netlify: builds the static site and serves it. The front page, /login and /signup are plain
+# Netlify, for the app (apps/web): builds the static site and serves it. It is at the top of the
+# repository so a site connected to it needs no settings of its own: `base` says where the app is.
+# The back office is a second site, with its own file (apps/back-office/netlify.toml) and its base
+# directory set in Netlify.
+#
+# The front page, /login and /signup are plain
 # HTML drawn at build time; every other page loads the app from one shell (_shell.html).
 
 [build]
+  # Everything below is relative to this folder: the build's output, and netlify/functions.
+  base = "apps/web"
   command = "pnpm build"
   publish = "dist/client"
 
 [build.environment]
   NODE_VERSION = "22"
-  # Public addresses of the Neon project. They end up in the browser anyway, so they are not
-  # secrets. DATABASE_URL is a secret and is never needed here: it is only for `pnpm db:migrate`
-  # on your own machine.
-  VITE_NEON_AUTH_URL = "https://ep-still-term-bapw7e1f.neonauth.c-8.eu-central-1.aws.neon.tech/neondb/auth"
-  VITE_NEON_DATA_API_URL = "https://ep-still-term-bapw7e1f.apirest.c-8.eu-central-1.aws.neon.tech/neondb/rest/v1"
-  # Netlify's secret scanner fails a build when a value marked as secret shows up in the repo
-  # or in the built files. These two are public and are meant to be in the built files, so the
-  # scanner is told to leave them alone. Everything else (DATABASE_URL, if it is ever set in
-  # Netlify) is still scanned.
+  # The site's variables are set in Netlify, not here (`pnpm cloud` sets them, see SETUP.md).
+  # The two Neon addresses are public and end up in the built files, so Netlify's secret scanner
+  # is told to leave them alone. Everything else is still scanned.
   SECRETS_SCAN_OMIT_KEYS = "VITE_NEON_AUTH_URL,VITE_NEON_DATA_API_URL"
 
 # Pages drawn at build time are files (/, /login/index.html, /signup/index.html) and Netlify

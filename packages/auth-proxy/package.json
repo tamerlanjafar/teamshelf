@@ -1,0 +1,19 @@
+{
+  "name": "@teamshelf/auth-proxy",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./index.d.mts",
+      "default": "./index.mjs"
+    },
+    "./vite": {
+      "types": "./vite.d.mts",
+      "default": "./vite.mjs"
+    }
+  },
+  "dependencies": {
+    "@neondatabase/neon-js": "0.9.0-beta"
+  }
+}

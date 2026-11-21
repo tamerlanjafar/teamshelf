@@ -1,0 +1,471 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+/* The theme is always written on <html data-theme>, see lib/theme.ts. */
+@custom-variant dark (&:is([data-theme='dark'] *));
+
+/* Teamshelf's palette. A cool, quiet page, white surfaces, an indigo brand color, and one
+   color per group that tints its card. Started from the Workroom Tabs launcher. */
+:root {
+    color-scheme: light;
+    --page: #f2f3f7;
+    --surface: #ffffff;
+    --ink: #13151d;
+    --quiet: #636a7c; /* secondary text */
+    --line: rgba(19, 21, 29, 0.09);
+    --brand: #4b50e6;
+    --on-brand: #ffffff;
+    --raised: #ffffff; /* a row in a list, a menu */
+    --well: #eff0f5; /* a control sunk into a row */
+    --chip: #ffffff; /* the chosen one of several choices */
+    --danger: #d5352f;
+    --wash: 11%; /* how much of its color the top of a card takes */
+    --wash-low: 4%; /* and the rest of it */
+    --shadow: 220 30% 20%; /* the color of shadows, as HSL parts */
+    --font-rounded: ui-rounded, 'SF Pro Rounded', system-ui, sans-serif;
+}
+
+:root[data-theme='dark'] {
+    color-scheme: dark;
+    --page: #0d0e13;
+    --surface: #16181f;
+    --ink: #eceef4;
+    --quiet: #8d93a4;
+    --line: rgba(236, 238, 244, 0.09);
+    --brand: #8a90ff;
+    --on-brand: #0d0e13;
+    --raised: #1c1e27;
+    --well: #101116;
+    --chip: #343848;
+    --danger: #ff6b66;
+    --wash: 17%;
+    --wash-low: 7%;
+    --shadow: 230 40% 2%;
+}
+
+/* The names the shadcn components expect, mapped onto the palette above. */
+:root {
+    --radius: 0.75rem;
+    --background: var(--surface);
+    --foreground: var(--ink);
+    --card: var(--surface);
+    --card-foreground: var(--ink);
+    --popover: var(--raised);
+    --popover-foreground: var(--ink);
+    --primary: var(--brand);
+    --primary-foreground: var(--on-brand);
+    --secondary: var(--well);
+    --secondary-foreground: var(--ink);
+    --muted: var(--well);
+    --muted-foreground: var(--quiet);
+    --accent: color-mix(in srgb, var(--ink) 7%, transparent);
+    --accent-foreground: var(--ink);
+    --destructive: var(--danger);
+    --border: var(--line);
+    --input: var(--line);
+    --ring: var(--brand);
+}
+
+@theme inline {
+    --font-sans: system-ui, -apple-system, sans-serif;
+    --font-rounded: var(--font-rounded);
+    --color-page: var(--page);
+    --color-surface: var(--surface);
+    --color-ink: var(--ink);
+    --color-quiet: var(--quiet);
+    --color-line: var(--line);
+    --color-brand: var(--brand);
+    --color-on-brand: var(--on-brand);
+    --color-raised: var(--raised);
+    --color-well: var(--well);
+    --color-chip: var(--chip);
+    --color-danger: var(--danger);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --color-foreground: var(--foreground);
+    --color-background: var(--background);
+    /* One scale of corners, by the size of the thing: a small button inside a line (xs), a
+       badge or a menu item (sm), a line or a small button (md), a 40px control such as the
+       search, a button or the space switcher (lg), a menu, dialog or panel (xl), a board card (2xl).
+       Something inside another keeps the outer corner less the gap between them. */
+    --radius-xs: 6px;
+    --radius-sm: 8px;
+    --radius-md: 10px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --radius-2xl: 18px;
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    html {
+        @apply font-sans;
+    }
+
+    body {
+        margin: 0;
+        min-height: 100dvh;
+        color: var(--ink);
+        font-size: 14px;
+        line-height: 1.35;
+        -webkit-font-smoothing: antialiased;
+        background: var(--page);
+    }
+
+    button {
+        cursor: pointer;
+    }
+
+    :focus-visible {
+        outline: 2px solid var(--brand);
+        outline-offset: 2px;
+    }
+
+    /* A field shows that it has the focus with its border, not with a ring around it. */
+    input:focus-visible,
+    textarea:focus-visible {
+        outline: none;
+    }
+
+    kbd {
+        display: inline-grid;
+        place-items: center;
+        min-width: 22px;
+        height: 22px;
+        padding: 0 6px;
+        font: 500 12px/1 var(--font-rounded);
+        color: var(--quiet);
+        background: var(--page);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+    }
+}
+
+/* Animations the components use (animate-skeleton, animate-splash, animate-card-in). */
+@theme {
+    --animate-skeleton: skeleton-pulse 1.4s ease-in-out infinite;
+    --animate-splash: splash-slash 1.1s ease-in-out infinite;
+    --animate-card-in: card-in 0.2s ease-out backwards;
+
+    @keyframes skeleton-pulse {
+        50% {
+            opacity: 0.45;
+        }
+    }
+
+    @keyframes splash-slash {
+        0%,
+        100% {
+            opacity: 0.35;
+        }
+        50% {
+            opacity: 1;
+        }
+    }
+
+    @keyframes card-in {
+        from {
+            opacity: 0;
+            translate: 0 6px;
+        }
+    }
+}
+
+/* Changing the theme (lib/theme.ts, setThemeFrom): the new look grows as a circle over the old
+   one. The circle is drawn by script, so the browser's own cross-fade is switched off. */
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation: none;
+    mix-blend-mode: normal;
+}
+
+/* The front page's small demos (src/features/landing). */
+@keyframes fade-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: none; }
+}
+@keyframes pop-in {
+    from { opacity: 0; transform: scale(0.85); }
+    to { opacity: 1; transform: none; }
+}
+@keyframes blink {
+    50% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+    [class*='animate-['] { animation: none !important; }
+}
+
+/* Parts of the front page that rise into view (Reveal in src/features/landing/motion.tsx): out
+   of sight until they come into view, only when the page runs (html.js), never in the page as
+   it was drawn at build time, which search engines and people without scripts get as it is. */
+html.js [data-reveal]:not([data-shown]) {
+    opacity: 0;
+    translate: 0 20px;
+}
+@media (prefers-reduced-motion: reduce) {
+    html.js [data-reveal]:not([data-shown]) { opacity: 1; translate: none; }
+}
+
+/* Parts drawn for both cases, signed in to an organization or not (the `signed-in` class, set
+   before the first paint in src/routes/__root.tsx): only the one that applies shows, from the
+   start, so nothing changes size once the page runs. Signed out is what the page drawn at build
+   time shows without scripts. */
+html:not(.signed-in) .if-signed-in,
+html.signed-in .if-signed-out {
+    display: none !important;
+}
+
+/* iOS zooms the whole page into a field whose text is under 16px when it gets focus. Only on iOS
+   (the only browsers with -webkit-touch-callout), every field's text is 16px, whatever its design. */
+@supports (-webkit-touch-callout: none) {
+    input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"]),
+    textarea,
+    select,
+    [contenteditable="true"] {
+        font-size: 16px !important;
+    }
+}
+
+/* Every scroll area the same: a thin, rounded thumb on no track, faint, and darker while the
+   pointer is over the area. */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--ink) 14%, transparent) transparent;
+}
+*:hover {
+    scrollbar-color: color-mix(in srgb, var(--ink) 26%, transparent) transparent;
+}
+
+/*
+ * Documents (features/files): how a Markdown document reads, in the viewer and in the editor.
+ * Tailwind's reset takes the browser's own look off headings and lists, so it is given back here.
+ */
+/* What to write, shown while the document is empty. */
+.doc-prose p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    color: var(--quiet);
+    pointer-events: none;
+}
+/* A checklist: its boxes stand in for the bullets, each beside its line. */
+.doc-prose ul[data-type='taskList'] {
+    list-style: none;
+    padding-left: 0.2em;
+}
+.doc-prose ul[data-type='taskList'] > li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+.doc-prose ul[data-type='taskList'] > li > label {
+    flex: none;
+    margin-top: 0.32em;
+    line-height: 0;
+}
+.doc-prose ul[data-type='taskList'] > li > label input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--brand);
+}
+.doc-prose ul[data-type='taskList'] > li > div {
+    flex: 1;
+    min-width: 0;
+}
+.doc-prose ul[data-type='taskList'] > li > div > p {
+    margin: 0;
+}
+.doc-prose ul[data-type='taskList'] > li[data-checked='true'] > div {
+    color: var(--quiet);
+    text-decoration: line-through;
+}
+.doc-prose li > p {
+    margin: 0;
+}
+/* A block of code. */
+.doc-prose pre {
+    margin: 0 0 1em;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+    font-size: 13.5px;
+    line-height: 1.55;
+    overflow-x: auto;
+}
+.doc-prose pre code {
+    padding: 0;
+    background: none;
+    font-size: inherit;
+}
+.doc-prose .tableWrapper {
+    overflow-x: auto;
+}
+.doc-prose th > p,
+.doc-prose td > p {
+    margin: 0;
+}
+/* The cells chosen in a table, and where the caret is between blocks. */
+.doc-prose .selectedCell {
+    background: color-mix(in srgb, var(--brand) 12%, transparent);
+}
+.doc-prose .ProseMirror-gapcursor::after {
+    border-top-color: var(--ink);
+}
+.doc-prose {
+    padding: 20px 4px 96px;
+    font-size: 16px;
+    line-height: 1.65;
+    outline: none;
+    overflow-wrap: anywhere;
+}
+.doc-prose > :first-child {
+    margin-top: 0;
+}
+.doc-prose h1,
+.doc-prose h2,
+.doc-prose h3,
+.doc-prose h4,
+.doc-prose h5,
+.doc-prose h6 {
+    font-family: var(--font-rounded);
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+    margin: 1.6em 0 0.5em;
+    text-wrap: balance;
+}
+.doc-prose h1 {
+    font-size: 30px;
+    letter-spacing: -0.02em;
+}
+.doc-prose h2 {
+    font-size: 23px;
+}
+.doc-prose h3 {
+    font-size: 19px;
+}
+.doc-prose h4,
+.doc-prose h5,
+.doc-prose h6 {
+    font-size: 16px;
+}
+.doc-prose p {
+    margin: 0 0 0.9em;
+}
+.doc-prose a {
+    color: var(--brand);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+.doc-prose ul,
+.doc-prose ol {
+    margin: 0 0 0.9em;
+    padding-left: 1.5em;
+}
+.doc-prose ul {
+    list-style: disc;
+}
+.doc-prose ol {
+    list-style: decimal;
+}
+.doc-prose li {
+    margin: 0.2em 0;
+}
+.doc-prose blockquote {
+    margin: 0 0 0.9em;
+    padding: 2px 0 2px 16px;
+    border-left: 3px solid color-mix(in srgb, var(--brand) 45%, transparent);
+    color: var(--quiet);
+}
+.doc-prose hr {
+    margin: 1.6em 0;
+    border: 0;
+    border-top: 1px solid var(--line);
+}
+.doc-prose code {
+    padding: 1px 5px;
+    border-radius: 5px;
+    background: color-mix(in srgb, var(--ink) 8%, transparent);
+    font-size: 0.9em;
+}
+.doc-prose img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+}
+.doc-prose table {
+    width: 100%;
+    margin: 0 0 1em;
+    border-collapse: collapse;
+    font-size: 15px;
+}
+/* While a document is edited, its columns are equal and stay put as a cell is typed in. For
+   reading, each column takes the room its content needs. */
+.doc-prose[contenteditable='true'] table {
+    table-layout: fixed;
+}
+.doc-prose th,
+.doc-prose td {
+    padding: 7px 10px;
+    border: 1px solid var(--line);
+    text-align: left;
+    vertical-align: top;
+}
+.doc-prose th {
+    background: color-mix(in srgb, var(--ink) 4%, transparent);
+    font-weight: 600;
+}
+
+/* A picture from another site: where it is from, and the button that fetches it. */
+.doc-prose .doc-picture {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 12px;
+    margin: 0 0 1em;
+    padding: 9px 12px;
+    border: 1px dashed var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--quiet);
+    font-size: 13.5px;
+    line-height: 1.4;
+    user-select: none;
+}
+.doc-prose .doc-picture button {
+    color: var(--brand);
+    font-weight: 500;
+}
+.doc-prose .doc-picture button:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+.doc-prose .doc-picture.doc-picture-shown {
+    display: block;
+    padding: 0;
+    border: 0;
+    background: none;
+}
+.doc-prose .doc-picture.ProseMirror-selectednode {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+}

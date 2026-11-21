@@ -1,0 +1,72 @@
+@import 'tailwindcss';
+
+/* The theme is written on <html data-theme> before the first paint (index.html). */
+@custom-variant dark (&:is([data-theme='dark'] *));
+
+/* The same palette as the app (apps/web/src/index.css). */
+:root {
+    color-scheme: light;
+    --page: #f2f3f7;
+    --surface: #ffffff;
+    --ink: #13151d;
+    --quiet: #636a7c;
+    --line: rgba(19, 21, 29, 0.09);
+    --brand: #4b50e6;
+    --on-brand: #ffffff;
+    --well: #eff0f5;
+    --danger: #d5352f;
+    --warning: #b45309;
+    --shadow: 220 30% 20%;
+}
+
+:root[data-theme='dark'] {
+    color-scheme: dark;
+    --page: #0d0e13;
+    --surface: #16181f;
+    --ink: #eceef4;
+    --quiet: #8d93a4;
+    --line: rgba(236, 238, 244, 0.09);
+    --brand: #8a90ff;
+    --on-brand: #0d0e13;
+    --well: #101116;
+    --danger: #ff6b66;
+    --warning: #f5a524;
+    --shadow: 230 40% 2%;
+}
+
+@theme inline {
+    --font-sans: system-ui, -apple-system, sans-serif;
+    --font-rounded: ui-rounded, 'SF Pro Rounded', system-ui, sans-serif;
+    --color-page: var(--page);
+    --color-surface: var(--surface);
+    --color-ink: var(--ink);
+    --color-quiet: var(--quiet);
+    --color-line: var(--line);
+    --color-brand: var(--brand);
+    --color-on-brand: var(--on-brand);
+    --color-well: var(--well);
+    --color-danger: var(--danger);
+    --color-warning: var(--warning);
+}
+
+@layer base {
+    * {
+        border-color: var(--line);
+    }
+    body {
+        margin: 0;
+        min-height: 100dvh;
+        color: var(--ink);
+        background: var(--page);
+        font-size: 14px;
+        line-height: 1.4;
+        -webkit-font-smoothing: antialiased;
+    }
+    button {
+        cursor: pointer;
+    }
+    :focus-visible {
+        outline: 2px solid var(--brand);
+        outline-offset: 2px;
+    }
+}
