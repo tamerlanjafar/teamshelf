@@ -3,7 +3,8 @@ import { goto, openScreen } from './helpers'
 
 // Folders inside a group, and inside each other: Data's Documentation. Pipelines holds
 // Warehouse (2 files) and Transform (1) and a file of its own; Metrics holds Finance; Archive is
-// empty; Glossary is at the top of the group. Folders are open unless someone closed them.
+// empty; Glossary is at the top of the group. Folders are closed until someone opens them: most
+// tests start from board-folders-open, where Alex opened them all.
 
 const docs = (page: Page) => page.getByRole('region', { name: 'Documentation' })
 const folder = (page: Page, name: string) => docs(page).getByRole('button', { name: new RegExp(`^${name}\\b`) })
@@ -38,13 +39,49 @@ async function dragOn(page: Page, target: Locator) {
   await page.mouse.move(to.x + 40, to.y + to.height / 2, { steps: 12 })
 }
 
-test.describe('as an admin of the space', () => {
+test.describe('as everyone first sees them', () => {
   test.beforeEach(async ({ page }) => {
     await openScreen(page, 'board-folders')
     await expect(docs(page)).toBeVisible()
   })
 
-  test('folders come first, A to Z, open, each with how many links it holds', async ({ page }) => {
+  test('folders start closed, and what is in them doesn’t show', async ({ page }) => {
+    // Only the top-level folders: those inside them are folded away too.
+    expect(await folderNames(page)).toEqual(['Archive', 'Metrics', 'Onboarding', 'Pipelines', 'Runbooks'])
+    await expect(folder(page, 'Pipelines')).toHaveAttribute('aria-expanded', 'false')
+    await expect(folder(page, 'Pipelines')).toContainText('4')
+    await expect(docs(page).getByRole('link', { name: 'Pipeline overview' })).toHaveCount(0)
+    await expect(docs(page).getByRole('link', { name: 'Glossary' })).toBeVisible()
+  })
+
+  test('opening a folder shows what is in it, and it stays open when the page is opened again', async ({ page }) => {
+    await folder(page, 'Pipelines').click()
+    await expect(inside(page, 'Pipelines').getByRole('link', { name: 'Pipeline overview' })).toBeVisible()
+    // The folders inside it are closed until opened themselves.
+    await expect(folder(page, 'Warehouse')).toHaveAttribute('aria-expanded', 'false')
+    await page.reload()
+    await expect(folder(page, 'Pipelines')).toHaveAttribute('aria-expanded', 'true')
+    await expect(inside(page, 'Pipelines').getByRole('link', { name: 'Pipeline overview' })).toBeVisible()
+  })
+
+  test('a new folder starts closed, like the rest', async ({ page }) => {
+    await docs(page).getByRole('button', { name: 'More for Documentation' }).click()
+    await page.getByRole('menuitem', { name: 'New folder…' }).click()
+    const dialog = page.getByRole('dialog', { name: 'New folder' })
+    await dialog.getByLabel('Name').fill('Contracts')
+    await dialog.getByRole('button', { name: 'Create folder' }).click()
+    await expect(dialog).toHaveCount(0)
+    await expect(folder(page, 'Contracts')).toHaveAttribute('aria-expanded', 'false')
+  })
+})
+
+test.describe('as an admin of the space', () => {
+  test.beforeEach(async ({ page }) => {
+    await openScreen(page, 'board-folders-open')
+    await expect(docs(page)).toBeVisible()
+  })
+
+  test('folders come first, A to Z, each with how many links it holds', async ({ page }) => {
     expect(await folderNames(page)).toEqual(['Archive', 'Metrics', 'Finance', 'Onboarding', 'Pipelines', 'Transform', 'Warehouse', 'Runbooks'])
     await expect(folder(page, 'Pipelines')).toContainText('4')
     await expect(folder(page, 'Pipelines')).toHaveAttribute('aria-expanded', 'true')
@@ -75,8 +112,6 @@ test.describe('as an admin of the space', () => {
     await dialog.getByRole('button', { name: 'Create folder' }).click()
     await expect(dialog).toHaveCount(0)
     expect(await folderNames(page)).toEqual(['Archive', 'Contracts', 'Metrics', 'Finance', 'Onboarding', 'Pipelines', 'Transform', 'Warehouse', 'Runbooks'])
-    // A new folder is open, like the rest.
-    await expect(folder(page, 'Contracts')).toHaveAttribute('aria-expanded', 'true')
   })
 
   test('saving a new folder never says its own name is taken', async ({ page }) => {

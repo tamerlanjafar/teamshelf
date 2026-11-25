@@ -12,7 +12,7 @@ export const boardPrefsQuery = (memberId: string) =>
     queryKey: prefsKey(memberId),
     staleTime: Infinity,
     queryFn: async (): Promise<BoardPrefs> => {
-      const row = await unwrap<BoardPrefs | null>(neon.from('member_prefs').select('group_order,group_layout,link_order,hidden_groups,hidden_links,recent_links,card_sizes,closed_folders').eq('member_id', memberId).maybeSingle())
+      const row = await unwrap<BoardPrefs | null>(neon.from('member_prefs').select('group_order,group_layout,link_order,hidden_groups,hidden_links,recent_links,card_sizes,open_folders').eq('member_id', memberId).maybeSingle())
       return row ? { ...NO_PREFS, ...row } : NO_PREFS
     },
   })

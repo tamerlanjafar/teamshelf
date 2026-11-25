@@ -66,7 +66,7 @@ What the end-to-end tests cover, by area. Each line is a test in `e2e/<area>.spe
 
 Documentation in Data (screens `board-folders`, `board-folders-member`): folders inside folders, up to 6 deep.
 
-- Folders come first in a card, A to Z, each with how many links it holds at any depth; they are open, for everyone, a new one too; closing one folds what is in it away (sliding), and opening it again shows it, indented; which folders a person closed is kept with their preferences, so they stay closed when the page is opened again, on any device.
+- Folders come first in a card, A to Z, each with how many links it holds at any depth; they start closed, for everyone, a new one too (and the folders inside one stay closed until opened themselves); opening one shows what is in it, indented, and closing it folds that away (sliding); which folders a person opened is kept with their preferences, so they stay open when the page is opened again, on any device.
 - An admin of the space: "New folder…" in the group's menu; "New folder inside…", "Rename…", "Move to…" and "Delete folder…" in a folder's menu; a name already used beside it is refused with the reason; an empty folder shows (and says it is empty).
 - Adding into a folder: "Add to this folder…" opens the form with the folder chosen, and the link lands in it; the form's Folder is a combobox like Group: the group's folders as a tree, found by typing any part of their path, shown by their path once chosen; a group without folders has no Folder field.
 - Moving: a link's menu moves it to another folder; a folder moves with everything in it, never into itself.

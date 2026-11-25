@@ -1,7 +1,7 @@
 // Example data for mock mode, and the situations ("scenarios") the screens need.
 // Everything here is made up. Ids are readable so addresses and rows are easy to follow.
 
-import type { Color, Folder, Group, Link, Member, Role, Space } from '@/lib/types'
+import { NO_PREFS, type Color, type Folder, type Group, type Link, type Member, type Role, type Space } from '@/lib/types'
 import { setState, type MockState, type Tables } from './store'
 
 const day = (daysAgo: number) => new Date(Date.now() - daysAgo * 86_400_000).toISOString()
@@ -299,6 +299,17 @@ export const SCENARIOS: Scenario[] = [
     description: 'Alex is signed in to Acme only.',
     roles: true,
     build: inAcme,
+  },
+  {
+    id: 'folders-opened',
+    title: 'Folders opened',
+    description: "Alex is signed in to Acme and opened every folder of Data's Documentation (folders start closed).",
+    roles: true,
+    build: (role) => {
+      const setup = inAcme(role)
+      setup.db.member_prefs.push({ ...NO_PREFS, member_id: 'm-nw-alex', open_folders: DATA_FOLDERS.map((one) => one.id) })
+      return setup
+    },
   },
   {
     id: 'space-admin',
