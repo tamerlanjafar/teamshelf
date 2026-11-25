@@ -1,5 +1,5 @@
 import { Link, useMatch } from '@tanstack/react-router'
-import { Menu, Plus, Settings } from 'lucide-react'
+import { Globe, Lock, Menu, Plus, Settings } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { useOrg } from '@/features/org/org-context'
@@ -38,7 +38,7 @@ export function TopBar({ children, tools, quiet = false }: { children?: ReactNod
         <button type="button" onClick={openSidebar} aria-label="Spaces and pages" className="text-quiet hover:text-ink hover:bg-ink/6 -ml-1.5 grid size-10 flex-none place-items-center rounded-lg md:hidden">
           <Menu className="size-5" />
         </button>
-        {onSpace && space && <SpaceTitle space={space} admin={publishes} />}
+        {onSpace && space && <SpaceTitle space={space} admin={publishes} onBoard={onBoard} />}
         {/* A page outside any space (on a phone, where this bar shows): the wordmark, back to the board. */}
         {!onSpace && <BackToBoard />}
       </div>
@@ -74,15 +74,44 @@ function BackToBoard() {
   )
 }
 
-/** The open space's logo and name, and for its admins a button to its settings. */
-function SpaceTitle({ space, admin }: { space: NonNullable<ReturnType<typeof useCurrentSpaceIfLoaded>>; admin: boolean }) {
+/**
+ * Who sees the open space, after its name: a lock on amber when it is private, a globe on green
+ * when everyone in the organization sees it. The word is there for screen readers.
+ */
+function Visibility({ space }: { space: { visibility: string } }) {
+  const open = space.visibility !== 'private'
+  const Icon = open ? Globe : Lock
+  return (
+    <span className={cn('grid size-[22px] flex-none place-items-center rounded-full', open ? 'bg-open-fill text-open' : 'bg-private-fill text-private')}>
+      <Icon className="size-[13px]" strokeWidth={2.5} aria-hidden="true" />
+      <span className="sr-only">{open ? 'Everyone' : 'Private'}</span>
+    </span>
+  )
+}
+
+/**
+ * The open space's logo, name and who sees it, and for its admins a button to its settings. The
+ * logo and name lead back to the board from a page under it (on a phone); on the board itself
+ * they are only its title.
+ */
+function SpaceTitle({ space, admin, onBoard }: { space: NonNullable<ReturnType<typeof useCurrentSpaceIfLoaded>>; admin: boolean; onBoard: boolean }) {
   const org = useOrg()
+  const title = (
+    <>
+      <SpaceLogo space={space} />
+      <span className="truncate text-[17px] font-[650] tracking-[-0.01em] [font-family:var(--font-rounded)]">{space.name}</span>
+    </>
+  )
   return (
     <div className="flex min-w-0 items-center gap-2.5">
-      <Link to="/$org/$space" params={{ org: org.slug, space: space.slug }} className="flex min-w-0 items-center gap-2.5 rounded-lg">
-        <SpaceLogo space={space} />
-        <span className="truncate text-[17px] font-[650] tracking-[-0.01em] [font-family:var(--font-rounded)]">{space.name}</span>
-      </Link>
+      {onBoard ? (
+        <div className="flex min-w-0 items-center gap-2.5">{title}</div>
+      ) : (
+        <Link to="/$org/$space" params={{ org: org.slug, space: space.slug }} className="flex min-w-0 items-center gap-2.5 rounded-lg">
+          {title}
+        </Link>
+      )}
+      <Visibility space={space} />
       {admin && (
         <Link
           to="/$org/$space/settings"

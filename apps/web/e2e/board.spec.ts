@@ -24,19 +24,34 @@ test.describe('what each role sees', () => {
     await expect(page.getByRole('link', { name: /Leadership/ })).toHaveCount(0)
   })
 
-  test('a private space opens for its people, marked with a lock in the sidebar', async ({ page }) => {
+  test('a private space opens for its people, marked private by its name at the top', async ({ page }) => {
     await openScreen(page, 'private-space')
-    const inSidebar = page.locator('aside').getByRole('link', { name: /Leadership/ })
+    const inSidebar = page.locator('aside').getByRole('link', { name: 'Leadership', exact: true })
     await expect(inSidebar).toHaveAttribute('aria-current', 'page')
-    await expect(inSidebar.locator('svg.lucide-lock')).toHaveCount(1)
+    await expect(page.getByRole('banner').getByText('Private', { exact: true })).toBeVisible()
     await expect(page.getByRole('region', { name: 'Plans' })).toBeVisible()
   })
 
   test('only a space’s admins see its settings', async ({ page }) => {
     await openScreen(page, 'board')
-    await expect(page.getByRole('link', { name: 'Development settings' })).toBeVisible()
+    await expect(page.getByRole('banner').getByRole('link', { name: 'Development settings' })).toBeVisible()
     await openScreen(page, 'board-member')
     await expect(page.getByRole('link', { name: 'Development settings' })).toHaveCount(0)
+  })
+
+  test('in the sidebar, each space someone runs has a gear to its settings, and the others don’t', async ({ page }) => {
+    // Alex runs Development and Leadership, not Design.
+    await openScreen(page, 'board-space-admin')
+    const sidebar = page.locator('aside')
+    // The open space shows its gear; another shows it only when pointed at.
+    await expect(sidebar.getByRole('link', { name: 'Development settings' })).toHaveCSS('opacity', '1')
+    const leadership = sidebar.getByRole('link', { name: 'Leadership settings' })
+    await expect(leadership).toHaveCSS('opacity', '0')
+    await sidebar.getByRole('link', { name: /^Leadership/ }).first().hover()
+    await expect(leadership).toHaveCSS('opacity', '1')
+    await expect(sidebar.getByRole('link', { name: 'Design settings' })).toHaveCount(0)
+    await sidebar.getByRole('link', { name: 'Development settings' }).click()
+    await expect(page).toHaveURL(/\/acme\/development\/settings$/)
   })
 
   test('every group shows its links, with how many it has', async ({ page }) => {
@@ -254,7 +269,7 @@ test('a new space starts private, even for an Org Admin, and opens', async ({ pa
   await dialog.getByLabel('Name').fill('Marketing')
   await dialog.getByRole('button', { name: 'Create space' }).click()
   await page.waitForURL('**/acme/marketing')
-  await expect(page.getByRole('navigation', { name: 'Acme' }).getByRole('link', { name: 'Marketing' }).getByLabel('Private')).toBeVisible()
+  await expect(page.getByRole('banner').getByText('Private', { exact: true })).toBeVisible()
 })
 
 // The layout: everyone arranges their own board and can go back to the space's default, which

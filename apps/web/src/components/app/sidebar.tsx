@@ -1,6 +1,6 @@
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
 import { Link, useRouterState } from '@tanstack/react-router'
-import { Inbox, Lock, Plus, Settings, Users } from 'lucide-react'
+import { Inbox, Plus, Settings, Users } from 'lucide-react'
 import { createContext, use, useState, type ReactNode } from 'react'
 import { useRequestsIfLoaded } from '@/api/links'
 import { useSpacesIfLoaded } from '@/api/spaces'
@@ -60,7 +60,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 function Sidebar() {
   const org = useOrg()
   const spaces = useSpacesIfLoaded()
-  const { admin, canManage } = usePermissions()
+  const { admin, canManage, isSpaceAdmin } = usePermissions()
   const requests = useRequestsIfLoaded()
   // A reviewer is told how many suggestions wait for them, in every space they run.
   const waiting = requests.filter((link) => link.status === 'pending' && canManage(link)).length
@@ -96,15 +96,34 @@ function Sidebar() {
           {/* The negative margin keeps the items' focus rings unclipped by the scrolling. */}
           <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1 py-0.5">
             <ul className="m-0 flex list-none flex-col gap-1 p-0">
-              {spaces.map((space) => (
-                <li key={space.id}>
-                  <Link to="/$org/$space" params={{ org: org.slug, space: space.slug }} activeOptions={{ includeSearch: false }} className={ITEM}>
-                    <SpaceLogo space={space} className="size-[22px] rounded-xs transition-transform duration-200 ease-out group-hover:scale-[1.08]" />
-                    <span className="min-w-0 flex-1 truncate">{space.name}</span>
-                    {space.visibility === 'private' && <Lock className="text-quiet size-3.5" aria-label="Private" />}
-                  </Link>
-                </li>
-              ))}
+              {spaces.map((space) => {
+                const settings = isSpaceAdmin(space.id)
+                return (
+                  // For a space's admins, a gear to its settings at the right of the line: on the open
+                  // space, and on the line pointed at or focused. (Who sees a space is in the top bar.) The gear is a link of its own beside the line's, as links don't nest.
+                  <li key={space.id} className="group/space relative">
+                    <Link to="/$org/$space" params={{ org: org.slug, space: space.slug }} activeOptions={{ includeSearch: false }} className={cn(ITEM, settings && 'group-hover/space:text-ink group-hover/space:not-aria-[current=page]:bg-ink/[0.055] pr-10')}>
+                      {/* The line stays lit while pointing at its gear, which sits over it. */}
+                      <SpaceLogo space={space} className="size-[22px] rounded-xs transition-transform duration-200 ease-out group-hover/space:scale-[1.08]" />
+                      <span className="min-w-0 flex-1 truncate">{space.name}</span>
+                    </Link>
+                    {settings && (
+                      <Link
+                        to="/$org/$space/settings"
+                        params={{ org: org.slug, space: space.slug }}
+                        aria-label={`${space.name} settings`}
+                        className={cn(
+                          'text-quiet hover:text-ink hover:bg-ink/[0.07] focus-visible:ring-brand/50 absolute top-1/2 right-1.5 grid size-7 -translate-y-1/2 place-items-center rounded-md outline-none transition-[color,background-color,opacity] duration-150 focus-visible:ring-2',
+                          'opacity-0 group-hover/space:opacity-100 group-focus-within/space:opacity-100 group-has-[[aria-current=page]]/space:opacity-100',
+                        )}
+                        activeProps={{ className: 'text-brand! bg-[color-mix(in_srgb,var(--brand)_11%,transparent)]' }}
+                      >
+                        <Settings className="size-4" />
+                      </Link>
+                    )}
+                  </li>
+                )
+              })}
               {/* With no spaces yet, a line of its own says how to start. */}
               {spaces.length === 0 && (
                 <li>

@@ -51,8 +51,8 @@ What the end-to-end tests cover, by area. Each line is a test in `e2e/<area>.spe
 
 - Org Admin: "Add link", and sees links restricted to admins (marked).
 - Member: "Suggest link" instead, no admin-only links, no private spaces they aren't in.
-- A private space opens for its people, with a lock in the sidebar.
-- Only a space's admins see its settings link.
+- A private space opens for its people. Who sees a space is an icon after its name in the top bar: a lock in amber when private, a globe in green when open to the organization (named for screen readers); the sidebar shows neither. On the board the space's name isn't a link (it is the page itself).
+- Only a space's admins see its settings link: in the top bar, and as a gear on the space's line in the sidebar (shown on the open space, and on another one pointed at); a space they don't run has none.
 - Every group shows its links and count.
 - An empty space says so.
 - Quick find: "/" focuses it; typing lists matches with their group; matches name, group or address; no match says so; arrows move, Enter opens in a new tab; Escape closes; a recently opened link is offered before typing.
@@ -110,7 +110,7 @@ What the end-to-end tests cover, by area. Each line is a test in `e2e/<area>.spe
 - The sidebar opens as a drawer from the menu button and closes after choosing a space.
 - On a phone, Team, Suggestions and Organization settings show the wordmark next to the menu button, back to the board.
 - A new space starts from the + by the Spaces heading (no "New space" line under the spaces, except when there are none).
-- A new space starts private, also for an Org Admin ("Only you see it until you add people or open it to everyone."), and opens; the sidebar shows its lock.
+- A new space starts private, also for an Org Admin ("Only you see it until you add people or open it to everyone."), and opens, marked private in the top bar.
 - With more spaces than fit (`many-spaces` screen), only the spaces scroll; Suggestions, Team and Organization settings stay at the bottom, in view.
 
 ## Not covered yet

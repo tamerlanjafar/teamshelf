@@ -20,6 +20,11 @@
     --well: #eff0f5; /* a control sunk into a row */
     --chip: #ffffff; /* the chosen one of several choices */
     --danger: #d5352f;
+    /* Who sees a space: an amber badge for private, a green one for open to everyone (icon on fill, 7:1 or more). */
+    --private: #6b3500;
+    --private-fill: #fde0a8;
+    --open: #084d2e;
+    --open-fill: #c6eed6;
     --wash: 11%; /* how much of its color the top of a card takes */
     --wash-low: 4%; /* and the rest of it */
     --shadow: 220 30% 20%; /* the color of shadows, as HSL parts */
@@ -39,6 +44,10 @@
     --well: #101116;
     --chip: #343848;
     --danger: #ff6b66;
+    --private: #ffc46b;
+    --private-fill: #4a2f0c;
+    --open: #7be3a6;
+    --open-fill: #123d28;
     --wash: 17%;
     --wash-low: 7%;
     --shadow: 230 40% 2%;
@@ -81,6 +90,10 @@
     --color-well: var(--well);
     --color-chip: var(--chip);
     --color-danger: var(--danger);
+    --color-private: var(--private);
+    --color-private-fill: var(--private-fill);
+    --color-open: var(--open);
+    --color-open-fill: var(--open-fill);
     --color-ring: var(--ring);
     --color-input: var(--input);
     --color-border: var(--border);
