@@ -85,6 +85,7 @@ export const SCREENS: ScreenGroup[] = [
       { id: 'board', title: 'Board, as an organization admin', scenario: 'acme', role: 'admin', path: '/acme/development' },
       { id: 'board-space-admin', title: 'Board, as an admin of this space', scenario: 'space-admin', path: '/acme/development' },
       { id: 'board-member', title: 'Board, as a member', note: 'No private spaces, Suggest instead of Add.', scenario: 'acme', role: 'member', path: '/acme/development' },
+      { id: 'board-recent', title: 'Search: links opened lately', note: 'Click into the search. Each line has an × to remove it, and "Clear" removes them all.', scenario: 'recent-links', path: '/acme/development', act: async () => (await element<HTMLInputElement>('input[aria-label="Search links"]')).focus() },
       { id: 'board-own-layout', title: 'Board you arranged yourself', note: 'The layout button (with a dot) resets it to the default.', scenario: 'own-layout', path: '/acme/development' },
       { id: 'board-editing', title: 'Editing the space layout', note: 'An admin of the space. Nothing is saved until "Save for everyone".', scenario: 'acme', role: 'admin', path: '/acme/development', act: async () => {
           ;(await element<HTMLButtonElement>('[aria-label^="Space layout"]')).click()

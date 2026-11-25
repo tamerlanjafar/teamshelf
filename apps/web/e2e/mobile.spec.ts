@@ -48,3 +48,12 @@ test('on a phone the default layout isn’t edited: its one column is nobody’s
   await expect(page.getByText('Default', { exact: true })).toBeVisible()
   await expect(page.getByRole('menuitem', { name: 'Edit default layout…' })).toBeHidden()
 })
+
+test('a recent link’s × shows without pointing at it, and removes it', async ({ page }) => {
+  await openScreen(page, 'board-recent')
+  await page.getByRole('combobox', { name: 'Search links' }).tap()
+  const remove = page.getByRole('button', { name: 'Remove Grafana from recent' })
+  await expect(remove).toHaveCSS('opacity', '1')
+  await remove.tap()
+  await expect(page.getByRole('listbox', { name: 'Recent links' }).getByRole('option')).toHaveCount(2)
+})

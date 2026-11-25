@@ -116,6 +116,56 @@ test.describe('quick find', () => {
   })
 })
 
+test.describe('recent links', () => {
+  // Figma, 1Password and Grafana were opened lately, newest first.
+  test.beforeEach(async ({ page }) => {
+    await openScreen(page, 'board-recent')
+    await page.getByRole('combobox', { name: 'Search links' }).click()
+    await expect(page.getByRole('listbox', { name: 'Recent links' }).getByRole('option')).toHaveCount(3)
+  })
+
+  test('a recent link’s × takes it off the list without opening it', async ({ page }) => {
+    const list = page.getByRole('listbox', { name: 'Recent links' })
+    await list.getByRole('option', { name: /1Password/ }).hover()
+    await page.getByRole('button', { name: 'Remove 1Password from recent' }).click()
+    await expect(list.getByRole('option')).toHaveCount(2)
+    await expect(list.getByRole('option', { name: /1Password/ })).toHaveCount(0)
+    await expect(page.getByRole('combobox', { name: 'Search links' })).toBeFocused()
+    expect(page.context().pages()).toHaveLength(1)
+  })
+
+  test('Delete takes the chosen recent link off the list, and the next one is chosen', async ({ page }) => {
+    const list = page.getByRole('listbox', { name: 'Recent links' })
+    await page.keyboard.press('ArrowDown')
+    await expect(list.getByRole('option', { name: /1Password/ })).toHaveAttribute('aria-selected', 'true')
+    await page.keyboard.press('Delete')
+    await expect(list.getByRole('option')).toHaveCount(2)
+    await expect(list.getByRole('option', { name: /Grafana/ })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  test('removing the last one closes the list', async ({ page }) => {
+    for (const name of ['Figma', '1Password', 'Grafana']) await page.getByRole('button', { name: `Remove ${name} from recent` }).click()
+    await expect(page.getByRole('listbox')).toHaveCount(0)
+  })
+
+  test('“Clear” empties the list, and Undo brings it back', async ({ page }) => {
+    await page.getByRole('button', { name: 'Clear recent links' }).click()
+    await expect(page.getByRole('listbox')).toHaveCount(0)
+    await page.getByRole('button', { name: 'Undo' }).click()
+    await page.getByRole('combobox', { name: 'Search links' }).click()
+    await expect(page.getByRole('listbox', { name: 'Recent links' }).getByRole('option')).toHaveCount(3)
+  })
+
+  test('search results can’t be removed, only recent links', async ({ page }) => {
+    await page.keyboard.type('graf')
+    await expect(page.getByRole('listbox', { name: 'Links found' }).getByRole('option')).toHaveCount(1)
+    await expect(page.getByRole('button', { name: /from recent/ })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Clear recent links' })).toHaveCount(0)
+    await page.keyboard.press('Delete')
+    await expect(page.getByRole('listbox', { name: 'Links found' }).getByRole('option')).toHaveCount(1)
+  })
+})
+
 test.describe('adding and suggesting', () => {
   test('an admin adds a link, and it is on the board at once', async ({ page }) => {
     await openScreen(page, 'board')

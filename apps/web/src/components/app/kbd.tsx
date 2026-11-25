@@ -16,15 +16,15 @@ const ICONS = { up: ArrowUp, down: ArrowDown, enter: CornerDownLeft, slash: Slas
 const NAMES = { up: 'Up arrow', down: 'Down arrow', enter: 'Enter', slash: 'Slash' }
 
 /**
- * A key on the keyboard, as a small key cap. Arrows, Enter and "/" are icons; a word ("esc")
- * is trimmed to the height of its small letters, so it sits in the middle of the cap too.
+ * A key on the keyboard, as a small key cap. Arrows, Enter and "/" are icons; a word ("esc",
+ * "del", "⌘⌫") is trimmed to the height of its small letters, so it sits in the middle of the cap too.
  */
-export function Kbd({ keyName, size = 'default', className }: { keyName: keyof typeof ICONS | 'esc'; size?: 'default' | 'small'; className?: string }) {
+export function Kbd({ keyName, size = 'default', className }: { keyName: keyof typeof ICONS | 'esc' | 'del' | '⌘⌫'; size?: 'default' | 'small'; className?: string }) {
   const small = size === 'small'
-  const Icon = keyName === 'esc' ? null : ICONS[keyName]
+  const Icon = keyName in ICONS ? ICONS[keyName as keyof typeof ICONS] : null
   return (
     <kbd
-      aria-label={Icon ? NAMES[keyName as keyof typeof NAMES] : undefined}
+      aria-label={Icon ? NAMES[keyName as keyof typeof NAMES] : keyName === '⌘⌫' ? 'Command Backspace' : undefined}
       className={cn('inline-flex! items-center justify-center', small ? 'h-[18px]! min-w-[18px]! px-1! text-[10.5px]!' : '', className)}
     >
       {Icon ? <Icon className={small ? 'size-[11px]' : 'size-3'} strokeWidth={2.25} /> : <span className="[text-box:trim-both_ex_alphabetic]">{keyName}</span>}

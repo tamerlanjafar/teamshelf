@@ -356,6 +356,27 @@ export const SCENARIOS: Scenario[] = [
     },
   },
   {
+    id: 'recent-links',
+    title: 'Links opened lately',
+    description: 'Alex, an admin of Acme, opened Figma, 1Password and Grafana in Development lately, so the search lists them before anything is typed.',
+    roles: false,
+    build: () => {
+      const setup = inAcme('admin')
+      const idOf = (title: string) => setup.db.links.find((one) => one.space_id === 'space-nw-dev' && one.title === title)!.id
+      setup.db.member_prefs.push({
+        member_id: 'm-nw-alex',
+        group_order: [],
+        group_layout: {},
+        link_order: {},
+        hidden_groups: [],
+        hidden_links: [],
+        recent_links: { 'space-nw-dev': ['Figma', '1Password', 'Grafana'].map(idOf) },
+        card_sizes: {},
+      })
+      return setup
+    },
+  },
+  {
     id: 'files',
     title: 'Files of every kind',
     description: 'Development has a document, notes, a picture, a PDF, a spreadsheet, and two files that try to run a script.',

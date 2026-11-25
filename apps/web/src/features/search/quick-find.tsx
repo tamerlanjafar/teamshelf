@@ -11,7 +11,7 @@ import { colorValue } from '@/lib/colors'
 import type { Group, Link } from '@/lib/types'
 import { Kbd } from '@/components/app/kbd'
 import { LinkOption, MenuKeys, MenuLabel, type LinkChoice } from './link-option'
-import { useRecordOpen } from './use-record-open'
+import { useForgetRecent, useRecordOpen } from './use-record-open'
 
 /** The most results the list shows, so it stays quick. Typing more finds the rest. */
 const MAX_RESULTS = 50
@@ -40,6 +40,7 @@ function rank(choice: LinkChoice, query: string) {
  * The search at the top of a space's board. It doesn't filter the board: it finds a link and
  * opens it. Clicking into it (or "/", or ⌘K) shows the links opened lately; typing searches every
  * link and file of the space, by name, group and address. Arrow keys choose, Enter opens.
+ * A recent link can be taken off the list (its ×, or Delete), or all of them ("Clear").
  */
 export function QuickFind() {
   const space = useCurrentSpaceIfLoaded()
@@ -47,6 +48,7 @@ export function QuickFind() {
   const links = useBoardLinksIfLoaded()
   const prefs = useBoardPrefsIfLoaded()
   const recordOpen = useRecordOpen()
+  const forgetRecent = useForgetRecent()
   const { openFile } = useFileViewer()
   const listId = useId()
   const input = useRef<HTMLInputElement>(null)
@@ -143,6 +145,12 @@ export function QuickFind() {
             event.preventDefault()
             choose(shown[chosen])
           }
+          // Delete (⌘⌫ on a Mac, whose "delete" is Backspace) takes the chosen recent link off the list.
+          const remove = event.key === 'Delete' || (event.key === 'Backspace' && (event.metaKey || event.ctrlKey))
+          if (remove && showing && !searching && shown[chosen]) {
+            event.preventDefault()
+            forgetRecent.remove(shown[chosen].link)
+          }
           if (event.key === 'Escape') {
             if (query) setQuery('')
             else {
@@ -185,17 +193,42 @@ export function QuickFind() {
         >
           {shown.length > 0 ? (
             <>
-              <MenuLabel>{searching ? `${matches.length} ${matches.length === 1 ? 'link' : 'links'}${matches.length > MAX_RESULTS ? `, first ${MAX_RESULTS}` : ''}` : 'Recent'}</MenuLabel>
+              <MenuLabel
+                action={
+                  !searching &&
+                  space && (
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      aria-label="Clear recent links"
+                      onClick={() => forgetRecent.clear(space.id)}
+                      className="text-quiet hover:text-ink hover:bg-ink/5 mr-1 rounded-md px-2 py-0.5 text-[12px] font-medium transition-colors"
+                    >
+                      Clear
+                    </button>
+                  )
+                }
+              >
+                {searching ? `${matches.length} ${matches.length === 1 ? 'link' : 'links'}${matches.length > MAX_RESULTS ? `, first ${MAX_RESULTS}` : ''}` : 'Recent'}
+              </MenuLabel>
               <ul ref={list} id={listId} role="listbox" aria-label={searching ? 'Links found' : 'Recent links'} className="m-0 grid max-h-[min(60dvh,420px)] list-none gap-0.5 overflow-y-auto p-0">
                 {shown.map((choice, index) => (
-                  <LinkOption key={choice.link.id} id={`${listId}-${index}`} choice={choice} selected={index === chosen} onHover={() => setActive(index)} onChoose={() => choose(choice)} />
+                  <LinkOption
+                    key={choice.link.id}
+                    id={`${listId}-${index}`}
+                    choice={choice}
+                    selected={index === chosen}
+                    onHover={() => setActive(index)}
+                    onChoose={() => choose(choice)}
+                    onRemove={searching ? undefined : () => forgetRecent.remove(choice.link)}
+                  />
                 ))}
               </ul>
             </>
           ) : (
             <p className="text-quiet m-0 px-3 py-5 text-center text-[13.5px]">Nothing in {space?.name ?? 'this space'} has “{query.trim()}” in its name, group or address.</p>
           )}
-          <MenuKeys className="-mx-1 mt-1 -mb-1" />
+          <MenuKeys className="-mx-1 mt-1 -mb-1" remove={!searching && shown.length > 0} />
         </div>
       )}
     </div>
