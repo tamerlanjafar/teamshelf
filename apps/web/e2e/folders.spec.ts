@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import { openScreen } from './helpers'
+import { goto, openScreen } from './helpers'
 
 // Folders inside a group, and inside each other: Data's Documentation. Pipelines holds
 // Warehouse (2 files) and Transform (1) and a file of its own; Metrics holds Finance; Archive is
@@ -336,7 +336,7 @@ test.describe('as a member', () => {
     await dialog.getByLabel('Address').fill('https://handbook.example.com')
     await dialog.getByRole('button', { name: 'Send for review' }).click()
     await expect(page.getByText(/Sent for review/)).toBeVisible()
-    await page.goto('/acme/requests')
+    await goto(page, '/acme/requests')
     await expect(page.getByRole('article').filter({ hasText: 'On call handbook' })).toContainText('Documentation / Runbooks')
   })
 })

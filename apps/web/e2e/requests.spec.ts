@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { openScreen } from './helpers'
+import { goto, openScreen } from './helpers'
 
 // Suggestions: what waits for a space's admins, and what each person sent.
 
@@ -24,7 +24,7 @@ test.describe('as a reviewer', () => {
   test('approving a suggestion for a folder puts it in that folder', async ({ page }) => {
     await page.getByRole('article').filter({ hasText: 'Late data runbook' }).getByRole('button', { name: 'Approve' }).click()
     await expect(page.getByRole('article').filter({ hasText: 'Late data runbook' })).toHaveCount(0)
-    await page.goto('/acme/data')
+    await goto(page, '/acme/data')
     const docs = page.getByRole('region', { name: 'Documentation' })
     await expect(docs.getByRole('group', { name: 'Runbooks' }).getByRole('link', { name: 'Late data runbook' })).toBeVisible()
   })
@@ -41,7 +41,7 @@ test.describe('as a reviewer', () => {
   test('approving puts it on the board', async ({ page }) => {
     await page.getByRole('article').filter({ hasText: 'Jira board' }).getByRole('button', { name: 'Approve' }).click()
     await expect(page.getByRole('article').filter({ hasText: 'Jira board' })).toHaveCount(0)
-    await page.goto('/acme/development')
+    await goto(page, '/acme/development')
     await expect(page.getByRole('region', { name: 'CI / CD' }).getByRole('link', { name: 'Jira board' })).toBeVisible()
   })
 

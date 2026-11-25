@@ -14,13 +14,18 @@ const loads = new Map<string, Promise<unknown>>()
 
 function loadAll(queryClient: QueryClient, orgId: string, memberId: string, userId: string) {
   // prefetchQuery never rejects: a query that fails is left for its own section to report.
-  const queries = [groupsQuery(orgId), foldersQuery(orgId), boardLinksQuery(orgId), requestsQuery(orgId), spacesQuery(orgId), spaceMembersQuery(orgId), membersQuery(orgId), boardPrefsQuery(memberId)]
+  const queries = [groupsQuery(orgId), foldersQuery(orgId), boardLinksQuery(orgId), spacesQuery(orgId), spaceMembersQuery(orgId), boardPrefsQuery(memberId)]
+  // Not waited for: the suggestions (the slowest to load; the sidebar's count fills in a moment
+  // later) and the people of the organization (the Team page and the forms). The pages that need
+  // them wait for them in their own sections.
+  for (const later of [requestsQuery(orgId), membersQuery(orgId)]) void queryClient.prefetchQuery(later as never)
   return Promise.all([...queries.map((query) => queryClient.prefetchQuery(query as never)), queryClient.prefetchQuery(myOrgsQuery(userId))])
 }
 
 /**
- * Loads everything the organization's pages show, and suspends until all of it has arrived
- * or failed. Used once, when the app starts, so the splash screen gives way to a complete page.
+ * Loads what the organization's board shows, and suspends until all of it has arrived or failed
+ * (the rest loads alongside, see loadAll). Used once, when the app starts, so the splash screen
+ * gives way to a complete board.
  */
 export function usePreloadOrg() {
   const org = useOrg()

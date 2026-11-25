@@ -1,7 +1,9 @@
 // What the app asks for all the time while it is open:
 //
 //   /api/auth/<org>/*   →  Neon Auth, keeping each organization's session in its own cookie on
-//                          this site (packages/auth-proxy)
+//                          this site (packages/auth-proxy). On Netlify the edge function
+//                          netlify/edge-functions/auth.mjs answers these first; this is the
+//                          fallback, and what the local preview uses.
 //   GET /api/files/url  →  a short-lived address to open a file at (netlify/lib/files-api.mjs)
 //
 // The costly requests (sending a sign-in email, looking up an icon, starting an upload) are
@@ -14,10 +16,9 @@ import { NEON_AUTH_URL } from '../lib/neon.mjs'
 export const config = {
   path: ['/api/auth/*', '/api/files/url'],
   excludedPath: ['/api/auth/:slot/sign-in/*'],
-  // Each address (IP) gets this many requests a minute, then 429 until the minute is over. A
-  // page makes a handful when it opens, so this is far above what people do, also many of them
-  // behind one office address. Netlify counts; nothing is kept here.
-  rateLimit: { windowLimit: 600, windowSize: 60, aggregateBy: ['ip', 'domain'] },
+  // No rate limit here. Netlify's free plan allows two per site: one is in actions.mjs, the
+  // other moved to the edge function that now answers /api/auth (edge-functions/auth.mjs).
+  // What this function still serves, file addresses, needs a signed-in person.
 }
 
 export default (request) => (new URL(request.url).pathname.startsWith('/api/auth/') ? handleAuthProxy(request, NEON_AUTH_URL) : files(request))
