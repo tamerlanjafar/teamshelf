@@ -263,6 +263,23 @@ test.describe('as an admin of the space', () => {
     await expect.poll(async () => (await docs(page).boundingBox())!.height).toBeLessThan(resized)
   })
 
+  test('a space’s default height is only a limit: with a folder closed, the card is shorter', async ({ page }) => {
+    await page.getByRole('button', { name: /^Space layout/ }).click()
+    await page.getByRole('menuitem', { name: 'Edit default layout…' }).click()
+    const before = (await docs(page).boundingBox())!.height
+    await page.getByRole('separator', { name: 'Height of Documentation' }).focus()
+    await page.keyboard.press('ArrowUp')
+    await expect.poll(async () => (await docs(page).boundingBox())!.height).toBeLessThan(before)
+    await page.getByRole('button', { name: 'Save for everyone' }).click()
+    await expect(page.getByRole('region', { name: 'Space layout editor' })).toHaveCount(0)
+    const withDefault = (await docs(page).boundingBox())!.height
+    await folder(page, 'Pipelines').click()
+    await expect.poll(async () => (await docs(page).boundingBox())!.height).toBeLessThan(withDefault)
+    // Nothing of their own to undo.
+    await docs(page).getByRole('button', { name: 'More for Documentation' }).click()
+    await expect(page.getByRole('menuitem', { name: 'Auto height' })).toHaveCount(0)
+  })
+
   test('a folder’s links can be sorted A to Z while editing the space’s layout, and only that folder’s', async ({ page }) => {
     await page.getByRole('button', { name: /^Space layout/ }).click()
     await page.getByRole('menuitem', { name: 'Edit default layout…' }).click()

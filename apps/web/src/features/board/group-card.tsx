@@ -84,7 +84,11 @@ const CAPPED =
 /** A group and its links, tinted with the group's color. As tall as what is in it, up to a part of the screen. */
 export function GroupCard({ card, restoring, cardRef, dragStyle, placeholder, lifted, headProps, resizable }: GroupCardProps & CardDragProps) {
   const { group, hidden } = card
-  const { setGroupHidden, cardHeight, resizeCard, resizeColumns } = useBoardActions()
+  const { setGroupHidden, cardHeight, resizeCard, resizeColumns, isResized, editing: arranging } = useBoardActions()
+  // A height this person set themselves holds, whatever is open in the card. The space's default
+  // height (for everyone, with their own folders open or closed) is a limit: the card is as tall
+  // as what is in it, up to there. So it is in the layout editor too.
+  const holdsHeight = !arranging && isResized(group.id)
   const height = cardHeight(group.id)
   const rows = rowsOf(card)
   const { isSpaceAdmin } = usePermissions()
@@ -174,9 +178,9 @@ export function GroupCard({ card, restoring, cardRef, dragStyle, placeholder, li
         className={cn(
           CARD_BODY,
           !lifted && CAPPED,
-          // A height someone set is the card's height, whatever is open in it (folders opening and
-          // closing don't move it). Pulled to the end of the list, it stays as tall as the list.
-          !lifted && height !== undefined && height < WHOLE_LIST && 'sm:h-[var(--card-h)]', edges.bottom && '[--fade-bottom:72px]', 'rounded-b-2xl transition-[background-color,box-shadow] duration-150', drop.isOver && DROP_TARGET)}
+          // Your own height holds, folders opening and closing don't move it (see holdsHeight).
+          // Pulled to the end of the list, it stays as tall as the list.
+          !lifted && holdsHeight && height !== undefined && height < WHOLE_LIST && 'sm:h-[var(--card-h)]', edges.bottom && '[--fade-bottom:72px]', 'rounded-b-2xl transition-[background-color,box-shadow] duration-150', drop.isOver && DROP_TARGET)}
         style={height === undefined || lifted ? undefined : ({ [HEIGHT_VAR]: `${height}px` } as CSSProperties)}
         onScroll={measureEdges}
         tabIndex={edges.bottom || edges.top ? 0 : undefined}
