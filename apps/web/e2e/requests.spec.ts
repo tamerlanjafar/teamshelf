@@ -16,6 +16,25 @@ test.describe('as a reviewer', () => {
     await expect(jira).toContainText('Priya Nair')
   })
 
+  test('a suggestion for a folder says which one', async ({ page }) => {
+    await expect(page.getByRole('article').filter({ hasText: 'Table owners' })).toContainText('Documentation / Pipelines / Warehouse')
+    await expect(page.getByRole('article').filter({ hasText: 'Late data runbook' })).toContainText('Documentation / Runbooks')
+  })
+
+  test('approving a suggestion for a folder puts it in that folder', async ({ page }) => {
+    await page.getByRole('article').filter({ hasText: 'Late data runbook' }).getByRole('button', { name: 'Approve' }).click()
+    await expect(page.getByRole('article').filter({ hasText: 'Late data runbook' })).toHaveCount(0)
+    await page.goto('/acme/data')
+    const docs = page.getByRole('region', { name: 'Documentation' })
+    await docs.getByRole('button', { name: /^Runbooks\b/ }).click()
+    await expect(docs.getByRole('group', { name: 'Runbooks' }).getByRole('link', { name: 'Late data runbook' })).toBeVisible()
+  })
+
+  test('editing a suggestion for a folder opens the form with that folder chosen', async ({ page }) => {
+    await page.getByRole('article').filter({ hasText: 'Table owners' }).getByRole('button', { name: 'Edit before approving' }).click()
+    await expect(page.getByRole('dialog').getByLabel('Folder')).toHaveValue('Pipelines / Warehouse')
+  })
+
   test('a suggestion for a new group says so', async ({ page }) => {
     await expect(page.getByRole('article').filter({ hasText: 'Postman' })).toContainText('(new)')
   })

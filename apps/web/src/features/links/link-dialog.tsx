@@ -17,16 +17,18 @@ import { toastError } from '@/lib/errors'
 import type { Link, LinkKind } from '@/lib/types'
 import { AudiencePicker } from './audience-picker'
 import { FilePicker } from './file-picker'
+import { useFoldersIfLoaded, foldersOf } from '@/api/folders'
+import { FolderSelect } from '@/features/folders/folder-select'
 import { GroupCombobox } from './group-combobox'
 import { draftOf, fieldsOf, hasErrors, newDraft, validate, type LinkDraft } from './link-draft'
 import { nameFromFile, NAME_MAX } from './name-rules'
 
-/** What the dialog was opened for: a new link (optionally in a given group), or changing one. */
-type Request = { kind: 'add'; groupName?: string } | { kind: 'edit'; link: Link }
+/** What the dialog was opened for: a new link (optionally in a given group and folder), or changing one. */
+type Request = { kind: 'add'; groupName?: string; folderId?: string | null } | { kind: 'edit'; link: Link }
 
 interface LinkDialogApi {
   /** Opens the form for a new link in the open space. Its admins add it, everyone else suggests it. */
-  addLink: (groupName?: string) => void
+  addLink: (groupName?: string, folderId?: string | null) => void
   /** Opens the form for an existing link. For the admins of its space. */
   editLink: (link: Link) => void
 }
@@ -52,7 +54,7 @@ export function LinkDialogProvider({ children }: { children: ReactNode }) {
 
   const api = useMemo<LinkDialogApi>(
     () => ({
-      addLink: (groupName) => show({ kind: 'add', groupName }),
+      addLink: (groupName, folderId) => show({ kind: 'add', groupName, folderId }),
       editLink: (link) => show({ kind: 'edit', link }),
     }),
     [show],
@@ -82,9 +84,10 @@ function LinkForm({ request, onDone }: { request: Request; onDone: () => void })
   const members = useMembersIfLoaded()
   const spaceMembers = useSpaceMembersIfLoaded()
   const boardLinks = useBoardLinksIfLoaded()
+  const folders = useFoldersIfLoaded()
   const savedAccess = useLinkAccess(editing?.visibility === 'members' ? editing.id : undefined)
 
-  const [draft, setDraft] = useState<LinkDraft>(() => (editing ? draftOf(editing, groups) : newDraft(request.kind === 'add' ? request.groupName : '')))
+  const [draft, setDraft] = useState<LinkDraft>(() => (editing ? draftOf(editing, groups) : newDraft(request.kind === 'add' ? request.groupName : '', request.kind === 'add' ? request.folderId : null)))
   const [attempted, setAttempted] = useState(false)
   // The name's error shows once the person has left the field, or tried to save.
   const [nameTouched, setNameTouched] = useState(false)
@@ -100,13 +103,17 @@ function LinkForm({ request, onDone }: { request: Request; onDone: () => void })
   const choosable = space?.visibility === 'private' ? members.filter((member) => spaceMembers.some((row) => row.space_id === space.id && row.member_id === member.id)) : members
 
   const group = groups.find((candidate) => candidate.name.toLowerCase() === draft.groupName.trim().toLowerCase())
-  const siblings = boardLinks.filter((link) => group && link.group_id === group.id && link.id !== editing?.id).map((link) => link.title)
+  const groupFolders = foldersOf(folders, group?.id)
+  // A folder that isn't the chosen group's (the group was changed) counts as none.
+  const folderId = groupFolders.some((folder) => folder.id === draft.folderId) ? draft.folderId : null
+  // Names are unique in one folder, or at the top of the group.
+  const siblings = boardLinks.filter((link) => group && link.group_id === group.id && (link.folder_id ?? null) === folderId && link.id !== editing?.id).map((link) => link.title)
   const memberIds = draft.memberIds ?? savedAccess.data ?? []
   const errors = validate(draft, memberIds, { siblings }, Boolean(editing))
   const shown = attempted ? errors : { ...(nameTouched && draft.title.trim() ? { title: errors.title } : {}) }
 
   const formId = useId()
-  const ids = { group: `${formId}-group`, title: `${formId}-title`, url: `${formId}-url`, file: `${formId}-file` }
+  const ids = { group: `${formId}-group`, folder: `${formId}-folder`, title: `${formId}-title`, url: `${formId}-url`, file: `${formId}-file` }
   const change = (changes: Partial<LinkDraft>) => setDraft((current) => ({ ...current, ...changes }))
 
   function pickFile(file: File | null) {
@@ -122,7 +129,7 @@ function LinkForm({ request, onDone }: { request: Request; onDone: () => void })
 
     const audience = { visibility: draft.visibility, memberIds }
     if (editing) {
-      updateLink.mutate({ id: editing.id, fields: fieldsOf(draft, space.id, groups), audience }, { onSuccess: onDone, onError: toastError })
+      updateLink.mutate({ id: editing.id, fields: fieldsOf({ ...draft, folderId }, space.id, groups), audience }, { onSuccess: onDone, onError: toastError })
       return
     }
 
@@ -138,7 +145,7 @@ function LinkForm({ request, onDone }: { request: Request; onDone: () => void })
       }
     }
     addLink.mutate(
-      { fields: fieldsOf(draft, space.id, groups, stored), publishFor: publishes ? audience : undefined },
+      { fields: fieldsOf({ ...draft, folderId }, space.id, groups, stored), publishFor: publishes ? audience : undefined },
       {
         onError: toastError,
         onSettled: () => setProgress(null),
@@ -195,7 +202,7 @@ function LinkForm({ request, onDone }: { request: Request; onDone: () => void })
               if (kind !== 'document') return change({ kind })
               // A document is written on a page of its own, starting from what was filled in here.
               onDone()
-              newDocument({ groupName: draft.groupName, title: draft.title })
+              newDocument({ groupName: draft.groupName, folderId, title: draft.title })
             }}
             className="flex"
           />
@@ -208,6 +215,11 @@ function LinkForm({ request, onDone }: { request: Request; onDone: () => void })
         <FormRow id={ids.group} label="Group" error={shown.groupName}>
           <GroupCombobox id={ids.group} groups={groups} value={draft.groupName} invalid={Boolean(shown.groupName)} autoFocus={!draft.groupName} onChange={(groupName) => change({ groupName })} />
         </FormRow>
+        {group && groupFolders.length > 0 && (
+          <FormRow id={ids.folder} label="Folder">
+            <FolderSelect id={ids.folder} folders={groupFolders} groupName={group.name} value={folderId} onChange={(next) => change({ folderId: next })} />
+          </FormRow>
+        )}
         <FormRow id={ids.title} label="Name" error={shown.title}>
           <Input
             id={ids.title}

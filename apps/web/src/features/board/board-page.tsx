@@ -3,6 +3,7 @@ import { useState, type CSSProperties, type ReactNode } from 'react'
 import { toast } from '@/components/ui/toast'
 import { groupsOf, useGroups, useGroupsIfLoaded } from '@/api/groups'
 import { useBoardLinks, useBoardLinksIfLoaded, useSetTeamLinkOrder } from '@/api/links'
+import { useFoldersIfLoaded } from '@/api/folders'
 import { useBoardPrefs, useBoardPrefsIfLoaded, useSaveBoardPrefs } from '@/api/prefs'
 import { useSetSpaceCardSizes, useSetSpaceLayout } from '@/api/spaces'
 import { useConfirm } from '@/components/app/confirm-dialog'
@@ -280,13 +281,14 @@ function BoardCards({ view, onViewChange }: BoardState) {
   const { isSpaceAdmin } = usePermissions()
   const groups = groupsOf(useGroups(), space?.id)
   const links = linksOf(useBoardLinks(), space)
+  const folders = useFoldersIfLoaded()
   useBoardPrefs()
   const prefs = useEffectiveBoardPrefs()
 
   if (!space) return <NoSpace />
 
   const admin = isSpaceAdmin(space.id)
-  const cards = buildBoard(groups, links, prefs, { view, keepEmpty: admin })
+  const cards = buildBoard(groups, links, prefs, { view, keepEmpty: admin }, folders)
   const grid = cards.length > 0 && <SortableBoard cards={cards} restoring={view === 'hidden'} footer={admin && view === 'board' ? <NewGroupCard space={space} /> : undefined} />
 
   if (view === 'hidden') {

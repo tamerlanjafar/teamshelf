@@ -8,6 +8,8 @@ import { nameError, type NameContext } from './name-rules'
 export interface LinkDraft {
   kind: LinkKind
   groupName: string
+  /** A folder of the chosen group, or null for its top. */
+  folderId: string | null
   title: string
   url: string
   /** The file picked for a new file. An edited file keeps the one it has. */
@@ -19,14 +21,15 @@ export interface LinkDraft {
 
 export type DraftErrors = Partial<Record<'groupName' | 'title' | 'url' | 'file' | 'audience', string>>
 
-export function newDraft(groupName = ''): LinkDraft {
-  return { kind: 'link', groupName, title: '', url: '', file: null, visibility: 'everyone', memberIds: null }
+export function newDraft(groupName = '', folderId: string | null = null): LinkDraft {
+  return { kind: 'link', groupName, folderId, title: '', url: '', file: null, visibility: 'everyone', memberIds: null }
 }
 
 export function draftOf(link: Link, groups: Group[]): LinkDraft {
   return {
     kind: link.kind,
     groupName: groups.find((group) => group.id === link.group_id)?.name ?? link.proposed_group ?? '',
+    folderId: link.folder_id,
     title: link.title,
     url: link.kind === 'file' ? '' : link.url,
     file: null,
@@ -72,6 +75,8 @@ export function fieldsOf(draft: LinkDraft, spaceId: string, groups: Group[], fil
   return {
     spaceId,
     group: existing ? { id: existing.id } : { name },
+    // A new group has no folders yet.
+    folderId: existing ? draft.folderId : null,
     title: draft.title.trim(),
     ...(draft.kind === 'link' ? { url: normalizeUrl(draft.url)! } : {}),
     ...(file ? { file } : {}),

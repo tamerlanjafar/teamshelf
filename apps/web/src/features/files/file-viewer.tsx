@@ -3,6 +3,8 @@ import { Copy, Download, FileQuestion, Pencil, RotateCw, TriangleAlert, X } from
 import { createContext, lazy, Suspense, useCallback, useContext, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import { toast } from '@/components/ui/toast'
 import { downloadFile, fetchFileBytes, formatBytes, saveFileText, uploadText } from '@/api/files'
+import { foldersOf, useFoldersIfLoaded } from '@/api/folders'
+import { FolderSelect } from '@/features/folders/folder-select'
 import { groupsOf, useGroupsIfLoaded } from '@/api/groups'
 import { useAddLink, useBoardLinksIfLoaded } from '@/api/links'
 import { useConfirm } from '@/components/app/confirm-dialog'
@@ -26,13 +28,13 @@ import { needsPlainText } from './markdown-safety'
 const MarkdownEditor = lazy(() => import('./markdown-editor'))
 
 /** What the viewer was opened for: a file of the board, or a new document to write. */
-type Request = { kind: 'file'; link: Link } | { kind: 'document'; groupName?: string; title?: string }
+type Request = { kind: 'file'; link: Link } | { kind: 'document'; groupName?: string; folderId?: string | null; title?: string }
 
 interface FileViewerApi {
   /** Shows a file inside the app: a picture, a PDF, sound, video, a document or text. Anything else offers its download. */
   openFile: (link: Link) => void
   /** Opens an empty document to write. It is saved as a Markdown file of the open space. */
-  newDocument: (start?: { groupName?: string; title?: string }) => void
+  newDocument: (start?: { groupName?: string; folderId?: string | null; title?: string }) => void
 }
 
 const FileViewerContext = createContext<FileViewerApi | null>(null)
@@ -365,13 +367,13 @@ function Notice({ icon, title, text, children }: { icon: ReactNode; title: strin
  * the open space like any uploaded one: an admin of the space puts it on the board, anyone else
  * sends it for review.
  */
-function NewDocument({ start, onClose }: { start: { groupName?: string; title?: string }; onClose: () => void }) {
+function NewDocument({ start, onClose }: { start: { groupName?: string; folderId?: string | null; title?: string }; onClose: () => void }) {
   const space = useCurrentSpaceIfLoaded()
   if (!space) return null
   return <DocumentForm space={space} start={start} onClose={onClose} />
 }
 
-function DocumentForm({ space, start, onClose }: { space: Space; start: { groupName?: string; title?: string }; onClose: () => void }) {
+function DocumentForm({ space, start, onClose }: { space: Space; start: { groupName?: string; folderId?: string | null; title?: string }; onClose: () => void }) {
   const { isSpaceAdmin } = usePermissions()
   const publishes = isSpaceAdmin(space.id)
   const confirm = useConfirm()
@@ -381,6 +383,8 @@ function DocumentForm({ space, start, onClose }: { space: Space; start: { groupN
 
   const [title, setTitle] = useState(start.title ?? '')
   const [groupName, setGroupName] = useState(start.groupName ?? '')
+  const [chosenFolder, setChosenFolder] = useState<string | null>(start.folderId ?? null)
+  const folders = useFoldersIfLoaded()
   const [markdown, setMarkdown] = useState('')
   const [format, setFormat] = useState<DocumentFormat>('md')
   // The file is named after the document, until its author names it themselves.
@@ -388,10 +392,13 @@ function DocumentForm({ space, start, onClose }: { space: Space; start: { groupN
   const fileName = ownFileName ?? fileNameFromTitle(title)
   const [attempted, setAttempted] = useState(false)
   const [saving, setSaving] = useState(false)
-  const ids = { title: useId(), group: useId(), file: useId() }
+  const ids = { title: useId(), group: useId(), folder: useId(), file: useId() }
 
   const group = groups.find((one) => one.name.toLowerCase() === groupName.trim().toLowerCase())
-  const siblings = boardLinks.filter((link) => group && link.group_id === group.id).map((link) => link.title)
+  const groupFolders = foldersOf(folders, group?.id)
+  // A folder of another group (the group was changed) counts as none.
+  const folderId = groupFolders.some((folder) => folder.id === chosenFolder) ? chosenFolder : null
+  const siblings = boardLinks.filter((link) => group && link.group_id === group.id && (link.folder_id ?? null) === folderId).map((link) => link.title)
   const errors = {
     title: nameError(title, { groupName, siblings }),
     group: !groupName.trim() ? 'Choose a group, or type a name to create one.' : groupName.trim().length > 60 ? 'Keep the group name to 60 characters.' : null,
@@ -410,7 +417,7 @@ function DocumentForm({ space, start, onClose }: { space: Space; start: { groupN
       const name = title.trim()
       const stored = await uploadText(space.id, documentFileName(fileName, format), markdown)
       await addLink.mutateAsync({
-        fields: { spaceId: space.id, group: group ? { id: group.id } : { name: groupName.trim() }, title: name, file: stored },
+        fields: { spaceId: space.id, group: group ? { id: group.id } : { name: groupName.trim() }, folderId: group ? folderId : null, title: name, file: stored },
         publishFor: publishes ? { visibility: 'everyone', memberIds: [] } : undefined,
       })
       toast.success(publishes ? `Added to ${space.name}.` : `Sent for review. The document appears in ${space.name} once an admin approves it.`)
@@ -487,6 +494,14 @@ function DocumentForm({ space, start, onClose }: { space: Space; start: { groupN
               </span>
             )}
           </div>
+          {group && groupFolders.length > 0 && (
+            <div className="grid min-w-0 content-start gap-1.5">
+              <label htmlFor={ids.folder} className="text-[13px] font-medium">
+                Folder
+              </label>
+              <FolderSelect id={ids.folder} folders={groupFolders} groupName={group.name} value={folderId} onChange={setChosenFolder} />
+            </div>
+          )}
         </div>
         <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
           <Segmented<DocumentFormat>

@@ -2,7 +2,7 @@
 // Kept in localStorage so it survives the reloads the app makes on purpose (switching to an
 // organization of another email, finishing a sign-in). "Reset" in the toolbar starts it over.
 
-import type { Group, Link, Member, Org, Role, Space, SpaceMember } from '@/lib/types'
+import type { Folder, Group, Link, Member, Org, Role, Space, SpaceMember } from '@/lib/types'
 
 export interface User {
   id: string
@@ -17,6 +17,7 @@ export interface Tables {
   spaces: Space[]
   space_members: SpaceMember[]
   groups: Group[]
+  folders: Folder[]
   links: Link[]
   link_access: { link_id: string; member_id: string }[]
   member_prefs: ({ member_id: string } & Record<string, unknown>)[]
@@ -54,6 +55,8 @@ export function getState(): MockState {
     state = null
   }
   if (!state) throw new Error('The mock backend has no data yet.')
+  // Saved before there were folders.
+  state.db.folders ??= []
   return state
 }
 

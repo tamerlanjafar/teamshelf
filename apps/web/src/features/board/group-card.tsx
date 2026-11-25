@@ -1,5 +1,6 @@
-import { ArrowDown, ArrowDownAZ, Eye, EyeOff, FoldVertical, ListRestart, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
-import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { ArrowDown, ArrowDownAZ, Eye, EyeOff, FolderPlus, FoldVertical, ListRestart, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
+import { useDroppable } from '@dnd-kit/core'
+import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useLayoutEffect, useRef, useState, type ComponentProps, type CSSProperties, type Ref } from 'react'
 import { useDeleteGroup } from '@/api/groups'
@@ -11,9 +12,11 @@ import { colorValue } from '@/lib/colors'
 import { toastError } from '@/lib/errors'
 import { cn } from '@/lib/utils'
 import { useBoardActions } from './board-actions'
-import { rowsOf, type BoardCard } from './board-model'
+import { useFolderActions } from '@/features/folders/folder-dialogs'
+import { cardTree, rowsOf, type BoardCard } from './board-model'
+import { Branch, DROP_TARGET } from './folder-branch'
 import { GroupDialog } from './group-dialog'
-import { CARD_BUTTON, LinkRow, SortableLinkRow } from './link-row'
+import { CARD_BUTTON } from './link-row'
 import { dragHeight, dragWidth, HEIGHT_VAR, heightKeys, widthKeys } from './resize'
 
 interface GroupCardProps {
@@ -56,9 +59,9 @@ const CARD_LIFTED =
   'animate-none rotate-[1.2deg] cursor-grabbing border-[color-mix(in_srgb,var(--c)_55%,transparent)] shadow-[0_2px_6px_hsl(var(--shadow)/0.1),0_18px_40px_-12px_hsl(var(--shadow)/0.35)]'
 
 /** A card's name, in its color. It keeps at least its longest word, and wraps between words. */
-const CARD_NAME = 'm-0 min-w-min flex-1 [font:650_18px/1.2_var(--font-rounded)] tracking-[-0.01em] wrap-break-word text-[color-mix(in_srgb,var(--c)_58%,var(--ink))]'
+const CARD_NAME = 'm-0 min-w-min [font:650_18px/1.2_var(--font-rounded)] tracking-[-0.01em] wrap-break-word text-[color-mix(in_srgb,var(--c)_58%,var(--ink))]'
 
-/** How many lines a card has, in a pill of its color. */
+/** How many links a card has, in a pill of its color, right after its name (the right of a card is for file sizes). */
 const CARD_COUNT = 'min-w-[26px] flex-none rounded-full bg-[color-mix(in_srgb,var(--c)_18%,transparent)] px-2 py-[3px] text-center [font:600_12px/1.2_var(--font-rounded)] text-[color-mix(in_srgb,var(--c)_50%,var(--ink))] tabular-nums'
 
 export const CARD_HEAD = 'flex min-h-[54px] items-center gap-2 pt-3.5 pr-2.5 pb-2.5 pl-4'
@@ -83,7 +86,14 @@ export function GroupCard({ card, restoring, cardRef, dragStyle, placeholder, li
   const { setGroupHidden, cardHeight, resizeCard, resizeColumns } = useBoardActions()
   const height = cardHeight(group.id)
   const rows = rowsOf(card)
-  const Row = lifted ? LinkRow : SortableLinkRow
+  const { isSpaceAdmin } = usePermissions()
+  // The space's admins see empty folders on the board, to add to them.
+  const tree = cardTree(card, isSpaceAdmin(group.space_id) && !restoring)
+  // A link dragged out of its folder, onto the card outside any folder or onto its header (always
+  // there, also when an open folder fills the card), goes to the top of the group.
+  const toTop = { type: 'area', groupId: group.id, folderId: null }
+  const drop = useDroppable({ id: `card:${group.id}`, data: toTop, disabled: lifted || card.folders.length === 0 })
+  const dropOnHead = useDroppable({ id: `card-head:${group.id}`, data: toTop, disabled: lifted || card.folders.length === 0 })
   // A card stops growing at a part of the screen and scrolls inside itself. Its edges fade
   // where lines are hidden above or below.
   const body = useRef<HTMLDivElement>(null)
@@ -93,7 +103,8 @@ export function GroupCard({ card, restoring, cardRef, dragStyle, placeholder, li
     if (!node) return
     const end = node.scrollTop + node.clientHeight
     // The lines that start below what is in view: what the "more" pill counts.
-    const below = [...node.children].filter((child) => child instanceof HTMLElement && child.hasAttribute('data-row') && child.offsetTop + child.offsetHeight / 2 > end).length
+    // Lines inside open folders count too. offsetTop is from the card (the nearest positioned box).
+    const below = [...node.querySelectorAll<HTMLElement>('[data-row]')].filter((child) => child.offsetTop - node.offsetTop + child.offsetHeight / 2 > end).length
     const next = { top: node.scrollTop > 2, bottom: end < node.scrollHeight - 2, below }
     setEdges((current) => (current.top === next.top && current.bottom === next.bottom && current.below === next.below ? current : next))
   }
@@ -104,7 +115,7 @@ export function GroupCard({ card, restoring, cardRef, dragStyle, placeholder, li
     const observer = new ResizeObserver(measureEdges)
     observer.observe(node)
     return () => observer.disconnect()
-  }, [rows.length])
+  }, [rows.length, tree.folders.length])
 
   return (
     <section
@@ -115,8 +126,11 @@ export function GroupCard({ card, restoring, cardRef, dragStyle, placeholder, li
       aria-label={group.name}
     >
       <header
+        ref={dropOnHead.setNodeRef}
         className={cn(
           CARD_HEAD,
+          'rounded-t-2xl transition-[background-color,box-shadow] duration-150',
+          dropOnHead.isOver && DROP_TARGET,
           // Picked up by its header. A finger drags only after a press and hold (see
           // sortable-board.tsx), so a swipe still scrolls, and holding selects no text.
           headProps && 'cursor-grab touch-manipulation select-none [-webkit-touch-callout:none]',
@@ -124,30 +138,28 @@ export function GroupCard({ card, restoring, cardRef, dragStyle, placeholder, li
         )}
         {...headProps}
       >
-        <h2 className={CARD_NAME}>{group.name}</h2>
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <h2 className={CARD_NAME}>{group.name}</h2>
+          <span className={CARD_COUNT} aria-label={`${rows.length} ${rows.length === 1 ? 'link' : 'links'}`}>
+            {rows.length}
+          </span>
+        </div>
         {restoring && hidden && <RestoreButton label={`Show ${group.name} again`} onClick={() => setGroupHidden(group.id, false)} />}
-        <span
-          className={CARD_COUNT}
-          aria-label={`${rows.length} ${rows.length === 1 ? 'link' : 'links'}`}
-        >
-          {rows.length}
-        </span>
         <GroupMenu card={card} />
       </header>
       <div
-        ref={body}
-        className={cn(CARD_BODY, !lifted && CAPPED, edges.top && '[--fade-top:28px]', edges.bottom && '[--fade-bottom:72px]')}
+        ref={(node) => {
+          body.current = node
+          drop.setNodeRef(node)
+        }}
+        className={cn(CARD_BODY, !lifted && CAPPED, edges.top && '[--fade-top:28px]', edges.bottom && '[--fade-bottom:72px]', 'rounded-b-2xl transition-[background-color,box-shadow] duration-150', drop.isOver && DROP_TARGET)}
         style={height === undefined || lifted ? undefined : ({ [HEIGHT_VAR]: `${height}px` } as CSSProperties)}
         onScroll={measureEdges}
         tabIndex={edges.bottom || edges.top ? 0 : undefined}
         aria-label={edges.bottom || edges.top ? `${group.name} links` : undefined}
       >
-        {rows.length === 0 && <EmptyGroup card={card} />}
-        <SortableContext items={rows.map((row) => row.id)} strategy={verticalListSortingStrategy}>
-          {rows.map((row) => (
-            <Row key={row.id} row={row} groupId={group.id} restoring={restoring && !hidden} />
-          ))}
-        </SortableContext>
+        {rows.length === 0 && tree.folders.length === 0 && <EmptyGroup card={card} />}
+        <Branch card={card} folders={tree.folders} links={tree.links} folderId={null} restoring={restoring} lifted={lifted} />
       </div>
       {!lifted && edges.bottom && edges.below > 0 && (
         <button
@@ -227,6 +239,7 @@ function GroupMenu({ card }: { card: BoardCard }) {
   const admin = isSpaceAdmin(group.space_id)
   const { editing: arranging, setGroupHidden, sortLinksByName, useTeamLinkOrder: resetLinkOrder, isResized, resizeCard } = useBoardActions()
   const { addLink } = useLinkDialog()
+  const { newFolder } = useFolderActions()
   const confirm = useConfirm()
   const deleteGroup = useDeleteGroup()
   const [editing, setEditing] = useState(false)
@@ -270,6 +283,10 @@ function GroupMenu({ card }: { card: BoardCard }) {
                   Sort links A to Z
                 </DropdownMenuItem>
               )}
+              <DropdownMenuItem onClick={() => newFolder(group, null)}>
+                <FolderPlus />
+                New folder…
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setEditing(true)}>
                 <Pencil />
                 Edit…

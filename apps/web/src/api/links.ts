@@ -73,6 +73,8 @@ export interface LinkFields {
   spaceId: string
   /** An existing group, or the name of one that doesn't exist yet. */
   group: { id: string } | { name: string }
+  /** One of the group's folders, or null for the top of the group (always, for a new group). */
+  folderId: string | null
   title: string
   /** A web address. Left out for a file. */
   url?: string
@@ -86,12 +88,12 @@ async function columns({ title, url, file }: LinkFields) {
   return { title: title.trim(), ...(url ? { url, icon_url: await findIcon(url) } : {}) }
 }
 
-/** The database refuses a second link with the same name in a group. */
-async function saving<Result>(run: () => Promise<Result>, title: string): Promise<Result> {
+/** The database refuses a second link with the same name in one folder (or at the top of a group). */
+async function saving<Result>(run: () => Promise<Result>, title: string, inFolder = false): Promise<Result> {
   try {
     return await run()
   } catch (error) {
-    if (isUniqueViolation(error)) throw new Error(`This group already has a link called ${title.trim()}.`)
+    if (isUniqueViolation(error)) throw new Error(`${inFolder ? 'This folder' : 'This group'} already has a link called ${title.trim()}.`)
     throw error
   }
 }
@@ -107,16 +109,17 @@ export function useAddLink() {
       const base = { org_id: orgId, space_id: spaceId, ...(await columns(fields)) }
 
       if (!publishFor) {
-        const place = 'id' in group ? { group_id: group.id } : { proposed_group: group.name.trim() }
+        const place = 'id' in group ? { group_id: group.id, folder_id: fields.folderId } : { proposed_group: group.name.trim() }
         await unwrap(neon.from('links').insert({ ...base, ...place }))
         return
       }
 
       const group_id = 'id' in group ? group.id : (await findOrCreateGroup(orgId, spaceId, group.name)).id
+      const folder_id = 'id' in group ? fields.folderId : null
       const published = { status: 'approved', visibility: publishFor.visibility, reviewed_at: new Date().toISOString() }
-      const created = await unwrap<{ id: string }>(neon.from('links').insert({ ...base, ...published, group_id }).select('id').single())
+      const created = await unwrap<{ id: string }>(neon.from('links').insert({ ...base, ...published, group_id, folder_id }).select('id').single())
       await setAccess(created.id, publishFor)
-    }, fields.title),
+    }, fields.title, Boolean(fields.folderId)),
   )
 }
 
@@ -125,9 +128,10 @@ export function useUpdateLink() {
   return useLinksMutation(({ id, fields, audience }: { id: string; fields: LinkFields; audience: Audience }, orgId) =>
     saving(async () => {
       const group_id = 'id' in fields.group ? fields.group.id : (await findOrCreateGroup(orgId, fields.spaceId, fields.group.name)).id
-      await unwrap(neon.from('links').update({ ...(await columns({ ...fields, file: undefined })), group_id, proposed_group: null, visibility: audience.visibility }).eq('id', id))
+      const folder_id = 'id' in fields.group ? fields.folderId : null
+      await unwrap(neon.from('links').update({ ...(await columns({ ...fields, file: undefined })), group_id, folder_id, proposed_group: null, visibility: audience.visibility }).eq('id', id))
       await setAccess(id, audience)
-    }, fields.title),
+    }, fields.title, Boolean(fields.folderId)),
   )
 }
 
@@ -150,7 +154,26 @@ async function approve(link: Link, orgId: string) {
       .from('links')
       .update({ status: 'approved', group_id, proposed_group: null, reviewed_at: new Date().toISOString(), review_note: '' })
       .eq('id', link.id),
-  ), link.title)
+  ), link.title, Boolean(link.folder_id))
+}
+
+/** Moves links into a folder of their group, or to its top (null). The space's admins. Shown at once, put back if it fails. */
+export function useMoveLinks() {
+  const org = useOrg()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ links, folderId }: { links: Link[]; folderId: string | null }) => {
+      for (const link of links) await saving(() => unwrap(neon.from('links').update({ folder_id: folderId }).eq('id', link.id)), link.title, Boolean(folderId))
+    },
+    onMutate: ({ links, folderId }) => {
+      const before = queryClient.getQueryData<Link[]>(boardKey(org.id))
+      const ids = new Set(links.map((link) => link.id))
+      queryClient.setQueryData<Link[]>(boardKey(org.id), (all) => all?.map((link) => (ids.has(link.id) ? { ...link, folder_id: folderId } : link)))
+      return { before }
+    },
+    onError: (_error, _input, context) => queryClient.setQueryData(boardKey(org.id), context?.before),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: linksKey(org.id) }),
+  })
 }
 
 /** The space's admins. The reason is shown to the person who suggested the link. */

@@ -51,6 +51,24 @@ export interface Group {
   created_at: string
 }
 
+/**
+ * A folder inside a group, or inside another folder of the same group (at most 6 deep). It
+ * arranges a long group without splitting it into more groups.
+ */
+export interface Folder {
+  id: string
+  org_id: string
+  space_id: string
+  group_id: string
+  /** The folder it is in. null: at the top of its group. */
+  parent_id: string | null
+  name: string
+  created_at: string
+}
+
+/** How deep folders go: a folder at the top of a group is 1 deep. */
+export const MAX_FOLDER_DEPTH = 6
+
 /** everyone in the organization sees an "org" space. Only its members see a "private" one. */
 export type SpaceVisibility = 'org' | 'private'
 
@@ -99,6 +117,8 @@ export interface Link {
   group_id: string | null
   /** A suggestion for a group that doesn't exist yet. */
   proposed_group: string | null
+  /** The folder of its group it is in. null: at the top of the group. */
+  folder_id: string | null
   title: string
   url: string
   /** The address of the site's icon, found when the link was saved. */

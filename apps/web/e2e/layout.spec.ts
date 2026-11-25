@@ -65,7 +65,8 @@ test('with more spaces than fit, the spaces scroll and the organization’s page
   const sidebar = page.getByRole('navigation', { name: 'Acme' })
   await expect(sidebar.getByRole('link', { name: 'Organization settings' })).toBeInViewport()
   await expect(sidebar.getByRole('link', { name: 'Suggestions' })).toBeInViewport()
-  const last = sidebar.getByRole('link', { name: 'Support' })
+  // Exact: the space's line, not its settings gear ("Support settings").
+  const last = sidebar.getByRole('link', { name: 'Support', exact: true })
   await expect(last).not.toBeInViewport()
   await last.scrollIntoViewIfNeeded()
   await expect(last).toBeInViewport()

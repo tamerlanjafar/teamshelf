@@ -23,7 +23,10 @@ import { cn } from '@/lib/utils'
 import { colorValue } from '@/lib/colors'
 import { useBoardActions } from './board-actions'
 import { arrangeColumns, columnOf, moveCard, sameLayout, type Layout } from './board-layout'
-import { estimateCardHeight, rowsOf, type BoardCard } from './board-model'
+import { useMoveLinks } from '@/api/links'
+import { toastError } from '@/lib/errors'
+import { mergeOrder } from '@/lib/order'
+import { estimateCardHeight, linkIdsIn, rowsOf, type BoardCard } from './board-model'
 import { GroupCard, SortableGroupCard } from './group-card'
 import { LinkRow } from './link-row'
 import { COLUMN_GAP, useColumnCount } from './masonry'
@@ -49,7 +52,7 @@ const FOOTER_HEIGHT = 88
 
 /** What is in your hand: a group, or a link (which only moves within its group). */
 /** A card in your hand remembers the column it came from (`from`). */
-type Held = { type: 'group'; id: string; from: number } | { type: 'link'; id: string; groupId: string }
+type Held = { type: 'group'; id: string; from: number } | { type: 'link'; id: string; groupId: string; folderId: string | null }
 
 /**
  * A link is only dropped among the links of its own group, at the nearest row. A group is
@@ -57,10 +60,28 @@ type Held = { type: 'group'; id: string; from: number } | { type: 'link'; id: st
  * below its last card, or in an empty column).
  */
 const sameKind: CollisionDetection = (args) => {
-  const held = args.active.data.current as { type: string; groupId?: string }
+  const held = args.active.data.current as { type: string; groupId?: string; folderId?: string | null; canMove?: boolean }
+  // A link of an admin's space can go into another folder of its group: the innermost folder
+  // under the pointer (its line, or all of it when open), or the card outside any folder (the
+  // top of the group). Over its own folder, it is sorted among that folder's links as before.
+  if (held.type === 'link' && held.canMove) {
+    const areas = args.droppableContainers.filter((container) => {
+      const data = container.data.current as { type?: string; groupId?: string } | undefined
+      return data?.type === 'area' && data.groupId === held.groupId
+    })
+    const under = pointerWithin({ ...args, droppableContainers: areas })
+    const area = (collision: (typeof under)[number]) => {
+      const rect = args.droppableRects.get(collision.id)
+      return rect ? rect.width * rect.height : Infinity
+    }
+    const innermost = [...under].sort((a, b) => area(a) - area(b))[0]
+    const folderId = (innermost?.data?.droppableContainer.data.current as { folderId?: string | null } | undefined)?.folderId
+    if (innermost && (folderId ?? null) !== (held.folderId ?? null)) return [innermost]
+  }
   const candidates = args.droppableContainers.filter((container) => {
-    const data = container.data.current as { type?: string; groupId?: string } | undefined
-    if (held.type === 'link') return data?.type === 'link' && data.groupId === held.groupId
+    const data = container.data.current as { type?: string; groupId?: string; folderId?: string | null } | undefined
+    // A link stays in its folder: it is dropped among the links of the same folder only.
+    if (held.type === 'link') return data?.type === 'link' && data.groupId === held.groupId && (data.folderId ?? null) === (held.folderId ?? null)
     return data?.type === 'group' || data?.type === 'column'
   })
   if (held.type === 'link') return closestCenter({ ...args, droppableContainers: candidates })
@@ -99,6 +120,7 @@ function usePendingOrder<Scope>(saved: (scope: Scope) => string[]) {
  */
 export function SortableBoard({ cards, restoring, footer }: { cards: BoardCard[]; restoring: boolean; /** The last thing on the board, after the cards. */ footer?: ReactNode }) {
   const { arrangeGroups, reorderLinks, layout, cardHeight, columnWidths } = useBoardActions()
+  const moveLinks = useMoveLinks()
   const container = useRef<HTMLDivElement>(null)
   const columnCount = useColumnCount(container)
   const [held, setHeld] = useState<Held | null>(null)
@@ -151,8 +173,8 @@ export function SortableBoard({ cards, restoring, footer }: { cards: BoardCard[]
   function onDragStart({ active }: DragStartEvent) {
     // A short buzz where the device has one, so a held finger knows the card is picked up.
     if (typeof navigator.vibrate === 'function') navigator.vibrate(12)
-    const data = active.data.current as { type: 'group' | 'link'; groupId?: string }
-    setHeld(data.type === 'group' ? { type: 'group', id: String(active.id), from: columnOf(columns, String(active.id)) } : { type: 'link', id: String(active.id), groupId: data.groupId! })
+    const data = active.data.current as { type: 'group' | 'link'; groupId?: string; folderId?: string | null }
+    setHeld(data.type === 'group' ? { type: 'group', id: String(active.id), from: columnOf(columns, String(active.id)) } : { type: 'link', id: String(active.id), groupId: data.groupId!, folderId: data.folderId ?? null })
     if (data.type === 'group') setDragged(columns)
   }
 
@@ -199,15 +221,22 @@ export function SortableBoard({ cards, restoring, footer }: { cards: BoardCard[]
         arrangeGroups(next)
       }
     }
-    if (held?.type === 'link' && over && over.id !== active.id) {
+    // Dropped into another folder (or the top of the group): it moves there, at the end.
+    const area = over?.data.current as { type?: string; folderId?: string | null } | undefined
+    if (held?.type === 'link' && area?.type === 'area' && (area.folderId ?? null) !== held.folderId) {
+      const link = shown(held.groupId)?.links.find((item) => item.link.id === held.id)?.link
+      if (link) moveLinks.mutate({ links: [link], folderId: area.folderId ?? null }, { onError: toastError })
+    } else if (held?.type === 'link' && over && over.id !== active.id) {
       const card = shown(held.groupId)
-      const rows = card ? rowsOf(card) : []
-      const from = rows.findIndex((row) => row.id === active.id)
-      const to = rows.findIndex((row) => row.id === over.id)
-      if (from !== -1 && to !== -1) {
-        const next = arrayMove(rows, from, to).map((row) => row.id)
-        setLinkOrder({ scope: held.groupId, ids: next })
-        reorderLinks(held.groupId, next)
+      // The links of the folder it was moved in, in their new order. They take the places they
+      // had among the group's links, and the rest stay where they were.
+      const siblings = card ? linkIdsIn(card, held.folderId) : []
+      const from = siblings.indexOf(String(active.id))
+      const to = siblings.indexOf(String(over.id))
+      if (card && from !== -1 && to !== -1) {
+        const moved = arrayMove(siblings, from, to)
+        setLinkOrder({ scope: held.groupId, ids: mergeOrder(rowsOf(card).map((row) => row.id), moved) })
+        reorderLinks(held.groupId, moved)
       }
     }
     setHeld(null)

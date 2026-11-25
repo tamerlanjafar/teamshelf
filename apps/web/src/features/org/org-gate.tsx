@@ -6,6 +6,7 @@ import { ConfirmProvider } from '@/components/app/confirm-dialog'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { AUTH_BUTTON, AUTH_SECONDARY, AuthCard, Strong } from '@/features/auth/screens'
 import { FileViewerProvider } from '@/features/files/file-viewer'
+import { FolderActionsProvider } from '@/features/folders/folder-dialogs'
 import { LinkDialogProvider } from '@/features/links/link-dialog'
 import { crossTo } from '@/lib/accounts'
 import { errorMessage } from '@/lib/errors'
@@ -39,7 +40,9 @@ export function OrgGate({ slug, children }: { slug: string; children: ReactNode 
       <ConfirmProvider>
         <FileViewerProvider>
           <LinkDialogProvider>
-            <Loaded>{children}</Loaded>
+            <FolderActionsProvider>
+              <Loaded>{children}</Loaded>
+            </FolderActionsProvider>
           </LinkDialogProvider>
         </FileViewerProvider>
       </ConfirmProvider>

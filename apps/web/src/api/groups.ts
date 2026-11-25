@@ -6,8 +6,9 @@ import type { Color, Group } from '@/lib/types'
 import { isUniqueViolation, NONE, unwrap } from './db'
 
 export const groupsKey = (orgId: string) => [orgId, 'groups'] as const
-/** Deleting a group deletes its links, so link lists are refreshed too. */
+/** Deleting a group deletes its links and folders, so those lists are refreshed too. */
 const linksKey = (orgId: string) => [orgId, 'links'] as const
+const foldersKey = (orgId: string) => [orgId, 'folders'] as const
 
 /** The groups of every space this person can see. Pages pick the open space's. */
 const fetchGroups = (orgId: string) => unwrap<Group[]>(neon.from('groups').select('*').eq('org_id', orgId))
@@ -51,7 +52,8 @@ function useGroupsMutation<Input>(run: (input: Input, orgId: string) => Promise<
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: Input) => run(input, org.id),
-    onSettled: () => Promise.all([queryClient.invalidateQueries({ queryKey: groupsKey(org.id) }), queryClient.invalidateQueries({ queryKey: linksKey(org.id) })]),
+    onSettled: () =>
+      Promise.all([queryClient.invalidateQueries({ queryKey: groupsKey(org.id) }), queryClient.invalidateQueries({ queryKey: linksKey(org.id) }), queryClient.invalidateQueries({ queryKey: foldersKey(org.id) })]),
   })
 }
 

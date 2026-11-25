@@ -1,11 +1,14 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Copy, Download, Eye, EyeOff, Lock, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { Copy, Download, Eye, EyeOff, FolderInput, Lock, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import type { ComponentProps, CSSProperties, ReactNode, Ref } from 'react'
 import { toast } from '@/components/ui/toast'
 import { downloadFile, formatBytes } from '@/api/files'
 import { useFileViewer } from '@/features/files/file-viewer'
+import { useFoldersIfLoaded } from '@/api/folders'
+import { useGroupsIfLoaded } from '@/api/groups'
 import { useDeleteLink } from '@/api/links'
+import { useFolderActions } from '@/features/folders/folder-dialogs'
 import { useConfirm } from '@/components/app/confirm-dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { useLinkDialog } from '@/features/links/link-dialog'
@@ -21,6 +24,8 @@ import { FileIcon } from './file-icon'
 interface LinkRowProps {
   row: BoardRow
   groupId: string
+  /** The folder the link is in (null: the top of its group). Links are only dragged among those of the same folder. */
+  folderId?: string | null
   /** In the view of what you hid: the line gets an eye button that brings the link back. */
   restoring: boolean
 }
@@ -145,9 +150,11 @@ export function LinkRow({ row, restoring, rowRef, style, placeholder, lifted, dr
 /** A row that can be dragged to another place in its group. */
 export function SortableLinkRow(props: LinkRowProps) {
   const { canReorder } = useBoardActions()
+  const { canManage } = usePermissions()
   const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({
     id: props.row.id,
-    data: { type: 'link', groupId: props.groupId },
+    // The space's admins can also drop it into another folder of its group (or at its top).
+    data: { type: 'link', groupId: props.groupId, folderId: props.folderId ?? null, canMove: canManage(props.row.item.link) },
     disabled: !canReorder,
   })
 
@@ -167,6 +174,9 @@ export function SortableLinkRow(props: LinkRowProps) {
 /** The menu of one link: copy the address (or download the file), hide it for yourself, and for the space's admins: edit and delete. */
 function LinkMenu({ link, hidden, label, className, children }: { link: Link; hidden: boolean; label: string; className: string; children: ReactNode }) {
   const { canManage } = usePermissions()
+  const group = useGroupsIfLoaded().find((one) => one.id === link.group_id)
+  const hasFolders = useFoldersIfLoaded().some((folder) => folder.group_id === link.group_id)
+  const { move } = useFolderActions()
   const { setLinksHidden, editing: arranging } = useBoardActions()
   const { openFile } = useFileViewer()
   const { editLink } = useLinkDialog()
@@ -216,6 +226,12 @@ function LinkMenu({ link, hidden, label, className, children }: { link: Link; hi
               <Pencil />
               Edit…
             </DropdownMenuItem>
+            {group && hasFolders && (
+              <DropdownMenuItem onClick={() => move({ kind: 'link', link, group })}>
+                <FolderInput />
+                Move to folder…
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               variant="destructive"
               onClick={() =>

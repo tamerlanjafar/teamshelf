@@ -1,7 +1,7 @@
 // Example data for mock mode, and the situations ("scenarios") the screens need.
 // Everything here is made up. Ids are readable so addresses and rows are easy to follow.
 
-import type { Color, Group, Link, Member, Role, Space } from '@/lib/types'
+import type { Color, Folder, Group, Link, Member, Role, Space } from '@/lib/types'
 import { setState, type MockState, type Tables } from './store'
 
 const day = (daysAgo: number) => new Date(Date.now() - daysAgo * 86_400_000).toISOString()
@@ -37,6 +37,7 @@ function link(org_id: string, space_id: string, group_id: string | null, title: 
     kind: 'link',
     group_id,
     proposed_group: null,
+    folder_id: null,
     title,
     url,
     icon_url: null,
@@ -54,6 +55,32 @@ function link(org_id: string, space_id: string, group_id: string | null, title: 
     ...extra,
   }
 }
+
+function folder(id: string, group_id: string, parent_id: string | null, name: string): Folder {
+  return { id, org_id: 'org-acme', space_id: 'space-nw-data', group_id, parent_id, name, created_at: day(70) }
+}
+
+/** A document of the Data team's, kept in Documentation (in a folder, or at its top). */
+function dataDoc(title: string, fileName: string, folder_id: string | null, extra: Partial<Link> = {}): Link {
+  const type = fileName.endsWith('.pdf') ? 'application/pdf' : 'text/markdown'
+  const key = `mock/data/${fileName}`
+  return link('org-acme', 'space-nw-data', 'g-data-docs', title, `/file?key=${key}`, { kind: 'file', file_key: key, file_name: fileName, file_size: 18_000 + title.length * 900, file_type: type, folder_id, ...extra })
+}
+
+/**
+ * The Data team's documentation: one group, its files arranged in folders inside folders.
+ * "Archive" is empty: only the space's admins see it.
+ */
+const DATA_FOLDERS: Folder[] = [
+  folder('f-pipelines', 'g-data-docs', null, 'Pipelines'),
+  folder('f-warehouse', 'g-data-docs', 'f-pipelines', 'Warehouse'),
+  folder('f-transform', 'g-data-docs', 'f-pipelines', 'Transform'),
+  folder('f-metrics', 'g-data-docs', null, 'Metrics'),
+  folder('f-finance', 'g-data-docs', 'f-metrics', 'Finance'),
+  folder('f-onboarding', 'g-data-docs', null, 'Onboarding'),
+  folder('f-runbooks', 'g-data-docs', null, 'Runbooks'),
+  folder('f-archive', 'g-data-docs', null, 'Archive'),
+]
 
 /** Acme (the main organization), Lumen Labs (Alex's other email), Orbit (open to @lumenlabs.dev). */
 function world(): Tables {
@@ -121,6 +148,20 @@ function world(): Tables {
     link(nw, dev, 'g-docs', 'Runbooks', 'https://www.notion.so'),
     link(nw, dev, 'g-docs', 'Release notes', 'https://github.com'),
     link(nw, dev, 'g-monitoring', 'Datadog', 'https://www.datadoghq.com'),
+    dataDoc('Pipeline overview', 'pipeline-overview.pdf', 'f-pipelines'),
+    dataDoc('Warehouse schema', 'warehouse-schema.pdf', 'f-warehouse'),
+    dataDoc('Naming rules', 'naming-rules.md', 'f-warehouse'),
+    dataDoc('Style guide (dbt)', 'dbt-style-guide.md', 'f-transform'),
+    dataDoc('Metric definitions', 'metric-definitions.md', 'f-metrics'),
+    dataDoc('Revenue model', 'revenue-model.pdf', 'f-finance'),
+    dataDoc('First week', 'first-week.md', 'f-onboarding'),
+    dataDoc('Access requests', 'access-requests.md', 'f-onboarding'),
+    dataDoc('Backfill runbook', 'backfill-runbook.md', 'f-runbooks'),
+    dataDoc('Incident runbook', 'incident-runbook.md', 'f-runbooks'),
+    dataDoc('Glossary', 'glossary.md', null),
+    // Suggested into folders, waiting for review.
+    dataDoc('Late data runbook', 'late-data-runbook.md', 'f-runbooks', { status: 'pending', created_by: 'm-nw-priya', reviewed_at: null, created_at: day(1) }),
+    link(nw, data, 'g-data-docs', 'Table owners', 'https://owners.example.com', { status: 'pending', folder_id: 'f-warehouse', created_by: 'm-nw-mina', reviewed_at: null, created_at: day(2) }),
   ]
 
   return {
@@ -176,10 +217,12 @@ function world(): Tables {
       group('g-figma', nw, design, 'Figma', 'pink', 1),
       group('g-assets', nw, design, 'Assets', 'yellow', 2),
       group('g-dash', nw, data, 'Dashboards', 'teal', 1),
+      group('g-data-docs', nw, data, 'Documentation', 'blue', 2),
       group('g-plans', nw, leads, 'Plans', 'purple', 1),
       group('g-lumen-papers', lumen, 'space-lumen-research', 'Papers', 'green', 1),
       group('g-orbit-tools', 'org-orbit', 'space-orbit-eng', 'Tools', 'purple', 1),
     ],
+    folders: DATA_FOLDERS.map((one) => ({ ...one })),
     links,
     link_access: [],
     member_prefs: [],

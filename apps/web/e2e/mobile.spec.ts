@@ -17,7 +17,7 @@ test('the front page fits the screen, with the actions full width', async ({ pag
   expect(Math.round(a!.width)).toBe(Math.round(b!.width))
 })
 
-for (const id of ['board', 'team', 'requests', 'space-settings', 'org-settings', 'orgs', 'login', 'file-document', 'document-new']) {
+for (const id of ['board', 'board-folders', 'team', 'requests', 'space-settings', 'org-settings', 'orgs', 'login', 'file-document', 'document-new']) {
   test(`${id} doesn’t scroll sideways`, async ({ page }) => {
     await openScreen(page, id)
     await noSidewaysScroll(page)
@@ -28,8 +28,9 @@ test('the sidebar opens as a drawer from the menu button, and closes after choos
   await openScreen(page, 'board')
   await page.getByRole('button', { name: 'Spaces and pages' }).click()
   const drawer = page.getByRole('dialog')
-  await expect(drawer.getByRole('link', { name: /Design/ })).toBeVisible()
-  await drawer.getByRole('link', { name: /Design/ }).click()
+  // Exact: the space's line, not its settings gear ("Design settings").
+  await expect(drawer.getByRole('link', { name: 'Design', exact: true })).toBeVisible()
+  await drawer.getByRole('link', { name: 'Design', exact: true }).click()
   await expect(page).toHaveURL(/\/acme\/design$/)
   await expect(page.getByRole('dialog')).toHaveCount(0)
 })

@@ -1,7 +1,8 @@
 // Turns groups, links and one person's preferences into what the board draws. Pure functions, no React.
 
+import { childrenOf } from '@/features/folders/folder-tree'
 import { personalOrder, teamOrder } from '@/lib/order'
-import type { BoardPrefs, Group, Link } from '@/lib/types'
+import type { BoardPrefs, Folder, Group, Link } from '@/lib/types'
 
 export interface BoardLink {
   link: Link
@@ -11,7 +12,10 @@ export interface BoardLink {
 
 export interface BoardCard {
   group: Group
+  /** Every link the card shows, in or out of folders, in order. */
   links: BoardLink[]
+  /** The group's folders. Which of them show is up to the tree (see cardTree). */
+  folders: Folder[]
   /** The person hid the whole group. */
   hidden: boolean
   /** The person arranged this group's links themselves, so the team's order doesn't apply to it. */
@@ -47,7 +51,7 @@ export interface BoardOptions {
   keepEmpty: boolean
 }
 
-export function buildBoard(groups: Group[], links: Link[], prefs: BoardPrefs, { view, keepEmpty }: BoardOptions): BoardCard[] {
+export function buildBoard(groups: Group[], links: Link[], prefs: BoardPrefs, { view, keepEmpty }: BoardOptions, folders: Folder[] = []): BoardCard[] {
   const hiddenGroups = new Set(prefs.hidden_groups)
   const hiddenLinks = new Set(prefs.hidden_links)
 
@@ -59,10 +63,51 @@ export function buildBoard(groups: Group[], links: Link[], prefs: BoardPrefs, { 
         // The board leaves out hidden links. The hidden view shows a hidden group whole,
         // and of the other groups only the links that were hidden one by one.
         .filter((item) => (view === 'board' ? !item.hidden : groupHidden || item.hidden))
-      return { group, links: shown, hidden: groupHidden, ownLinkOrder: Boolean(prefs.link_order[group.id]?.length) }
+      return { group, links: shown, folders: folders.filter((folder) => folder.group_id === group.id), hidden: groupHidden, ownLinkOrder: Boolean(prefs.link_order[group.id]?.length) }
     })
     .filter((card) => (view === 'board' ? !card.hidden : card.hidden || card.links.length > 0))
     .filter((card) => card.links.length > 0 || (view === 'hidden' ? card.hidden : keepEmpty))
+}
+
+/** A folder as a card draws it: what is right inside it, and how many links it holds at any depth. */
+export interface FolderNode {
+  folder: Folder
+  folders: FolderNode[]
+  links: BoardLink[]
+  count: number
+}
+
+/** What a card draws: its folders (by name) and then the links at the top of the group. */
+export interface CardTree {
+  folders: FolderNode[]
+  links: BoardLink[]
+}
+
+/**
+ * A card's links in its folders. A folder with nothing shown in it is left out, unless
+ * `keepEmpty` (the space's admins on the board, who can add to it).
+ */
+export function cardTree(card: BoardCard, keepEmpty: boolean): CardTree {
+  const known = new Set(card.folders.map((folder) => folder.id))
+  // A link whose folder isn't there (gone, or not loaded yet) shows at the top of the group.
+  const placeOf = (item: BoardLink) => (item.link.folder_id && known.has(item.link.folder_id) ? item.link.folder_id : null)
+  const linksIn = (folderId: string | null) => card.links.filter((item) => placeOf(item) === folderId)
+  const build = (parentId: string | null, seen: Set<string>): FolderNode[] =>
+    childrenOf(parentId, card.folders)
+      .filter((folder) => !seen.has(folder.id))
+      .map((folder) => {
+        const folders = build(folder.id, new Set([...seen, folder.id]))
+        const links = linksIn(folder.id)
+        return { folder, folders, links, count: links.length + folders.reduce((sum, child) => sum + child.count, 0) }
+      })
+      .filter((node) => keepEmpty || node.count > 0)
+  return { folders: build(null, new Set()), links: linksIn(null) }
+}
+
+/** The ids of the links right inside one folder of a card (null: at its top), in order. */
+export const linkIdsIn = (card: BoardCard, folderId: string | null) => {
+  const known = new Set(card.folders.map((folder) => folder.id))
+  return card.links.filter((item) => (item.link.folder_id && known.has(item.link.folder_id) ? item.link.folder_id : null) === folderId).map((item) => item.link.id)
 }
 
 /** One line of a card: one link or file. */
@@ -88,7 +133,9 @@ export function countHidden(groups: Group[], links: Link[], prefs: BoardPrefs): 
 
 /** A rough height for a card, enough to balance the columns before anything is measured. Long cards stop at about 16 lines and scroll (see CAPPED in group-card.tsx). */
 export const estimateCardHeight = (card: BoardCard, maxLines = 16) => {
-  const lines = card.links.length
+  // Folders start closed: a card shows a line per folder at its top, and its own links.
+  const tree = cardTree(card, true)
+  const lines = tree.folders.length + tree.links.length
   return 62 + Math.min(Math.max(lines, 1), maxLines) * 37
 }
 

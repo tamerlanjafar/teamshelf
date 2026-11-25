@@ -62,6 +62,20 @@ What the end-to-end tests cover, by area. Each line is a test in `e2e/<area>.spe
 - Your own changes to a space's layout (the layout button beside "Add"): someone who changed nothing sees it marked "Default", with nothing to reset; a board you changed is marked on the button and in its menu, resets to the default (which can be undone); the first change says only you see it (an admin's too, with the way to the editor); a space's admin can save their own changes as the default layout, after confirming, and someone who isn't can't; a card's menu goes back to the space's height.
 - Editing the default layout: only a space's admins are offered it, in the layout menu (not on a phone); the top bar steps back and a dock at the bottom says which space is edited, with nothing to save until something changes ("Close" leaves); a change is saved for everyone and isn't the admin's own; discarding asks first and leaves the layout as it was; while editing, hiding for yourself is off and a group's links can be sorted A to Z.
 
+## Folders (`folders.spec.ts`)
+
+Documentation in Data (screens `board-folders`, `board-folders-member`): folders inside folders, up to 6 deep.
+
+- Folders come first in a card, A to Z, each with how many links it holds at any depth; they start closed; opening one shows what is in it, indented; it stays open when the page is opened again.
+- An admin of the space: "New folder…" in the group's menu; "New folder inside…", "Rename…", "Move to…" and "Delete folder…" in a folder's menu; a name already used beside it is refused with the reason; an empty folder shows (and says it is empty).
+- Adding into a folder: "Add to this folder…" opens the form with the folder chosen, and the link lands in it; the form's Folder is a combobox like Group: the group's folders as a tree, found by typing any part of their path, shown by their path once chosen; a group without folders has no Folder field.
+- Moving: a link's menu moves it to another folder; a folder moves with everything in it, never into itself.
+- Dragging (admins of the space): a link dropped on a folder (its line, or anywhere inside it when open; the innermost wins) goes into it; held over a closed folder, the folder opens; dropped on the card's header (or the card outside any folder) it goes to the top of the group; within its own folder it is reordered as before. A member's drag only reorders within the folder.
+- Deleting a folder asks first, saying what moves where; what was in it moves up a level.
+- A member: no empty folders, and a folder's menu only offers to suggest into it; the suggestion shows its folder on the Suggestions page (mock data: Late data runbook for Runbooks, Table owners for Pipelines / Warehouse); approving puts it in that folder, and editing it first opens the form with the folder chosen.
+- Search finds a link in a folder, and shows its path (Documentation / Pipelines / Warehouse).
+- Rules in plain code (`src/features/folders/folder-tree.test.ts`): paths, the order of the tree, what is inside a folder, where a folder may move (not into itself, not past 6 levels).
+
 ## Files (`files.spec.ts`)
 
 - Opening: a document shows with its formatting (headings, a checklist, a table), for reading until "Edit" is pressed; a text file as it is written; a picture; a PDF in a frame of its own; a file that can't be shown offers its download; Escape and the X close the viewer; a file's menu opens it too.

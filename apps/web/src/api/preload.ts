@@ -2,6 +2,7 @@ import { useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { use } from 'react'
 import { useMe, useOrg } from '@/features/org/org-context'
 import { spaceMembersQuery, spacesQuery } from './spaces'
+import { foldersQuery } from './folders'
 import { groupsQuery } from './groups'
 import { boardLinksQuery, requestsQuery } from './links'
 import { membersQuery } from './members'
@@ -13,7 +14,7 @@ const loads = new Map<string, Promise<unknown>>()
 
 function loadAll(queryClient: QueryClient, orgId: string, memberId: string, userId: string) {
   // prefetchQuery never rejects: a query that fails is left for its own section to report.
-  const queries = [groupsQuery(orgId), boardLinksQuery(orgId), requestsQuery(orgId), spacesQuery(orgId), spaceMembersQuery(orgId), membersQuery(orgId), boardPrefsQuery(memberId)]
+  const queries = [groupsQuery(orgId), foldersQuery(orgId), boardLinksQuery(orgId), requestsQuery(orgId), spacesQuery(orgId), spaceMembersQuery(orgId), membersQuery(orgId), boardPrefsQuery(memberId)]
   return Promise.all([...queries.map((query) => queryClient.prefetchQuery(query as never)), queryClient.prefetchQuery(myOrgsQuery(userId))])
 }
 

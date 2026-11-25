@@ -2,7 +2,7 @@
 // as the app asks for. Access rules are a light imitation of db/migrations: enough for each role
 // to see what it would, not a test of the real rules.
 
-import type { Member, Org, Space } from '@/lib/types'
+import { MAX_FOLDER_DEPTH, type Folder, type Member, type Org, type Space } from '@/lib/types'
 import { getState, now, update, uuid, type Tables, type User } from './store'
 
 export interface Answer {
@@ -67,6 +67,11 @@ function visibleRows(db: Tables, user: User | null, table: TableName): Row[] {
         if (link.visibility === 'members') return db.link_access.some((row) => row.link_id === link.id && row.member_id === member?.id)
         return false
       }) as unknown as Row[]
+    case 'folders':
+      return db.folders.filter((one) => {
+        const space = db.spaces.find((candidate) => candidate.id === one.space_id)
+        return Boolean(space && seesSpace(db, user, space))
+      }) as unknown as Row[]
     default:
       return rows
   }
@@ -84,6 +89,7 @@ function withDefaults(db: Tables, user: User | null, table: TableName, values: R
         kind: 'link',
         group_id: null,
         proposed_group: null,
+        folder_id: null,
         icon_url: null,
         file_key: null,
         file_name: null,
@@ -101,6 +107,8 @@ function withDefaults(db: Tables, user: User | null, table: TableName, values: R
       }
     case 'groups':
       return { id, position: null, created_at: now(), ...values }
+    case 'folders':
+      return { id, parent_id: null, created_at: now(), ...values }
     case 'members':
       return { id, name: '', user_id: null, invited_by: memberOf(db, user, values.org_id)?.id ?? null, invited_at: now(), joined_at: null, role: 'member', approved: true, ...values }
     default:
@@ -121,9 +129,37 @@ function duplicate(db: Tables, table: TableName, row: Row, except?: Row) {
     const same = (other: Row) => other !== except && columns.every((column) => String(other[column]).toLowerCase() === String(row[column]).toLowerCase())
     if (rows.some(same)) return message
   }
+  // A link's name is unique in its folder (or at the top of its group), as links_group_title.
   if (table === 'links' && row.status === 'approved' && row.group_id) {
-    const clash = db.links.find((other) => (other as unknown as Row) !== except && other.status === 'approved' && other.group_id === row.group_id && other.title.toLowerCase() === String(row.title).toLowerCase())
+    const clash = db.links.find(
+      (other) => (other as unknown as Row) !== except && other.status === 'approved' && other.group_id === row.group_id && (other.folder_id ?? null) === (row.folder_id ?? null) && other.title.toLowerCase() === String(row.title).toLowerCase(),
+    )
     if (clash) return 'That link already exists.'
+  }
+  // Folders side by side have different names, as folders_name_unique.
+  if (table === 'folders') {
+    const clash = db.folders.find((other) => (other as unknown as Row) !== except && other.group_id === row.group_id && (other.parent_id ?? null) === (row.parent_id ?? null) && other.name.toLowerCase() === String(row.name).trim().toLowerCase())
+    if (clash) return 'That folder already exists.'
+  }
+  return null
+}
+
+/** As the triggers check_folder and check_link_folder: where a folder, or a link's folder, may go. */
+function misplaced(db: Tables, table: TableName, row: Row): string | null {
+  if (table === 'links' && row.folder_id) {
+    const folder = db.folders.find((one) => one.id === row.folder_id)
+    if (!folder || folder.group_id !== row.group_id) return 'A link can only go in a folder of its own group.'
+  }
+  if (table === 'folders' && row.parent_id) {
+    const parent = db.folders.find((one) => one.id === row.parent_id)
+    if (!parent || parent.group_id !== row.group_id) return 'A folder can only go in a folder of the same group.'
+    let depth = 1
+    for (let at: Folder | undefined = parent; at; at = db.folders.find((one) => one.id === at!.parent_id)) {
+      if (at.id === row.id) return "A folder can't go inside itself."
+      depth += 1
+    }
+    const below = (id: unknown): number => Math.max(0, ...db.folders.filter((one) => one.parent_id === id).map((one) => 1 + below(one.id)))
+    if (depth + below(row.id) > MAX_FOLDER_DEPTH) return `Folders go at most ${MAX_FOLDER_DEPTH} deep.`
   }
   return null
 }
@@ -188,6 +224,11 @@ export function runQuery(query: Query, user: User | null): Answer {
           answer = fail(problem, '23505')
           return
         }
+        const wrongPlace = misplaced(db, table, row)
+        if (wrongPlace) {
+          answer = fail(wrongPlace, 'P0001')
+          return
+        }
         rows.push(row)
         created.push(row)
       }
@@ -220,6 +261,11 @@ export function runQuery(query: Query, user: User | null): Answer {
           answer = fail(problem, '23505')
           return
         }
+        const wrongPlace = misplaced(db, table, { ...row, ...(query.values as Row) })
+        if (wrongPlace) {
+          answer = fail(wrongPlace, 'P0001')
+          return
+        }
         const opening = table === 'spaces' && values.visibility === 'org' && row.visibility !== 'org'
         Object.assign(row, query.values)
         // As the trigger open_spaces_keep_admins: an open space keeps only its admins (and invitations still waiting).
@@ -231,15 +277,26 @@ export function runQuery(query: Query, user: User | null): Answer {
     }
 
     // delete, and what goes with it
+    // As the trigger keep_folder_contents: what is in a deleted folder moves up to where it was.
+    if (table === 'folders') {
+      for (const folder of targets as unknown as Folder[]) {
+        for (const child of db.folders) if (child.parent_id === folder.id) child.parent_id = folder.parent_id
+        for (const link of db.links) if (link.folder_id === folder.id) link.folder_id = folder.parent_id
+      }
+    }
     const gone = new Set(targets)
     ;(db as unknown as Record<string, Row[]>)[table] = rows.filter((row) => !gone.has(row))
     const ids = new Set(targets.map((row) => row.id))
     if (table === 'spaces') {
       db.groups = db.groups.filter((one) => !ids.has(one.space_id))
+      db.folders = db.folders.filter((one) => !ids.has(one.space_id))
       db.links = db.links.filter((one) => !ids.has(one.space_id))
       db.space_members = db.space_members.filter((one) => !ids.has(one.space_id))
     }
-    if (table === 'groups') db.links = db.links.filter((one) => !ids.has(one.group_id ?? ''))
+    if (table === 'groups') {
+      db.links = db.links.filter((one) => !ids.has(one.group_id ?? ''))
+      db.folders = db.folders.filter((one) => !ids.has(one.group_id))
+    }
     if (table === 'members') db.space_members = db.space_members.filter((one) => !ids.has(one.member_id))
     answer = shape(targets, query)
   })

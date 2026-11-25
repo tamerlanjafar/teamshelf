@@ -8,7 +8,9 @@ import { openLink } from '@/features/board/open-link'
 import { useFileViewer } from '@/features/files/file-viewer'
 import { useCurrentSpaceIfLoaded } from '@/features/spaces/current-space'
 import { colorValue } from '@/lib/colors'
-import type { Group, Link } from '@/lib/types'
+import { useFoldersIfLoaded } from '@/api/folders'
+import { pathLabel } from '@/features/folders/folder-tree'
+import type { Folder, Group, Link } from '@/lib/types'
 import { Kbd } from '@/components/app/kbd'
 import { LinkOption, MenuKeys, MenuLabel, type LinkChoice } from './link-option'
 import { useForgetRecent, useRecordOpen } from './use-record-open'
@@ -18,15 +20,17 @@ const MAX_RESULTS = 50
 
 type Found = LinkChoice & { haystack: string }
 
-/** How a link reads in the list, and the text it is found by. */
-function choiceOf(link: Link, group: Group): Found {
+/** How a link reads in the list ("Documentation / Pipelines / Name"), and the text it is found by. */
+function choiceOf(link: Link, group: Group, folders: Folder[]): Found {
   const title = link.title
+  const path = pathLabel(link.folder_id, folders)
+  const where = path ? `${group.name} / ${path}` : group.name
   return {
     link,
     title,
-    groupName: group.name,
+    groupName: where,
     color: colorValue(group.color),
-    haystack: `${group.name} ${link.title} ${link.kind === 'file' ? (link.file_name ?? '') : link.url}`.toLowerCase(),
+    haystack: `${where} ${link.title} ${link.kind === 'file' ? (link.file_name ?? '') : link.url}`.toLowerCase(),
   }
 }
 
@@ -46,6 +50,7 @@ export function QuickFind() {
   const space = useCurrentSpaceIfLoaded()
   const groups = useGroupsIfLoaded()
   const links = useBoardLinksIfLoaded()
+  const folders = useFoldersIfLoaded()
   const prefs = useBoardPrefsIfLoaded()
   const recordOpen = useRecordOpen()
   const forgetRecent = useForgetRecent()
@@ -82,9 +87,9 @@ export function QuickFind() {
     const groupById = new Map(groupsOf(groups, space.id).map((group) => [group.id, group]))
     return links.flatMap((link) => {
       const group = link.space_id === space.id && link.group_id ? groupById.get(link.group_id) : undefined
-      return group ? [choiceOf(link, group)] : []
+      return group ? [choiceOf(link, group, folders)] : []
     })
-  }, [groups, links, space])
+  }, [groups, links, space, folders])
 
   const words = query.toLowerCase().split(/\s+/).filter(Boolean)
   const searching = words.length > 0

@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 import { formatBytes } from '@/api/files'
+import { foldersOf, useFoldersIfLoaded } from '@/api/folders'
+import { pathLabel } from '@/features/folders/folder-tree'
 import { Favicon } from '@/features/board/favicon'
 import { FileIcon } from '@/features/board/file-icon'
 import { useFileViewer } from '@/features/files/file-viewer'
@@ -14,7 +16,7 @@ const shortAddress = (url: string) => url.replace(/^https?:\/\//, '').replace(/\
 
 /**
  * One suggested link, as a card (SheetGroup cards), in three columns centered on one line: its
- * icon; its name with where it would go (space › group), over the address it opens and when (and
+ * icon; its name with where it would go (space › group / folder), over the address it opens and when (and
  * by whom, if not you); and the buttons given as children, alone at the right. A rejected one
  * says why underneath, on the text's left edge.
  */
@@ -34,10 +36,12 @@ export function RequestRow({
   const me = useMe()
   const { openFile } = useFileViewer()
   const byOther = author && author.id !== me.id
+  // The folder it would go in, if one was chosen (and still exists).
+  const folder = pathLabel(link.folder_id, foldersOf(useFoldersIfLoaded(), group?.id))
 
   const destination = (
     <SpaceBadge space={space}>
-      <span className="truncate">{group?.name ?? link.proposed_group}</span>
+      <span className="truncate">{[group?.name ?? link.proposed_group, folder].filter(Boolean).join(' / ')}</span>
       {!group && <span className="opacity-70">(new)</span>}
     </SpaceBadge>
   )

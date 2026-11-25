@@ -13,6 +13,7 @@ What the app does in detail, who may do what, and how it is put together. To set
 - **Joining.** An organization can name email domains whose people join on their own. Admins can invite anyone else, at any domain.
 - **Spaces.** A new organization has none: its people create the ones they need. Each has its own admins, members, logo and color. A space is open to the whole organization, or private to its members.
 - **Suggestions.** Anyone who sees a space can suggest a link or a file. It waits until an admin of that space approves or rejects it.
+- **Folders.** A group can hold folders, and folders can hold folders, up to 6 deep, so one long group (all of a team's documentation, say) stays one group and is easy to look through. A card lists its folders first, A to Z, each with how many links it holds; a folder opens in place, and stays open in that browser. A space's admins create, rename, move and delete folders from the card's menus, and move a link to another folder from its menu or its form; deleting a folder moves what is in it up a level. Someone suggesting a link can choose one of the group's folders for it. Search shows where a link is (Documentation / Pipelines / Warehouse). Names are unique per folder.
 - **Strict names.** Link names follow fixed rules (extra detail in brackets, like “Payments API (v2)”, a capital first, no “ - ” or “_”…), checked in the form and again in the database.
 - **Files.** Uploaded to Cloudflare R2, up to 25 MB each. Clicking one opens it inside Teamshelf: pictures, PDFs, sound and video are shown, Markdown documents are shown with their formatting, and text of any kind (notes, data, code, a web page's source) as it is written. Anything else offers its download. Outside the app a file is only ever saved to disk, never opened as a page.
 - **Documents.** "Add" has a third choice next to a web address and a file: a document, written in Teamshelf with headings, lists and checklists, quotes, links, tables and code, and kept as a Markdown file (or, without formatting, as a plain text file), under a file name you can change. A space's admins edit documents the same way, and text files as plain text; the new contents replace the file's, under the same link.
@@ -32,7 +33,7 @@ An organization has admins and members. Each space has its own admins and member
 | See a private space | | that space | that space | if in it |
 | Create a space (and become its admin) | private only | private only | private only | ✓ |
 | Open a space to the whole organization | | | | ✓ |
-| Add links straight away, review suggestions, edit and delete links, manage groups and the default layout, the space's settings and visibility, delete it | | | that space | spaces they run |
+| Add links straight away, review suggestions, edit and delete links, manage groups, their folders and the default layout, the space's settings and visibility, delete it | | | that space | spaces they run |
 | Add people of the organization to the space, change their role in it, take them out of it (they stay in the organization) | | | that space | spaces they run |
 | Invite someone to the space by email | | | that space | spaces they run |
 | Approve invitations from a space for people outside what the organization lets in | | | | ✓ |
