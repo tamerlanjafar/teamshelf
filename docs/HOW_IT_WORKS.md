@@ -17,7 +17,8 @@ What the app does in detail, who may do what, and how it is put together. To set
 - **Strict names.** Link names follow fixed rules (extra detail in brackets, like “Payments API (v2)”, a capital first, no “ - ” or “_”…), checked in the form and again in the database.
 - **Files.** Uploaded to Cloudflare R2, up to 25 MB each. Clicking one opens it inside Teamshelf: pictures, PDFs, sound and video are shown, Markdown documents are shown with their formatting, and text of any kind (notes, data, code, a web page's source) as it is written. Anything else offers its download. Outside the app a file is only ever saved to disk, never opened as a page.
 - **Documents.** "Add" has a third choice next to a web address and a file: a document, written in Teamshelf with headings, lists and checklists, quotes, links, tables and code, and kept as a Markdown file (or, without formatting, as a plain text file), under a file name you can change. A space's admins edit documents the same way, and text files as plain text; the new contents replace the file's, under the same link.
-- **Restricted links.** A link can be visible to everyone who sees the space, to its admins only, or to chosen people.
+- **Teams.** Named sets of people in an organization ("Backend", "On call"), on the Team page. A private space can take in teams (everyone in them is a member, never an admin), and a group or a link can be shown to teams, so nobody is picked one by one. What a team was given follows it: someone added to the team sees it, someone taken out stops. Org Admins change every team; they can let other people manage teams, who then open the Team page (the people there only to look at), create teams, and change only the ones they created.
+- **Restricted links and groups.** A link, or a whole group with its folders and links, can be visible to everyone who sees the space, to its admins only, or to chosen teams and people.
 - **Your own view.** Hide groups and links you don't need. Only you are affected.
 - **Layout.** Everyone arranges their own board: drag a card to any column and place, drag a link within its group, drag a card's bottom edge to change its height or a side edge to change its column's width. It is yours alone and wins over the space's default, until you reset your changes from the layout button beside "Add" (which can be undone). A dot on that button marks a board you changed. What you hid stays hidden.
 - **Default layout.** A space's admins build the layout everyone starts from on the board itself ("Edit default layout…" in the layout button's menu, not on a phone), with a dock at the bottom to save or discard. An admin who has rearranged the board for themselves can also make that arrangement the default ("Save as default layout…"): the same dragging and resizing, and sorting a group's links A to Z, on a draft that nobody sees until "Save for everyone". Saving doesn't touch what people arranged themselves: they keep it until they reset.
@@ -37,10 +38,14 @@ An organization has admins and members. Each space has its own admins and member
 | Add people of the organization to the space, change their role in it, take them out of it (they stay in the organization) | | | that space | spaces they run |
 | Invite someone to the space by email | | | that space | spaces they run |
 | Approve invitations from a space for people outside what the organization lets in | | | | ✓ |
-| Invite and remove people, change roles (member ↔ admin) | | | | ✓ |
+| Invite and remove people, change roles (member ↔ admin), let people manage teams | | | | ✓ |
+| Create teams, change and delete the ones you created | | | | ✓ (every team) |
+| Give a private space, a group or a link to teams | | | that space | spaces they run |
 | Organization settings: name, email domains that join on their own | | | | ✓ |
 
 Admins of the organization don't run every space: only the ones they created or were made admins of.
+
+**Managing teams.** An Org Admin can let anyone in the organization manage teams. They see the Team page (everyone, without changing anyone), create teams, and change or delete the teams they created; the others they only see. Everyone in the organization can read who is in which team.
 
 **Inviting from a space.** Someone already in the organization is added to the space at once. Someone new is invited to the organization too: at once when their email is at a domain the organization lets in, or when an admin of the organization invites them; otherwise the invitation waits on the Team page until an admin of the organization approves it.
 

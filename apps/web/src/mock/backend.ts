@@ -2,7 +2,7 @@
 // as the app asks for. Access rules are a light imitation of db/migrations: enough for each role
 // to see what it would, not a test of the real rules.
 
-import { MAX_FOLDER_DEPTH, type Folder, type Member, type Org, type Space } from '@/lib/types'
+import { MAX_FOLDER_DEPTH, type Folder, type Group, type Member, type Org, type Space } from '@/lib/types'
 import { getState, now, update, uuid, type Tables, type User } from './store'
 
 export interface Answer {
@@ -40,14 +40,30 @@ function memberOf(db: Tables, user: User | null, orgId: unknown): Member | undef
   return user ? db.members.find((one) => one.org_id === orgId && one.user_id === user.id) : undefined
 }
 
+const inTeam = (db: Tables, member: Member | undefined, teamId: unknown) => Boolean(member) && db.team_members.some((row) => row.team_id === teamId && row.member_id === member!.id)
+
+/** Their own role in the space, or member through a team the space took in, as app.space_role. */
 function spaceRole(db: Tables, member: Member | undefined, spaceId: unknown) {
   if (!member) return null
-  return db.space_members.find((row) => row.space_id === spaceId && row.member_id === member.id)?.role ?? null
+  const own = db.space_members.find((row) => row.space_id === spaceId && row.member_id === member.id)?.role
+  if (own) return own
+  return db.space_teams.some((row) => row.space_id === spaceId && inTeam(db, member, row.team_id)) ? 'member' : null
 }
 
 function seesSpace(db: Tables, user: User | null, space: Space) {
   const member = memberOf(db, user, space.org_id)
   return Boolean(member) && (space.visibility === 'org' || spaceRole(db, member, space.id) !== null)
+}
+
+/** As app.can_see_group: they see its space, and it is for everyone, or they run the space, or they (or a team of theirs) were chosen. */
+function seesGroup(db: Tables, user: User | null, group: Group | undefined) {
+  if (!group) return false
+  const space = db.spaces.find((one) => one.id === group.space_id)
+  if (!space || !seesSpace(db, user, space)) return false
+  const member = memberOf(db, user, group.org_id)
+  if ((group.visibility ?? 'everyone') === 'everyone' || spaceRole(db, member, group.space_id) === 'admin') return true
+  if (group.visibility !== 'members') return false
+  return db.group_access.some((row) => row.group_id === group.id && row.member_id === member?.id) || db.group_team_access.some((row) => row.group_id === group.id && inTeam(db, member, row.team_id))
 }
 
 /** The rows of a table this user may read, as row-level security would leave them. */
@@ -63,13 +79,20 @@ function visibleRows(db: Tables, user: User | null, table: TableName): Row[] {
         const member = memberOf(db, user, link.org_id)
         const admin = spaceRole(db, member, link.space_id) === 'admin'
         if (link.status !== 'approved') return admin || link.created_by === member?.id
-        if (link.visibility === 'everyone' || admin) return true
-        if (link.visibility === 'members') return db.link_access.some((row) => row.link_id === link.id && row.member_id === member?.id)
+        if (admin) return true
+        if (!seesGroup(db, user, db.groups.find((one) => one.id === link.group_id))) return false
+        if (link.visibility === 'everyone') return true
+        if (link.visibility === 'members')
+          return db.link_access.some((row) => row.link_id === link.id && row.member_id === member?.id) || db.link_team_access.some((row) => row.link_id === link.id && inTeam(db, member, row.team_id))
         return false
       }) as unknown as Row[]
+    case 'groups':
+      return db.groups.filter((one) => seesGroup(db, user, one)) as unknown as Row[]
     case 'folders':
-      return db.folders.filter((one) => {
-        const space = db.spaces.find((candidate) => candidate.id === one.space_id)
+      return db.folders.filter((one) => seesGroup(db, user, db.groups.find((group) => group.id === one.group_id))) as unknown as Row[]
+    case 'space_teams':
+      return db.space_teams.filter((row) => {
+        const space = db.spaces.find((one) => one.id === row.space_id)
         return Boolean(space && seesSpace(db, user, space))
       }) as unknown as Row[]
     default:
@@ -106,11 +129,14 @@ function withDefaults(db: Tables, user: User | null, table: TableName, values: R
         ...values,
       }
     case 'groups':
-      return { id, position: null, created_at: now(), ...values }
+      return { id, position: null, visibility: 'everyone', created_at: now(), ...values }
+    case 'teams':
+      // As the trigger stamp_team_creator.
+      return { id, created_at: now(), ...values, created_by: memberOf(db, user, values.org_id)?.id ?? null }
     case 'folders':
       return { id, parent_id: null, created_at: now(), ...values }
     case 'members':
-      return { id, name: '', user_id: null, invited_by: memberOf(db, user, values.org_id)?.id ?? null, invited_at: now(), joined_at: null, role: 'member', approved: true, ...values }
+      return { id, name: '', user_id: null, invited_by: memberOf(db, user, values.org_id)?.id ?? null, invited_at: now(), joined_at: null, role: 'member', approved: true, manages_teams: false, ...values }
     default:
       return { ...values }
   }
@@ -121,6 +147,9 @@ const UNIQUE: Partial<Record<TableName, [string[], string][]>> = {
   members: [[['org_id', 'email'], 'That person is already in the organization.']],
   groups: [[['space_id', 'name'], 'That group already exists.']],
   spaces: [[['org_id', 'slug'], 'That space already exists.']],
+  teams: [[['org_id', 'name'], 'That team already exists.']],
+  team_members: [[['team_id', 'member_id'], 'That person is already in the team.']],
+  space_teams: [[['space_id', 'team_id'], 'That team is already in the space.']],
 }
 
 function duplicate(db: Tables, table: TableName, row: Row, except?: Row) {
@@ -269,8 +298,10 @@ export function runQuery(query: Query, user: User | null): Answer {
         const opening = table === 'spaces' && values.visibility === 'org' && row.visibility !== 'org'
         Object.assign(row, query.values)
         // As the trigger open_spaces_keep_admins: an open space keeps only its admins (and invitations still waiting).
-        if (opening)
+        if (opening) {
           db.space_members = db.space_members.filter((one) => one.space_id !== row.id || one.role === 'admin' || !db.members.find((member) => member.id === one.member_id)?.approved)
+          db.space_teams = db.space_teams.filter((one) => one.space_id !== row.id)
+        }
       }
       answer = shape(targets, query)
       return
@@ -292,12 +323,25 @@ export function runQuery(query: Query, user: User | null): Answer {
       db.folders = db.folders.filter((one) => !ids.has(one.space_id))
       db.links = db.links.filter((one) => !ids.has(one.space_id))
       db.space_members = db.space_members.filter((one) => !ids.has(one.space_id))
+      db.space_teams = db.space_teams.filter((one) => !ids.has(one.space_id))
     }
     if (table === 'groups') {
       db.links = db.links.filter((one) => !ids.has(one.group_id ?? ''))
       db.folders = db.folders.filter((one) => !ids.has(one.group_id))
+      db.group_access = db.group_access.filter((one) => !ids.has(one.group_id))
+      db.group_team_access = db.group_team_access.filter((one) => !ids.has(one.group_id))
     }
-    if (table === 'members') db.space_members = db.space_members.filter((one) => !ids.has(one.member_id))
+    if (table === 'members') {
+      db.space_members = db.space_members.filter((one) => !ids.has(one.member_id))
+      db.team_members = db.team_members.filter((one) => !ids.has(one.member_id))
+      db.group_access = db.group_access.filter((one) => !ids.has(one.member_id))
+    }
+    if (table === 'teams') {
+      db.team_members = db.team_members.filter((one) => !ids.has(one.team_id))
+      db.space_teams = db.space_teams.filter((one) => !ids.has(one.team_id))
+      db.link_team_access = db.link_team_access.filter((one) => !ids.has(one.team_id))
+      db.group_team_access = db.group_team_access.filter((one) => !ids.has(one.team_id))
+    }
     answer = shape(targets, query)
   })
   return answer
@@ -396,7 +440,7 @@ export function runRpc(name: string, args: Args, user: User | null): Answer {
       const waiting = db.members.find((one) => one.org_id === org.id && one.email === user.email && one.user_id === null)
       const member: Member = waiting
         ? { ...waiting, user_id: user.id, joined_at: now(), approved: true }
-        : { id: uuid(), org_id: org.id, email: user.email, name: user.name, role: 'member', user_id: user.id, invited_by: null, invited_at: now(), joined_at: now(), approved: true }
+        : { id: uuid(), org_id: org.id, email: user.email, name: user.name, role: 'member', user_id: user.id, invited_by: null, manages_teams: false, invited_at: now(), joined_at: now(), approved: true }
       update(({ db: draft }) => {
         draft.members = [...draft.members.filter((one) => one.id !== member.id), member]
       })
@@ -410,7 +454,7 @@ export function runRpc(name: string, args: Args, user: User | null): Answer {
       const org: Org = { id: uuid(), slug: String(args.org_slug), name: String(args.org_name).trim(), allowed_domains: [] }
       update(({ db: draft }) => {
         draft.orgs.push(org)
-        draft.members.push({ id: uuid(), org_id: org.id, email: user.email, name: user.name, role: 'admin', user_id: user.id, invited_by: null, invited_at: now(), joined_at: now(), approved: true })
+        draft.members.push({ id: uuid(), org_id: org.id, email: user.email, name: user.name, role: 'admin', user_id: user.id, invited_by: null, manages_teams: false, invited_at: now(), joined_at: now(), approved: true })
       })
       return ok(org)
     }
@@ -460,6 +504,7 @@ export function runRpc(name: string, args: Args, user: User | null): Answer {
             role: 'member',
             user_id: null,
             invited_by: inviter.id,
+            manages_teams: false,
             invited_at: now(),
             joined_at: null,
             approved: inviter.role === 'admin' || org.allowed_domains.includes(domainOf(address)),

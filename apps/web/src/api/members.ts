@@ -61,6 +61,11 @@ export function useSetMemberRole() {
  * Lets in someone a space invited from outside what the organization lets in, and emails them the
  * sign-in link to it. Admins of the organization.
  */
+/** Lets someone create teams and manage the ones they created, or stops it. Admins of the organization. */
+export function useSetManagesTeams() {
+  return useMembersMutation(({ id, manages }: { id: string; manages: boolean }) => unwrap(neon.from('members').update({ manages_teams: manages }).eq('id', id)))
+}
+
 export function useApproveMember() {
   const org = useOrg()
   return useMembersMutation(async (member: Member) => {

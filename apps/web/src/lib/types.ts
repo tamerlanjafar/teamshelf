@@ -34,6 +34,8 @@ export interface Member {
   approved: boolean
   /** Who invited them, if someone did. */
   invited_by: string | null
+  /** An admin of the organization lets them create teams, and manage the ones they created. */
+  manages_teams: boolean
   invited_at: string
   joined_at: string | null
 }
@@ -48,6 +50,8 @@ export interface Group {
   color: Color
   /** The place in the team's order, set by admins. null: after the placed ones, by name. */
   position: number | null
+  /** Who sees the group, and so its folders and links: as a link's, see Visibility. */
+  visibility: Visibility
   created_at: string
 }
 
@@ -101,9 +105,35 @@ export interface SpaceMember {
   role: SpaceRole
 }
 
+/**
+ * A named set of people in the organization ("Backend", "On call"). A private space, a group or a
+ * link given to a team is seen by everyone in it, as long as they are in it.
+ */
+export interface Team {
+  id: string
+  org_id: string
+  name: string
+  /** Who created it: they may change it while they manage teams. null once they left. */
+  created_by: string | null
+  created_at: string
+}
+
+export interface TeamMember {
+  team_id: string
+  member_id: string
+  org_id: string
+}
+
+/** A team a private space took in: everyone in it is a member of the space. */
+export interface SpaceTeam {
+  space_id: string
+  team_id: string
+  org_id: string
+}
+
 export type LinkStatus = 'pending' | 'approved' | 'rejected'
 
-/** everyone: everyone who sees the space. admins: the space's admins. members: only the chosen people. */
+/** everyone: everyone who sees the space. admins: the space's admins. members: only the chosen people and teams (and the space's admins). */
 export type Visibility = 'everyone' | 'admins' | 'members'
 
 /** A web address, or a file kept by Teamshelf. */

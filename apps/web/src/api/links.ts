@@ -1,9 +1,11 @@
 import { queryOptions, useMutation, useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import { useOrg } from '@/features/org/org-context'
 import { neon } from '@/lib/neon'
-import type { Link, Visibility } from '@/lib/types'
+import type { Link } from '@/lib/types'
+import type { Audience } from './access'
 import { isUniqueViolation, NONE, unwrap } from './db'
 import { fileAddress, type StoredFile } from './files'
+import { readAccess, setAccess } from './access'
 import { findOrCreateGroup, groupsKey } from './groups'
 import { findIcon } from './icons'
 
@@ -34,16 +36,13 @@ export const useRequests = () => useSuspenseQuery(requestsQuery(useOrg().id)).da
 
 export const useRequestsIfLoaded = (): Link[] => useQuery(requestsQuery(useOrg().id)).data ?? NONE
 
-/** The ids of the members who may see a link whose visibility is "members". */
+/** The people and teams who may see a link whose visibility is "members". */
 export function useLinkAccess(linkId: string | undefined) {
   const org = useOrg()
   return useQuery({
     queryKey: [...linksKey(org.id), 'access', linkId],
     enabled: Boolean(linkId),
-    queryFn: async () => {
-      const rows = await unwrap<{ member_id: string }[]>(neon.from('link_access').select('member_id').eq('link_id', linkId!))
-      return rows.map((row) => row.member_id)
-    },
+    queryFn: () => readAccess('link', linkId!),
   })
 }
 
@@ -54,18 +53,6 @@ function useLinksMutation<Input>(run: (input: Input, orgId: string) => Promise<u
     mutationFn: (input: Input) => run(input, org.id),
     onSettled: () => Promise.all([queryClient.invalidateQueries({ queryKey: linksKey(org.id) }), queryClient.invalidateQueries({ queryKey: groupsKey(org.id) })]),
   })
-}
-
-/** Who may see a link. `memberIds` only matters when the visibility is "members". */
-export interface Audience {
-  visibility: Visibility
-  memberIds: string[]
-}
-
-async function setAccess(linkId: string, { visibility, memberIds }: Audience) {
-  await unwrap(neon.from('link_access').delete().eq('link_id', linkId))
-  if (visibility !== 'members' || memberIds.length === 0) return
-  await unwrap(neon.from('link_access').insert(memberIds.map((member_id) => ({ link_id: linkId, member_id }))))
 }
 
 /** What the link form collects, for a new link and for an edited one. */
@@ -118,7 +105,7 @@ export function useAddLink() {
       const folder_id = 'id' in group ? fields.folderId : null
       const published = { status: 'approved', visibility: publishFor.visibility, reviewed_at: new Date().toISOString() }
       const created = await unwrap<{ id: string }>(neon.from('links').insert({ ...base, ...published, group_id, folder_id }).select('id').single())
-      await setAccess(created.id, publishFor)
+      await setAccess('link', created.id, publishFor)
     }, fields.title, Boolean(fields.folderId)),
   )
 }
@@ -130,7 +117,7 @@ export function useUpdateLink() {
       const group_id = 'id' in fields.group ? fields.group.id : (await findOrCreateGroup(orgId, fields.spaceId, fields.group.name)).id
       const folder_id = 'id' in fields.group ? fields.folderId : null
       await unwrap(neon.from('links').update({ ...(await columns({ ...fields, file: undefined })), group_id, folder_id, proposed_group: null, visibility: audience.visibility }).eq('id', id))
-      await setAccess(id, audience)
+      await setAccess('link', id, audience)
     }, fields.title, Boolean(fields.folderId)),
   )
 }

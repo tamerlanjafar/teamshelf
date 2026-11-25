@@ -97,6 +97,8 @@ export const SCREENS: ScreenGroup[] = [
         },
       },
       { id: 'private-space', title: 'Private space', scenario: 'acme', path: '/acme/leadership' },
+      { id: 'board-teams', title: 'Given to teams, as an admin', note: 'Security is shown only to On call, Datadog only to Backend: both marked with a lock.', scenario: 'teams', role: 'admin', path: '/acme/development' },
+      { id: 'board-teams-member', title: 'Given to teams, as a member', note: 'Alex is in Backend, not On call: no Security group, Datadog shown, and Leadership through Backend.', scenario: 'teams', role: 'member', path: '/acme/development' },
       { id: 'files', title: 'Files of every kind', note: 'Click one to open it in the app.', scenario: 'files', role: 'admin', path: '/acme/development' },
       { id: 'files-member', title: 'Files, as a member', note: 'Opens them, can\'t edit them.', scenario: 'files', role: 'member', path: '/acme/development' },
       { id: 'file-document', title: 'A document, open', scenario: 'files', role: 'admin', path: '/acme/development', act: async () => {
@@ -124,9 +126,12 @@ export const SCREENS: ScreenGroup[] = [
     screens: [
       { id: 'requests', title: 'Suggestions, as a reviewer', scenario: 'acme', path: '/acme/requests' },
       { id: 'requests-member', title: 'Suggestions, as a member', scenario: 'acme', role: 'member', path: '/acme/requests' },
-      { id: 'team', title: 'Team', note: 'With an invitation waiting for approval.', scenario: 'acme', path: '/acme/team' },
+      { id: 'team', title: 'Team', note: 'With an invitation waiting for approval, and three teams.', scenario: 'acme', path: '/acme/team' },
+      { id: 'team-manager', title: 'Team, as someone who manages teams', note: 'A member, not an Org Admin: sees everyone, changes only Leads, the team Alex created.', scenario: 'team-manager', path: '/acme/team' },
+      { id: 'team-no-teams', title: 'Team, without teams', scenario: 'no-teams', path: '/acme/team' },
       { id: 'org-settings', title: 'Organization settings', scenario: 'acme', path: '/acme/settings' },
       { id: 'space-settings', title: 'Space settings, as Org Admin', scenario: 'acme', path: '/acme/development/settings' },
+      { id: 'space-settings-teams', title: 'Private space with a team', note: 'Leadership took in Backend: everyone in it is a member.', scenario: 'teams', role: 'admin', path: '/acme/leadership/settings' },
       { id: 'space-settings-private-member', title: 'Private space settings, as Space Admin', note: 'Not an Org Admin, so they can\'t open it to everyone.', scenario: 'space-admin', path: '/acme/leadership/settings' },
       { id: 'space-settings-open-member', title: 'Open space settings, as Space Admin', note: 'Not an Org Admin, so making it private is one-way.', scenario: 'space-admin', path: '/acme/development/settings' },
     ],

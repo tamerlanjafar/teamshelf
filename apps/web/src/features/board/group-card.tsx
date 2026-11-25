@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowDownAZ, Eye, EyeOff, FolderPlus, FoldVertical, ListRestart, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowDownAZ, Eye, EyeOff, FolderPlus, FoldVertical, ListRestart, Lock, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useDroppable } from '@dnd-kit/core'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -162,6 +162,7 @@ export function GroupCard({ card, restoring, cardRef, dragStyle, placeholder, li
       >
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <h2 className={CARD_NAME}>{group.name}</h2>
+          {group.visibility && group.visibility !== 'everyone' && <Lock className="text-quiet size-3.5 flex-none" aria-label="Only some people see this group" />}
           <span className={CARD_COUNT} aria-label={`${rows.length} ${rows.length === 1 ? 'link' : 'links'}`}>
             {rows.length}
           </span>

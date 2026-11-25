@@ -3,8 +3,8 @@ import { toast } from '@/components/ui/toast'
 import { uploadFile } from '@/api/files'
 import { groupsOf, useGroupsIfLoaded } from '@/api/groups'
 import { useAddLink, useBoardLinksIfLoaded, useLinkAccess, useUpdateLink } from '@/api/links'
-import { useMembersIfLoaded } from '@/api/members'
-import { useSpaceMembersIfLoaded, useSpacesIfLoaded } from '@/api/spaces'
+import { useSpacesIfLoaded } from '@/api/spaces'
+import { useSpacePeople } from '@/features/spaces/space-people'
 import { Segmented } from '@/components/app/form'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -20,7 +20,7 @@ import { FilePicker } from './file-picker'
 import { useFoldersIfLoaded, foldersOf } from '@/api/folders'
 import { FolderSelect } from '@/features/folders/folder-select'
 import { GroupCombobox } from './group-combobox'
-import { draftOf, fieldsOf, hasErrors, newDraft, validate, type LinkDraft } from './link-draft'
+import { draftOf, fieldsOf, hasErrors, newDraft, NO_ONE, validate, type LinkDraft } from './link-draft'
 import { nameFromFile, NAME_MAX } from './name-rules'
 
 /** What the dialog was opened for: a new link (optionally in a given group and folder), or changing one. */
@@ -81,8 +81,6 @@ function LinkForm({ request, onDone }: { request: Request; onDone: () => void })
   const spaces = useSpacesIfLoaded()
   const space = editing ? (spaces.find((candidate) => candidate.id === editing.space_id) ?? null) : currentSpace
   const groups = groupsOf(useGroupsIfLoaded(), space?.id)
-  const members = useMembersIfLoaded()
-  const spaceMembers = useSpaceMembersIfLoaded()
   const boardLinks = useBoardLinksIfLoaded()
   const folders = useFoldersIfLoaded()
   const savedAccess = useLinkAccess(editing?.visibility === 'members' ? editing.id : undefined)
@@ -99,8 +97,8 @@ function LinkForm({ request, onDone }: { request: Request; onDone: () => void })
   // An admin of the space adds straight to the board. Everyone else's link waits for review.
   const publishes = isSpaceAdmin(space?.id)
 
-  // Who a link can be shown to: people who can see the space (only its members, for a private one).
-  const choosable = space?.visibility === 'private' ? members.filter((member) => spaceMembers.some((row) => row.space_id === space.id && row.member_id === member.id)) : members
+  // Who a link can be shown to: people who can see the space.
+  const choosable = useSpacePeople(space)
 
   const group = groups.find((candidate) => candidate.name.toLowerCase() === draft.groupName.trim().toLowerCase())
   const groupFolders = foldersOf(folders, group?.id)
@@ -108,8 +106,8 @@ function LinkForm({ request, onDone }: { request: Request; onDone: () => void })
   const folderId = groupFolders.some((folder) => folder.id === draft.folderId) ? draft.folderId : null
   // Names are unique in one folder, or at the top of the group.
   const siblings = boardLinks.filter((link) => group && link.group_id === group.id && (link.folder_id ?? null) === folderId && link.id !== editing?.id).map((link) => link.title)
-  const memberIds = draft.memberIds ?? savedAccess.data ?? []
-  const errors = validate(draft, memberIds, { siblings }, Boolean(editing))
+  const chosen = draft.chosen ?? savedAccess.data ?? NO_ONE
+  const errors = validate(draft, chosen, { siblings }, Boolean(editing))
   // After saving, the links are loaded again before the save counts as done and the dialog
   // closes; the new one would then count as a name taken by itself. Nothing is said from pressing
   // save until the dialog is gone.
@@ -131,7 +129,7 @@ function LinkForm({ request, onDone }: { request: Request; onDone: () => void })
     setAttempted(true)
     if (hasErrors(errors) || !space) return
 
-    const audience = { visibility: draft.visibility, memberIds }
+    const audience = { visibility: draft.visibility, ...chosen }
     if (editing) {
       updateLink.mutate({ id: editing.id, fields: fieldsOf({ ...draft, folderId }, space.id, groups), audience }, { onSuccess: onDone, onError: toastError })
       return
@@ -257,11 +255,11 @@ function LinkForm({ request, onDone }: { request: Request; onDone: () => void })
         {publishes && (
           <AudiencePicker
             space={space}
-            visibility={draft.visibility}
-            memberIds={memberIds}
+            noun="link"
+            audience={{ visibility: draft.visibility, ...chosen }}
             members={choosable}
             error={shown.audience}
-            onChange={(visibility, nextIds) => change({ visibility, memberIds: nextIds })}
+            onChange={({ visibility, memberIds, teamIds }) => change({ visibility, chosen: { memberIds, teamIds } })}
           />
         )}
       </div>

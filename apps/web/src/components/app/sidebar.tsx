@@ -4,10 +4,11 @@ import { Inbox, Plus, Settings, Users } from 'lucide-react'
 import { createContext, use, useState, type ReactNode } from 'react'
 import { useRequestsIfLoaded } from '@/api/links'
 import { useSpacesIfLoaded } from '@/api/spaces'
-import { useOrg } from '@/features/org/org-context'
+import { useMe, useOrg } from '@/features/org/org-context'
 import { usePermissions } from '@/features/org/permissions'
 import { NewSpaceDialog } from '@/features/spaces/new-space-dialog'
 import { SpaceLogo } from '@/features/spaces/space-logo'
+import { managesTeams } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 import { Wordmark } from './brand'
 import { OrgSwitcher } from './org-switcher'
@@ -59,6 +60,7 @@ export function AppShell({ children }: { children: ReactNode }) {
  */
 function Sidebar() {
   const org = useOrg()
+  const me = useMe()
   const spaces = useSpacesIfLoaded()
   const { admin, canManage, isSpaceAdmin } = usePermissions()
   const requests = useRequestsIfLoaded()
@@ -152,7 +154,7 @@ function Sidebar() {
                 )}
               </Link>
             </li>
-            {admin && (
+            {managesTeams(me) && (
               <li>
                 <Link to="/$org/team" params={{ org: org.slug }} className={ITEM}>
                   <Users className={ICON} />

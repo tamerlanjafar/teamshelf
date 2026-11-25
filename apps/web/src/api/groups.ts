@@ -3,6 +3,7 @@ import { useOrg } from '@/features/org/org-context'
 import { leastUsedColor } from '@/lib/colors'
 import { neon } from '@/lib/neon'
 import type { Color, Group } from '@/lib/types'
+import { readAccess, setAccess, type Audience } from './access'
 import { isUniqueViolation, NONE, unwrap } from './db'
 
 export const groupsKey = (orgId: string) => [orgId, 'groups'] as const
@@ -61,14 +62,26 @@ export function useCreateGroup() {
   return useGroupsMutation(({ spaceId, name, color }: { spaceId: string; name: string; color?: Color }, orgId) => createGroup(orgId, spaceId, name, color))
 }
 
+/** Renames a group, recolors it, and (with an audience) changes who sees it. The space's admins. */
 export function useUpdateGroup() {
-  return useGroupsMutation(async ({ id, name, color }: { id: string; name: string; color: Color }) => {
+  return useGroupsMutation(async ({ id, name, color, audience }: { id: string; name: string; color: Color; audience?: Audience }) => {
     try {
-      await unwrap(neon.from('groups').update({ name: name.trim(), color }).eq('id', id))
+      await unwrap(neon.from('groups').update({ name: name.trim(), color, ...(audience ? { visibility: audience.visibility } : {}) }).eq('id', id))
     } catch (error) {
       if (isUniqueViolation(error)) throw new Error(`There is already a group called ${name.trim()} in this space.`)
       throw error
     }
+    if (audience) await setAccess('group', id, audience)
+  })
+}
+
+/** The people and teams who may see a group whose visibility is "members". The space's admins. */
+export function useGroupAccess(groupId: string | undefined) {
+  const org = useOrg()
+  return useQuery({
+    queryKey: [...groupsKey(org.id), 'access', groupId],
+    enabled: Boolean(groupId),
+    queryFn: () => readAccess('group', groupId!),
   })
 }
 

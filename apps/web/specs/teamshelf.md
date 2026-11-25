@@ -103,6 +103,18 @@ Documentation in Data (screens `board-folders`, `board-folders-member`): folders
 - Your own row has no menu; a space count opens their spaces with roles.
 - The space count includes every open space (everyone is in them), and only the private spaces they were added to.
 
+## Teams (`teams.spec.ts`)
+
+Acme has Backend (Alex, Priya), On call (Sam, Mina) and Leads (Alex, Sam). On the `teams` screens, Leadership took in Backend, Development's Security group is shown only to On call, and Datadog only to Backend.
+
+- Team page: the teams, each with who is in it; without teams, what they are for.
+- Creating a team with people picked (Create disabled until named); a name already used (ignoring case) is refused under the name.
+- Editing a team: renaming it and taking someone out; deleting asks first and says its people stay in the organization.
+- The space count on the Team page includes a private space someone is in through a team.
+- People who manage teams: an Org Admin lets someone manage teams and stops it (marked "Manages teams"); they get the Team page, see everyone without menus, no Invite and no invitations waiting; they see every team, "by" whoever created the ones they can't change, and change only their own; a team they create is theirs to change; a member who doesn't manage teams has no Team page.
+- A private space: lists the teams it took in with how many people each has; adding a team (teams already in aren't offered) and removing it; opening it to everyone says its teams are taken off too; an open space has no teams; someone in a team it took in sees it.
+- Groups and links: a member doesn't see a group shown to a team they aren't in (nor its links) and sees a link shown to their team; admins of the space see every group, a restricted one marked with a lock; showing a group only to a team ("People & teams"); choosing nobody is refused; editing a restricted group keeps its teams; showing a link only to a team.
+
 ## Settings (`settings.spec.ts`)
 
 - Organization: rename; add and remove a join domain; a domain must look like one; changing the URL warns that old links stop working, and moves there; a taken URL is refused; members don't see organization settings.

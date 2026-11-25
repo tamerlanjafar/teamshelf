@@ -16,7 +16,7 @@ const USERS = {
 }
 
 function member(id: string, org_id: string, email: string, name: string, role: Role, user_id: string | null, daysAgo: number, extra: Partial<Member> = {}): Member {
-  return { id, org_id, email, name, role, user_id, invited_by: null, invited_at: day(daysAgo), joined_at: user_id ? day(daysAgo - 1) : null, approved: true, ...extra }
+  return { id, org_id, email, name, role, user_id, invited_by: null, manages_teams: false, invited_at: day(daysAgo), joined_at: user_id ? day(daysAgo - 1) : null, approved: true, ...extra }
 }
 
 function space(id: string, org_id: string, slug: string, name: string, logo: string, color: Color, position: number, visibility: Space['visibility'] = 'org'): Space {
@@ -24,7 +24,7 @@ function space(id: string, org_id: string, slug: string, name: string, logo: str
 }
 
 function group(id: string, org_id: string, space_id: string, name: string, color: Color, position: number): Group {
-  return { id, org_id, space_id, name, color, position, created_at: day(80) }
+  return { id, org_id, space_id, name, color, position, visibility: 'everyone', created_at: day(80) }
 }
 
 let linkCount = 0
@@ -225,6 +225,24 @@ function world(): Tables {
     folders: DATA_FOLDERS.map((one) => ({ ...one })),
     links,
     link_access: [],
+    // Acme's teams. Nothing is given to them here: the "teams" scenario does that.
+    teams: [
+      { id: 'team-backend', org_id: nw, name: 'Backend', created_by: 'm-nw-sam', created_at: day(50) },
+      { id: 'team-on-call', org_id: nw, name: 'On call', created_by: 'm-nw-sam', created_at: day(40) },
+      { id: 'team-leads', org_id: nw, name: 'Leads', created_by: 'm-nw-alex', created_at: day(30) },
+    ],
+    team_members: [
+      { team_id: 'team-backend', member_id: 'm-nw-alex', org_id: nw },
+      { team_id: 'team-backend', member_id: 'm-nw-priya', org_id: nw },
+      { team_id: 'team-on-call', member_id: 'm-nw-sam', org_id: nw },
+      { team_id: 'team-on-call', member_id: 'm-nw-mina', org_id: nw },
+      { team_id: 'team-leads', member_id: 'm-nw-alex', org_id: nw },
+      { team_id: 'team-leads', member_id: 'm-nw-sam', org_id: nw },
+    ],
+    space_teams: [],
+    link_team_access: [],
+    group_access: [],
+    group_team_access: [],
     member_prefs: [],
     org_creators: [USERS.alex.email, USERS.alexLumen.email],
   }
@@ -308,6 +326,47 @@ export const SCENARIOS: Scenario[] = [
     build: (role) => {
       const setup = inAcme(role)
       setup.db.member_prefs.push({ ...NO_PREFS, member_id: 'm-nw-alex', open_folders: DATA_FOLDERS.map((one) => one.id) })
+      return setup
+    },
+  },
+  {
+    id: 'teams',
+    title: 'Given to teams',
+    description:
+      "Leadership (private) took in the Backend team (Alex and Priya). In Development, the Security group is shown only to On call (Sam and Mina), and Datadog only to Backend.",
+    roles: true,
+    build: (role) => {
+      const setup = inAcme(role)
+      const { db } = setup
+      db.space_teams.push({ space_id: 'space-nw-leads', team_id: 'team-backend', org_id: 'org-acme' })
+      db.groups.find((one) => one.id === 'g-security')!.visibility = 'members'
+      db.group_team_access.push({ group_id: 'g-security', team_id: 'team-on-call' })
+      const datadog = db.links.find((one) => one.title === 'Datadog')!
+      datadog.visibility = 'members'
+      db.link_team_access.push({ link_id: datadog.id, team_id: 'team-backend' })
+      return setup
+    },
+  },
+  {
+    id: 'team-manager',
+    title: 'Manages teams',
+    description: 'Alex is a member of Acme whom an admin lets manage teams. Alex created Leads; Sam created Backend and On call.',
+    roles: false,
+    build: () => {
+      const setup = inAcme('member')
+      setup.db.members.find((one) => one.id === 'm-nw-alex')!.manages_teams = true
+      return setup
+    },
+  },
+  {
+    id: 'no-teams',
+    title: 'No teams',
+    description: 'Acme without any team yet.',
+    roles: false,
+    build: () => {
+      const setup = inAcme('admin')
+      setup.db.teams = []
+      setup.db.team_members = []
       return setup
     },
   },

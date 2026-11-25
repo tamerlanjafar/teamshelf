@@ -8,6 +8,7 @@ import { boardLinksQuery, requestsQuery } from './links'
 import { membersQuery } from './members'
 import { myOrgsQuery } from './orgs'
 import { boardPrefsQuery } from './prefs'
+import { teamsQuery } from './teams'
 
 /** One load per member, so re-rendering while it runs doesn't start it again. */
 const loads = new Map<string, Promise<unknown>>()
@@ -16,9 +17,9 @@ function loadAll(queryClient: QueryClient, orgId: string, memberId: string, user
   // prefetchQuery never rejects: a query that fails is left for its own section to report.
   const queries = [groupsQuery(orgId), foldersQuery(orgId), boardLinksQuery(orgId), spacesQuery(orgId), spaceMembersQuery(orgId), boardPrefsQuery(memberId)]
   // Not waited for: the suggestions (the slowest to load; the sidebar's count fills in a moment
-  // later) and the people of the organization (the Team page and the forms). The pages that need
+  // later) and the people of the organization and its teams (the Team page and the forms). The pages that need
   // them wait for them in their own sections.
-  for (const later of [requestsQuery(orgId), membersQuery(orgId)]) void queryClient.prefetchQuery(later as never)
+  for (const later of [requestsQuery(orgId), membersQuery(orgId), teamsQuery(orgId)]) void queryClient.prefetchQuery(later as never)
   return Promise.all([...queries.map((query) => queryClient.prefetchQuery(query as never)), queryClient.prefetchQuery(myOrgsQuery(userId))])
 }
 

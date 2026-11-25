@@ -6,7 +6,7 @@ import { openScreen } from './helpers'
 test.beforeEach(async ({ page }) => openScreen(page, 'team'))
 
 test('says who may join on their own, and lists everyone with their role', async ({ page }) => {
-  await expect(page.getByRole('heading', { name: 'Team' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Team', exact: true })).toBeVisible()
   await expect(page.getByText('Anyone with an email at @acme.com can join on their own.')).toBeVisible()
   await expect(page.locator('main').getByText('alex@acme.com', { exact: true })).toBeVisible()
   await expect(page.getByText('Org Admin').first()).toBeVisible()

@@ -1,15 +1,16 @@
-import { Check, Layers, MoreHorizontal, Send, Shield, ShieldOff, UserMinus, X } from 'lucide-react'
+import { Check, Layers, MoreHorizontal, Send, Shield, ShieldOff, UserMinus, UsersRound, X } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from '@/components/ui/toast'
-import { useApproveMember, useMembersIfLoaded, useRemoveMember, useResendInvite, useSetMemberRole } from '@/api/members'
+import { useApproveMember, useMembersIfLoaded, useRemoveMember, useResendInvite, useSetManagesTeams, useSetMemberRole } from '@/api/members'
 import { useSpaceMembersIfLoaded, useSpacesIfLoaded } from '@/api/spaces'
+import { peopleThroughTeams, useTeamsIfLoaded } from '@/api/teams'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuItem, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Avatar } from '@/components/app/avatar'
 import { useConfirm } from '@/components/app/confirm-dialog'
 import { useMe, useOrg } from '@/features/org/org-context'
 import { toastError } from '@/lib/errors'
-import { displayName, ROLE_LABELS } from '@/lib/roles'
+import { displayName, isAdmin, ROLE_LABELS } from '@/lib/roles'
 import { timeAgo } from '@/lib/time'
 import type { Member, SpaceRole } from '@/lib/types'
 import { SpaceBadge } from '@/features/spaces/space-badge'
@@ -17,8 +18,9 @@ import { SpaceLogo } from '@/features/spaces/space-logo'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 /**
- * A person on the team, in one calm line: who they are (an Org Admin is marked by the name), how
- * many spaces they are in, and a menu for the rest. Your own row has no menu.
+ * A person on the team, in one calm line: who they are (an Org Admin, or someone who manages
+ * teams, is marked by the name), how many spaces they are in, and a menu for the rest. Your own
+ * row has no menu, and only Org Admins have menus at all.
  */
 export function MemberRow({ member }: { member: Member }) {
   const me = useMe()
@@ -34,6 +36,7 @@ export function MemberRow({ member }: { member: Member }) {
           {member.role === 'admin' && (
             <span className="text-brand flex-none rounded-sm bg-[color-mix(in_srgb,var(--brand)_11%,transparent)] px-1.5 text-[11.5px] leading-5 font-semibold whitespace-nowrap">{ROLE_LABELS.admin}</span>
           )}
+          {member.manages_teams && member.role !== 'admin' && <span className="bg-well text-quiet flex-none rounded-xs px-1.5 text-[11.5px] leading-5 font-medium whitespace-nowrap">Manages teams</span>}
           {invited && <span className="bg-well text-quiet flex-none rounded-xs px-1.5 text-[11.5px] leading-5 font-medium">Invited {timeAgo(member.invited_at)}</span>}
         </div>
         <div className="text-quiet truncate text-[13px]">{member.email}</div>
@@ -42,22 +45,26 @@ export function MemberRow({ member }: { member: Member }) {
       <span className="flex w-24 flex-none justify-end max-sm:hidden">
         <SpacesRun member={member} />
       </span>
-      {member.id === me.id ? <span className="w-8 flex-none" aria-hidden="true" /> : <MemberMenu member={member} />}
+      {member.id === me.id || !isAdmin(me) ? <span className="w-8 flex-none" aria-hidden="true" /> : <MemberMenu member={member} />}
     </div>
   )
 }
 
 /**
- * How many spaces someone is in (every open space, and the private ones they were added to), as a quiet button. It opens the list: each space with its logo
+ * How many spaces someone is in (every open space, and the private ones they or a team of theirs were added to), as a quiet button. It opens the list: each space with its logo
  * and their role in it. Stays one small thing however many spaces there are.
  */
 function SpacesRun({ member }: { member: Member }) {
   const spaces = useSpacesIfLoaded()
   const rows = useSpaceMembersIfLoaded()
+  const teams = useTeamsIfLoaded()
   const [open, setOpen] = useState(false)
+  // Everyone in the organization is in its open spaces; private ones only for their people, and
+  // the people of the teams they took in.
+  const roleIn = (space: (typeof spaces)[number]): SpaceRole | undefined =>
+    rows.find((row) => row.space_id === space.id && row.member_id === member.id)?.role ?? (space.visibility === 'org' || peopleThroughTeams(teams, space.id).has(member.id) ? 'member' : undefined)
   const theirs = spaces
-    // Everyone in the organization is in its open spaces; private ones only for their people.
-    .map((space) => ({ space, role: rows.find((row) => row.space_id === space.id && row.member_id === member.id)?.role ?? (space.visibility === 'org' ? ('member' as const) : undefined) }))
+    .map((space) => ({ space, role: roleIn(space) }))
     .filter((entry): entry is { space: (typeof spaces)[number]; role: SpaceRole } => Boolean(entry.role))
     .sort((a, b) => (a.role === b.role ? a.space.name.localeCompare(b.space.name) : a.role === 'admin' ? -1 : 1))
   if (theirs.length === 0) return null
@@ -99,6 +106,7 @@ function MemberMenu({ member }: { member: Member }) {
   const removeMember = useRemoveMember()
   const resendInvite = useResendInvite()
   const setRole = useSetMemberRole()
+  const setManagesTeams = useSetManagesTeams()
   const admin = member.role === 'admin'
 
   return (
@@ -111,6 +119,13 @@ function MemberMenu({ member }: { member: Member }) {
           {admin ? <ShieldOff /> : <Shield />}
           {admin ? 'Make member' : `Make ${ROLE_LABELS.admin}`}
         </DropdownMenuItem>
+        {/* An Org Admin manages every team already. */}
+        {!admin && (
+          <DropdownMenuItem onClick={() => setManagesTeams.mutate({ id: member.id, manages: !member.manages_teams }, { onError: toastError })}>
+            <UsersRound />
+            {member.manages_teams ? 'Stop managing teams' : 'Let manage teams'}
+          </DropdownMenuItem>
+        )}
         {!member.user_id && (
           <DropdownMenuItem onClick={() => resendInvite.mutate(member.email, { onSuccess: () => toast.success(`Invitation sent again to ${member.email}.`), onError: toastError })}>
             <Send />

@@ -15,14 +15,26 @@ export interface LinkDraft {
   /** The file picked for a new file. An edited file keeps the one it has. */
   file: File | null
   visibility: Visibility
-  /** null until chosen: an edited link then keeps the people it already has. */
-  memberIds: string[] | null
+  /** null until chosen: an edited link then keeps the people and teams it already has. */
+  chosen: Chosen | null
 }
+
+/** The people and teams a link or a group is shown to, when its visibility is "members". */
+export interface Chosen {
+  memberIds: string[]
+  teamIds: string[]
+}
+
+export const NO_ONE: Chosen = { memberIds: [], teamIds: [] }
+
+/** Why an audience can't be saved: "members" with nobody chosen. */
+export const audienceError = (visibility: Visibility, chosen: Chosen) =>
+  visibility === 'members' && chosen.memberIds.length === 0 && chosen.teamIds.length === 0 ? 'Choose at least one team or person.' : undefined
 
 export type DraftErrors = Partial<Record<'groupName' | 'title' | 'url' | 'file' | 'audience', string>>
 
 export function newDraft(groupName = '', folderId: string | null = null): LinkDraft {
-  return { kind: 'link', groupName, folderId, title: '', url: '', file: null, visibility: 'everyone', memberIds: null }
+  return { kind: 'link', groupName, folderId, title: '', url: '', file: null, visibility: 'everyone', chosen: null }
 }
 
 export function draftOf(link: Link, groups: Group[]): LinkDraft {
@@ -34,7 +46,7 @@ export function draftOf(link: Link, groups: Group[]): LinkDraft {
     url: link.kind === 'file' ? '' : link.url,
     file: null,
     visibility: link.visibility,
-    memberIds: null,
+    chosen: null,
   }
 }
 
@@ -50,7 +62,7 @@ export function normalizeUrl(value: string): string | null {
   }
 }
 
-export function validate(draft: LinkDraft, memberIds: string[], names: Omit<NameContext, 'groupName'>, editing: boolean): DraftErrors {
+export function validate(draft: LinkDraft, chosen: Chosen, names: Omit<NameContext, 'groupName'>, editing: boolean): DraftErrors {
   const errors: DraftErrors = {}
   if (!draft.groupName.trim()) errors.groupName = 'Choose a group, or type a name to create one.'
   else if (draft.groupName.trim().length > 60) errors.groupName = 'Keep the group name to 60 characters.'
@@ -62,7 +74,8 @@ export function validate(draft: LinkDraft, memberIds: string[], names: Omit<Name
     else if (draft.file.size > MAX_FILE_BYTES) errors.file = `Files can be up to ${formatBytes(MAX_FILE_BYTES)}. This one is ${formatBytes(draft.file.size)}.`
     else if (draft.file.size === 0) errors.file = 'This file is empty.'
   }
-  if (draft.visibility === 'members' && memberIds.length === 0) errors.audience = 'Choose at least one person.'
+  const audience = audienceError(draft.visibility, chosen)
+  if (audience) errors.audience = audience
   return errors
 }
 

@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Copy, Download, FileQuestion, Pencil, RotateCw, TriangleAlert, X } from 'lucide-react'
 import { createContext, lazy, Suspense, useCallback, useContext, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import { toast } from '@/components/ui/toast'
+import { EVERYONE } from '@/api/access'
 import { downloadFile, fetchFileBytes, formatBytes, saveFileText, uploadText } from '@/api/files'
 import { foldersOf, useFoldersIfLoaded } from '@/api/folders'
 import { FolderSelect } from '@/features/folders/folder-select'
@@ -418,7 +419,7 @@ function DocumentForm({ space, start, onClose }: { space: Space; start: { groupN
       const stored = await uploadText(space.id, documentFileName(fileName, format), markdown)
       await addLink.mutateAsync({
         fields: { spaceId: space.id, group: group ? { id: group.id } : { name: groupName.trim() }, folderId: group ? folderId : null, title: name, file: stored },
-        publishFor: publishes ? { visibility: 'everyone', memberIds: [] } : undefined,
+        publishFor: publishes ? EVERYONE : undefined,
       })
       toast.success(publishes ? `Added to ${space.name}.` : `Sent for review. The document appears in ${space.name} once an admin approves it.`)
       onClose()

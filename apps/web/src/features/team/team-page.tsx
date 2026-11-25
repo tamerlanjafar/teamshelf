@@ -2,14 +2,18 @@ import { useMembers } from '@/api/members'
 import { PageSheet, SheetGroup } from '@/components/app/page-sheet'
 import { ListSkeleton, Section } from '@/components/app/section'
 import { TopBar } from '@/components/app/top-bar'
-import { useOrg } from '@/features/org/org-context'
-import { displayName } from '@/lib/roles'
+import { useMe, useOrg } from '@/features/org/org-context'
+import { displayName, isAdmin } from '@/lib/roles'
 import { InviteButton } from './invite-form'
 import { MemberRow, WaitingRow } from './member-row'
+import { Teams } from './teams'
 
 /** Who is in the organization and what they may do. For its admins. */
 export function TeamPage() {
   const org = useOrg()
+  const me = useMe()
+  // Someone who only manages teams sees the people, and changes nothing but teams.
+  const admin = isAdmin(me)
   const domains = org.allowed_domains
   // The domains stand out from the sentence, joined as you'd say them: "a, b and c".
   const who = domains.length > 0 && (
@@ -28,7 +32,7 @@ export function TeamPage() {
   return (
     <>
       <TopBar />
-      <PageSheet title="Team" lead={who || undefined} action={<InviteButton />}>
+      <PageSheet title="Team" lead={(admin && who) || undefined} action={admin ? <InviteButton /> : undefined}>
         <Section compact skeleton={<ListSkeleton rows={4} />}>
           <Members />
         </Section>
@@ -39,11 +43,13 @@ export function TeamPage() {
 
 /**
  * Invitations waiting for approval first, as cards. Then everyone in one list: those who signed
- * in, and those invited who haven't yet, marked as such. Org Admins first, then by name.
+ * in, and those invited who haven't yet, marked as such. Org Admins first, then by name. Then
+ * the teams they are put in.
  */
 function Members() {
   const members = useMembers()
-  const waiting = members.filter((member) => !member.approved)
+  const admin = isAdmin(useMe())
+  const waiting = admin ? members.filter((member) => !member.approved) : []
   const people = members
     .filter((member) => member.approved)
     .sort((a, b) => (a.role === b.role ? displayName(a).localeCompare(displayName(b)) : a.role === 'admin' ? -1 : 1))
@@ -63,6 +69,7 @@ function Members() {
           <MemberRow key={member.id} member={member} />
         ))}
       </SheetGroup>
+      <Teams />
     </>
   )
 }

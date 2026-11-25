@@ -1,11 +1,12 @@
 import { Link, Navigate } from '@tanstack/react-router'
-import { Check, FolderPlus, Globe, Lock, Mail, MoreHorizontal, Pencil, Plus, Search, Shield, ShieldOff, Trash2, UserMinus, UserPlus } from 'lucide-react'
+import { Check, FolderPlus, Globe, Lock, Mail, MoreHorizontal, Pencil, Plus, Search, Shield, ShieldOff, Trash2, UserMinus, UserPlus, Users } from 'lucide-react'
 import { useState, type CSSProperties, type FormEvent, type ReactNode } from 'react'
 import { toast } from '@/components/ui/toast'
 import { groupsOf, useDeleteGroup, useGroups } from '@/api/groups'
 import { useBoardLinks } from '@/api/links'
 import { useMembers } from '@/api/members'
 import { useDeleteSpace, useInviteToSpace, useSetSpaceMember, useSpaceMembersIfLoaded, useUpdateSpace } from '@/api/spaces'
+import { peopleOf, useSetSpaceTeam, useTeams, useTeamsIfLoaded } from '@/api/teams'
 import { Avatar } from '@/components/app/avatar'
 import { ColorPicker } from '@/components/app/color-picker'
 import { useConfirm } from '@/components/app/confirm-dialog'
@@ -31,8 +32,8 @@ import { NewGroupDialog } from './new-group-dialog'
 import { isImageLogo, SpaceLogo } from './space-logo'
 
 /**
- * Everything about one space, for its admins: its name and logo, who sees it, its people, its
- * groups, and deleting it.
+ * Everything about one space, for its admins: its name and logo, who sees it, its people (and,
+ * for a private space, its teams), its groups, and deleting it.
  */
 export function SpaceSettingsPage() {
   return (
@@ -66,6 +67,7 @@ function SpaceSettings() {
       <Identity key={`identity-${space.id}`} space={space} />
       <Visibility space={space} />
       <People space={space} />
+      {space.visibility === 'private' && <SpaceTeams space={space} />}
       <Groups space={space} />
       <DangerZone space={space} />
     </PageSheet>
@@ -227,15 +229,19 @@ function Visibility({ space }: { space: Space }) {
   // Plain members of a private space: opening it takes them off (the database does, too), as
   // being in an open space adds nothing. Invitations still waiting stay, as the database keeps them.
   const plain = rows.filter((row) => row.role === 'member' && members.find((member) => member.id === row.member_id)?.approved).length
+  const teams = useTeamsIfLoaded().spaces.filter((row) => row.space_id === space.id).length
 
   function change(visibility: SpaceVisibility) {
     if (visibility === space.visibility) return
     if (visibility === 'private') return setClosing(true)
     const apply = () => updateSpace.mutate({ id: space.id, changes: { visibility } }, { onError: toastError })
-    if (plain === 0) return apply()
+    if (plain === 0 && teams === 0) return apply()
+    // "Its member is", "Its 2 members are", "Its 2 members and 1 team are".
+    const counted = (count: number, one: string, alone: boolean) => (count === 1 && alone ? one : `${count} ${count === 1 ? one : `${one}s`}`)
+    const leaving = [plain > 0 && counted(plain, 'member', teams === 0), teams > 0 && counted(teams, 'team', plain === 0)].filter(Boolean).join(' and ')
     confirm({
       title: `Open ${space.name} to everyone in ${org.name}?`,
-      description: `Everyone in ${org.name} will see ${space.name} and can suggest links. Its ${plain === 1 ? 'member is' : `${plain} members are`} taken off its list, as everyone is in it now. Its admins stay.`,
+      description: `Everyone in ${org.name} will see ${space.name} and can suggest links. Its ${leaving} ${plain + teams === 1 ? 'is' : 'are'} taken off its list, as everyone is in it now. Its admins stay.`,
       confirmLabel: 'Open to everyone',
       onConfirm: apply,
     })
@@ -346,6 +352,119 @@ function People({ space }: { space: Space }) {
         <DialogContent className="rounded-xl sm:max-w-[560px]">{adding && <AddPeople space={space} adminsOnly={open} onDone={() => setAdding(false)} />}</DialogContent>
       </Dialog>
     </Panel>
+  )
+}
+
+/**
+ * The teams a private space took in: everyone in them is a member of it, for as long as they are
+ * in the team. Admins are still named one by one, under People.
+ */
+function SpaceTeams({ space }: { space: Space }) {
+  const data = useTeams()
+  const setTeam = useSetSpaceTeam()
+  const [adding, setAdding] = useState(false)
+  const ids = data.spaces.filter((row) => row.space_id === space.id).map((row) => row.team_id)
+  const teams = data.teams.filter((team) => ids.includes(team.id))
+
+  return (
+    <Panel
+      title="Teams"
+      count={teams.length}
+      padded={false}
+      note={`Everyone in these teams is a member of ${space.name}, as long as they are in the team.`}
+      action={
+        <Button variant="outline" disabled={data.teams.length === 0} onClick={() => setAdding(true)}>
+          <Users />
+          Add teams
+        </Button>
+      }
+    >
+      {teams.length === 0 && <p className="text-quiet m-0 px-4 py-3">{data.teams.length === 0 ? 'The organization has no teams yet. An Org Admin creates them on the Team page.' : 'No teams yet.'}</p>}
+      {teams.map((team) => {
+        const count = peopleOf(data, team.id).length
+        return (
+          <div key={team.id} className="flex items-center gap-3 px-4 py-3">
+            <span className="bg-well text-quiet grid size-9 flex-none place-items-center rounded-full">
+              <Users className="size-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="truncate font-medium">{team.name}</div>
+              <div className="text-quiet truncate text-[13px]">{count === 0 ? 'Nobody in it yet' : `${count} ${count === 1 ? 'person' : 'people'}`}</div>
+            </div>
+            <RowMenu label={`More for ${team.name}`}>
+              <DropdownMenuItem variant="destructive" onClick={() => setTeam.mutate({ spaceId: space.id, teamId: team.id, add: false }, { onError: toastError })}>
+                <UserMinus />
+                Remove from {space.name}
+              </DropdownMenuItem>
+            </RowMenu>
+          </div>
+        )
+      })}
+      <Dialog open={adding} onOpenChange={setAdding}>
+        <DialogContent className="rounded-xl sm:max-w-[480px]">{adding && <AddTeams space={space} taken={ids} onDone={() => setAdding(false)} />}</DialogContent>
+      </Dialog>
+    </Panel>
+  )
+}
+
+/** Picks teams of the organization to take into a private space. */
+function AddTeams({ space, taken, onDone }: { space: Space; taken: string[]; onDone: () => void }) {
+  const data = useTeams()
+  const setTeam = useSetSpaceTeam()
+  const [picked, setPicked] = useState<string[]>([])
+  const [saving, setSaving] = useState(false)
+  const others = data.teams.filter((team) => !taken.includes(team.id))
+  const toggle = (id: string) => setPicked((now) => (now.includes(id) ? now.filter((other) => other !== id) : [...now, id]))
+
+  async function confirm() {
+    setSaving(true)
+    try {
+      for (const teamId of picked) await setTeam.mutateAsync({ spaceId: space.id, teamId, add: true })
+      toast.success(`${picked.length === 1 ? 'Team' : `${picked.length} teams`} added to ${space.name}.`)
+      onDone()
+    } catch (error) {
+      toastError(error)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="grid gap-4">
+      <DialogHeader>
+        <DialogTitle className="text-[18px] font-[650] [font-family:var(--font-rounded)]">Add teams to {space.name}</DialogTitle>
+      </DialogHeader>
+      <ul className="border-line divide-line m-0 max-h-[320px] list-none divide-y overflow-y-auto rounded-md border p-0">
+        {others.map((team) => {
+          const count = peopleOf(data, team.id).length
+          return (
+            <li key={team.id}>
+              <PickRow
+                chosen={picked.includes(team.id)}
+                onClick={() => toggle(team.id)}
+                mark={
+                  <span className="bg-well text-quiet grid size-8 flex-none place-items-center rounded-full">
+                    <Users className="size-4" />
+                  </span>
+                }
+                title={team.name}
+                detail={count === 0 ? 'Nobody in it yet' : `${count} ${count === 1 ? 'person' : 'people'}`}
+              />
+            </li>
+          )
+        })}
+        {others.length === 0 && <li className="text-quiet px-3 py-6 text-center text-[13.5px]">Every team is already in {space.name}.</li>}
+      </ul>
+      <p className="text-quiet m-0 text-[13px]">Their people become members. Admins are added one by one, under People.</p>
+      <DialogFooter>
+        <Button variant="outline" onClick={onDone}>
+          Cancel
+        </Button>
+        <Button disabled={picked.length === 0 || saving} onClick={confirm}>
+          {saving ? 'Adding…' : picked.length > 1 ? `Add ${picked.length} teams` : 'Add team'}
+        </Button>
+      </DialogFooter>
+    </div>
   )
 }
 
@@ -641,6 +760,12 @@ function GroupRow({ group, count }: { group: Group; count: number }) {
     <div className="flex min-w-0 items-center gap-3 px-4 py-2.5">
       <span className="size-2.5 flex-none rounded-full bg-(--g)" style={{ '--g': colorValue(group.color) } as CSSProperties} />
       <span className="min-w-0 flex-1 truncate font-medium">{group.name}</span>
+      {group.visibility && group.visibility !== 'everyone' && (
+        <span className="text-quiet flex flex-none items-center gap-1 text-[12.5px]">
+          <Lock className="size-3.5" />
+          {group.visibility === 'admins' ? 'Admins only' : 'Chosen'}
+        </span>
+      )}
       <span className="text-quiet text-[12.5px] tabular-nums">
         {count} {count === 1 ? 'link' : 'links'}
       </span>
