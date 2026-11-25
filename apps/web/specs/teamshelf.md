@@ -59,14 +59,14 @@ What the end-to-end tests cover, by area. Each line is a test in `e2e/<area>.spe
 - Recent links (the search before typing): a link's × takes it off the list without opening it (shown on the line pointed at or chosen, always on a phone); Delete (⌘⌫ on a Mac) removes the chosen one and the next is chosen; removing the last one closes the list; "Clear" empties it and its toast's Undo brings it back; search results have no ×, no "Clear", and Delete does nothing to them.
 - Adding: an admin's link is on the board at once; a member's suggestion waits and isn't on the board; refused names with their reason (generic, " - ", already in the group); a name may start with its group's name; an address is needed.
 - Own view: hiding a link takes it off your board, the hidden view brings it back; copying a link's address.
-- Your own changes to a space's layout (the layout button beside "Add"): someone who changed nothing sees it marked "Default", with nothing to reset; a board you changed is marked on the button and in its menu, resets to the default (which can be undone); the first change says only you see it (an admin's too, with the way to the editor); a space's admin can save their own changes as the default layout, after confirming, and someone who isn't can't; a card's menu goes back to the space's height.
+- Your own changes to a space's layout (the layout button beside "Add"): someone who changed nothing sees it marked "Default", with nothing to reset; a board you changed is marked on the button and in its menu, resets to the default (which can be undone); the first change says only you see it (an admin's too, with the way to the editor); a space's admin can save their own changes as the default layout, after confirming, and someone who isn't can't; a resized card keeps its height when folders in it open or close; "Auto height" in its menu goes back to the space's height (or, while editing, to as tall as its links).
 - Editing the default layout: only a space's admins are offered it, in the layout menu (not on a phone); the top bar steps back and a dock at the bottom says which space is edited, with nothing to save until something changes ("Close" leaves); a change is saved for everyone and isn't the admin's own; discarding asks first and leaves the layout as it was; while editing, hiding for yourself is off and a group's links can be sorted A to Z.
 
 ## Folders (`folders.spec.ts`)
 
 Documentation in Data (screens `board-folders`, `board-folders-member`): folders inside folders, up to 6 deep.
 
-- Folders come first in a card, A to Z, each with how many links it holds at any depth; they start closed; opening one shows what is in it, indented; it stays open when the page is opened again.
+- Folders come first in a card, A to Z, each with how many links it holds at any depth; they are open, for everyone, a new one too; closing one folds what is in it away (sliding), and opening it again shows it, indented; which folders a person closed is kept with their preferences, so they stay closed when the page is opened again, on any device.
 - An admin of the space: "New folder…" in the group's menu; "New folder inside…", "Rename…", "Move to…" and "Delete folder…" in a folder's menu; a name already used beside it is refused with the reason; an empty folder shows (and says it is empty).
 - Adding into a folder: "Add to this folder…" opens the form with the folder chosen, and the link lands in it; the form's Folder is a combobox like Group: the group's folders as a tree, found by typing any part of their path, shown by their path once chosen; a group without folders has no Folder field.
 - Moving: a link's menu moves it to another folder; a folder moves with everything in it, never into itself.
@@ -74,6 +74,9 @@ Documentation in Data (screens `board-folders`, `board-folders-member`): folders
 - Deleting a folder asks first, saying what moves where; what was in it moves up a level.
 - A member: no empty folders, and a folder's menu only offers to suggest into it; the suggestion shows its folder on the Suggestions page (mock data: Late data runbook for Runbooks, Table owners for Pipelines / Warehouse); approving puts it in that folder, and editing it first opens the form with the folder chosen.
 - Search finds a link in a folder, and shows its path (Documentation / Pipelines / Warehouse).
+- "Sort links A to Z" in a group's or a folder's menu (a folder's: only its own links, not other folders'): on the board, for everyone, it is their own order (as dragging is), undone by "Use the space's order"; while editing the space's layout, it is the space's order.
+- A card that stopped growing says there is more below (the fade and the "N more" button) as soon as its open folders run past its end, and stops when they close or their links move away; no reload needed.
+- Saving a new folder, link or document never says its own name is taken (the lists reload before the dialog closes).
 - Rules in plain code (`src/features/folders/folder-tree.test.ts`): paths, the order of the tree, what is inside a folder, where a folder may move (not into itself, not past 6 levels).
 
 ## Files (`files.spec.ts`)

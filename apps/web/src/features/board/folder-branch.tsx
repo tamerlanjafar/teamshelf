@@ -1,15 +1,16 @@
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { ChevronRight, Folder as FolderIcon, FolderInput, FolderOpen, FolderPlus, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
+import { ArrowDownAZ, ChevronRight, Folder as FolderIcon, FolderInput, FolderOpen, FolderPlus, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useId, useState } from 'react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { useFolderActions } from '@/features/folders/folder-dialogs'
 import { roomInside } from '@/features/folders/folder-tree'
-import { setFolderOpen, useOpenFolders } from '@/features/folders/open-folders'
+import { useOpenFolders } from '@/features/folders/open-folders'
 import { useLinkDialog } from '@/features/links/link-dialog'
 import { usePermissions } from '@/features/org/permissions'
-import type { Folder, Group } from '@/lib/types'
+import { MAX_FOLDER_DEPTH, type Folder, type Group } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { useBoardActions } from './board-actions'
 import type { BoardCard, BoardLink, FolderNode } from './board-model'
 import { CARD_BUTTON, LinkRow, SortableLinkRow } from './link-row'
 
@@ -22,18 +23,20 @@ interface BranchProps {
   restoring: boolean
   /** The copy of a card that follows the pointer: nothing in it is sortable. */
   lifted?: boolean
+  /** How deep the folders at this level are: 1 at the top of the card. */
+  depth?: number
 }
 
 /**
  * What is at one level of a card: its folders first (by name), each opening in place, then its
  * links, which can be dragged to another place among themselves.
  */
-export function Branch({ card, folders, links, folderId, restoring, lifted }: BranchProps) {
+export function Branch({ card, folders, links, folderId, restoring, lifted, depth = 1 }: BranchProps) {
   const Row = lifted ? LinkRow : SortableLinkRow
   return (
     <>
       {folders.map((node) => (
-        <FolderBranch key={node.folder.id} card={card} node={node} restoring={restoring} lifted={lifted} />
+        <FolderBranch key={node.folder.id} card={card} node={node} restoring={restoring} lifted={lifted} depth={depth} />
       ))}
       <SortableContext items={links.map((item) => item.link.id)} strategy={verticalListSortingStrategy}>
         {links.map((item) => (
@@ -45,10 +48,10 @@ export function Branch({ card, folders, links, folderId, restoring, lifted }: Br
 }
 
 /** A folder's line, and when it is open, what is inside it, indented along a thin line in the card's color. */
-function FolderBranch({ card, node, restoring, lifted }: { card: BoardCard; node: FolderNode; restoring: boolean; lifted?: boolean }) {
-  const openFolders = useOpenFolders()
+function FolderBranch({ card, node, restoring, lifted, depth }: { card: BoardCard; node: FolderNode; restoring: boolean; lifted?: boolean; depth: number }) {
+  const { isOpen, setFolderOpen } = useOpenFolders()
   // In the view of what you hid, folders open by themselves: what is in them is what to look through.
-  const open = openFolders.has(node.folder.id) || (restoring && node.count > 0)
+  const open = isOpen(node.folder.id) || (restoring && node.count > 0)
   const inside = useId()
   const { folder, count } = node
   const empty = node.folders.length === 0 && node.links.length === 0
@@ -65,12 +68,34 @@ function FolderBranch({ card, node, restoring, lifted }: { card: BoardCard; node
 
   return (
     <div ref={setNodeRef} className={cn('flex flex-col rounded-md transition-[background-color,box-shadow] duration-150', isOver && DROP_TARGET)}>
-      <div data-row className="group/row relative flex min-h-[34px] items-center gap-1.5 rounded-md pr-1 hover:bg-[color-mix(in_srgb,var(--c)_14%,transparent)] has-[:focus-visible]:bg-[color-mix(in_srgb,var(--c)_14%,transparent)]">
+      {/* While its folder is open and scrolled through, the line stays at the top of the card (under
+          the lines of the folders it is in), so it is clear whose links go by. The card marks it
+          data-stuck then (group-card.tsx), and it covers what scrolls under it. */}
+      <div
+        data-row
+        data-folder-row
+        className={cn(
+          'group/row relative flex min-h-[34px] items-center gap-1.5 rounded-md pr-1 hover:bg-[color-mix(in_srgb,var(--c)_14%,transparent)] has-[:focus-visible]:bg-[color-mix(in_srgb,var(--c)_14%,transparent)]',
+          open && !lifted && STICKY,
+        )}
+        style={open && !lifted ? { top: (depth - 1) * FOLDER_LINE, zIndex: 10 + MAX_FOLDER_DEPTH - depth } : undefined}
+      >
         <button
           type="button"
           aria-expanded={open}
           aria-controls={inside}
-          onClick={() => setFolderOpen(folder.id, !open)}
+          onClick={(event) => {
+            // Closing a folder whose line is stuck at the top (its links scrolled past above):
+            // the card first scrolls back to where the folder starts, so its line stays right
+            // where it is and what is in it folds away below, instead of the list jumping.
+            const row = event.currentTarget.closest<HTMLElement>('[data-folder-row]')
+            if (open && row?.hasAttribute('data-stuck')) {
+              const list = row.closest<HTMLElement>('[data-card-list]')
+              const start = row.parentElement?.getBoundingClientRect().top
+              if (list && start !== undefined) list.scrollTop += start - row.getBoundingClientRect().top
+            }
+            setFolderOpen(folder.id, !open)
+          }}
           className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md py-1.5 pl-1 text-left outline-none"
         >
           <ChevronRight className={cn('text-quiet size-3.5 flex-none transition-transform duration-150 motion-reduce:transition-none', open && 'rotate-90')} strokeWidth={2.5} aria-hidden="true" />
@@ -82,7 +107,7 @@ function FolderBranch({ card, node, restoring, lifted }: { card: BoardCard; node
             <span className="sr-only"> {count === 1 ? 'link' : 'links'}</span>
           </span>
         </button>
-        {!lifted && <FolderMenu group={card.group} folder={folder} folders={card.folders} />}
+        {!lifted && <FolderMenu group={card.group} folder={folder} folders={card.folders} links={node.links.length} />}
       </div>
       {mounted && (
         // Slides open to its own height and fades in (a grid row going from 0fr to 1fr), and
@@ -94,9 +119,10 @@ function FolderBranch({ card, node, restoring, lifted }: { card: BoardCard; node
           )}
           inert={!expanded}
         >
-          <div className="min-h-0 overflow-hidden">
+          {/* Clipped, not hidden: clipping leaves the card as what the folder lines stick to. */}
+          <div className="min-h-0 overflow-clip">
             <div id={inside} role="group" aria-label={folder.name} className="mt-[3px] ml-[13px] flex flex-col gap-[3px] border-l border-[color-mix(in_srgb,var(--c)_28%,var(--line))] pl-1.5">
-              <Branch card={card} folders={node.folders} links={node.links} folderId={folder.id} restoring={restoring} lifted={lifted} />
+              <Branch card={card} folders={node.folders} links={node.links} folderId={folder.id} restoring={restoring} lifted={lifted} depth={depth + 1} />
               {empty && <p className="text-quiet m-0 py-1.5 pl-2.5 text-[13px]">Empty folder</p>}
             </div>
           </div>
@@ -105,6 +131,17 @@ function FolderBranch({ card, node, restoring, lifted }: { card: BoardCard; node
     </div>
   )
 }
+
+/** How far apart the stuck lines of nested folders are: a folder's line, so each sits right under its parent's, with no gap to see through. */
+const FOLDER_LINE = 34
+
+/**
+ * A folder's line that stays at the top of a card while its folder scrolls by (where a card
+ * scrolls: not on a phone). Stuck, it takes the card's color where it is (a little more than at
+ * the card's foot: the top of a card is tinted more), so what scrolls under it is covered.
+ */
+const STICKY =
+  'sm:sticky data-[stuck]:bg-[color-mix(in_srgb,var(--c)_calc(var(--wash-low)+2%),var(--surface))] data-[stuck]:rounded-none'
 
 /** Where a dragged link would land: tinted in the card's color, with an outline. */
 export const DROP_TARGET = 'bg-[color-mix(in_srgb,var(--c)_12%,transparent)] shadow-[inset_0_0_0_1.5px_color-mix(in_srgb,var(--c)_55%,transparent)]'
@@ -142,9 +179,10 @@ function useCollapse(open: boolean) {
 const FOLDER_ICON = 'size-[18px] flex-none text-[color-mix(in_srgb,var(--c)_70%,var(--ink))] fill-[color-mix(in_srgb,var(--c)_22%,transparent)]'
 
 /** Adding to a folder, and for the space's admins: a folder inside it, renaming, moving and deleting it. */
-function FolderMenu({ group, folder, folders }: { group: Group; folder: Folder; folders: Folder[] }) {
+function FolderMenu({ group, folder, folders, links }: { group: Group; folder: Folder; folders: Folder[]; /** How many links are right inside it. */ links: number }) {
   const { isSpaceAdmin } = usePermissions()
   const admin = isSpaceAdmin(group.space_id)
+  const { sortLinksByName } = useBoardActions()
   const { addLink } = useLinkDialog()
   const { newFolder, renameFolder, move, deleteFolder } = useFolderActions()
 
@@ -161,6 +199,13 @@ function FolderMenu({ group, folder, folders }: { group: Group; folder: Folder; 
           <Plus />
           {admin ? 'Add to this folder…' : 'Suggest for this folder…'}
         </DropdownMenuItem>
+        {/* As the group's menu: your own order; while editing, the space's order for everyone. */}
+        {links > 1 && (
+          <DropdownMenuItem onClick={() => sortLinksByName(group.id, folder.id)}>
+            <ArrowDownAZ />
+            Sort links A to Z
+          </DropdownMenuItem>
+        )}
         {admin && (
           <>
             {roomInside(folder.id, folders) && (

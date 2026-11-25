@@ -1,43 +1,33 @@
-import { useSyncExternalStore } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useFoldersIfLoaded } from '@/api/folders'
+import { boardPrefsQuery, useBoardPrefsIfLoaded, useSaveBoardPrefs } from '@/api/prefs'
+import { useMe } from '@/features/org/org-context'
+import { toastError } from '@/lib/errors'
+import { NO_PREFS, type BoardPrefs } from '@/lib/types'
 
-// Which folders are open, remembered in this browser. Folders start closed. Opening one is a
-// matter of how you look at the board, not part of it, so it isn't saved for the account.
+// Folders are open, for everyone and from the start (a new one too). Which ones a person closed
+// is kept with their preferences, so a folder they closed stays closed on every device they sign
+// in on. Only they see it.
 
-const KEY = 'teamshelf.open-folders'
-const listeners = new Set<() => void>()
-let open: ReadonlySet<string> | null = null
+/** Whether a folder is open for this person, and the way to open or close one (shown at once, saved in the background). */
+export function useOpenFolders() {
+  const me = useMe()
+  const queryClient = useQueryClient()
+  const prefs = useBoardPrefsIfLoaded()
+  const folders = useFoldersIfLoaded()
+  const savePrefs = useSaveBoardPrefs()
+  // A row saved before there was this column has none.
+  const closed = new Set(prefs.closed_folders ?? [])
 
-function read(): ReadonlySet<string> {
-  if (open) return open
-  try {
-    const saved: unknown = JSON.parse(localStorage.getItem(KEY) ?? '[]')
-    open = new Set(Array.isArray(saved) ? saved.filter((id): id is string => typeof id === 'string') : [])
-  } catch {
-    open = new Set()
+  function setFolderOpen(id: string, open: boolean) {
+    // From what is saved (or shown) right now, so two folders closed in a row both stay closed.
+    const current = queryClient.getQueryData<BoardPrefs>(boardPrefsQuery(me.id).queryKey)?.closed_folders ?? NO_PREFS.closed_folders
+    if (current.includes(id) !== open) return
+    // Folders that are gone (deleted, or in a space no longer open to them) are dropped on the way.
+    const existing = new Set(folders.map((folder) => folder.id))
+    const kept = current.filter((one) => one !== id && existing.has(one))
+    savePrefs.mutate({ closed_folders: open ? kept : [...kept, id] }, { onError: toastError })
   }
-  return open
+
+  return { isOpen: (id: string) => !closed.has(id), setFolderOpen }
 }
-
-const EMPTY: ReadonlySet<string> = new Set()
-
-function subscribe(listener: () => void) {
-  listeners.add(listener)
-  return () => listeners.delete(listener)
-}
-
-/** Opens or closes a folder. */
-export function setFolderOpen(id: string, isOpen: boolean) {
-  const next = new Set(read())
-  if (isOpen) next.add(id)
-  else next.delete(id)
-  open = next
-  try {
-    localStorage.setItem(KEY, JSON.stringify([...next]))
-  } catch {
-    // Not remembered (a private window, storage blocked): it still opens for now.
-  }
-  for (const listener of listeners) listener()
-}
-
-/** The open folders. Nothing is open while the public pages are drawn at build time. */
-export const useOpenFolders = () => useSyncExternalStore(subscribe, read, () => EMPTY)

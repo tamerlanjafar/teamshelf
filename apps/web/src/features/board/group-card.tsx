@@ -17,7 +17,7 @@ import { cardTree, rowsOf, type BoardCard } from './board-model'
 import { Branch, DROP_TARGET } from './folder-branch'
 import { GroupDialog } from './group-dialog'
 import { CARD_BUTTON } from './link-row'
-import { dragHeight, dragWidth, HEIGHT_VAR, heightKeys, widthKeys } from './resize'
+import { dragHeight, dragWidth, HEIGHT_VAR, heightKeys, WHOLE_LIST, widthKeys } from './resize'
 
 interface GroupCardProps {
   card: BoardCard
@@ -73,12 +73,13 @@ export const CARD_BODY = 'flex flex-col gap-[3px] px-1.5 pb-2'
  * On a tablet or a computer, a card stops growing at a part of the screen (or at the height it
  * was resized to, --card-h) and its list scrolls
  * inside it, so one long group doesn't stretch its column far past the others. The edge fades
- * where lines are hidden (--fade-top, --fade-bottom), a slim scrollbar in the card's color stays
+ * where lines are hidden below (--fade-bottom; above, the lines of the folders scrolled through stay
+ * in view instead, see folder-branch.tsx), a slim scrollbar in the card's color stays
  * in view (macOS hides scrollbars otherwise), and lines keep their own height instead of being
  * squeezed. On a phone the cards are one column, so a card shows its whole list.
  */
 const CAPPED =
-  'sm:max-h-[var(--card-h,min(62dvh,640px))] sm:overflow-y-auto sm:overscroll-contain sm:*:shrink-0 sm:[mask-image:linear-gradient(to_bottom,transparent_0,#000_var(--fade-top,0px),#000_calc(100%-var(--fade-bottom,0px)),transparent_100%)] sm:focus-visible:rounded-xl sm:focus-visible:outline-2 sm:focus-visible:-outline-offset-2 sm:focus-visible:outline-[color-mix(in_srgb,var(--c)_50%,transparent)] sm:[&::-webkit-scrollbar]:w-1.5 sm:[&::-webkit-scrollbar-track]:my-1.5 sm:[&::-webkit-scrollbar-track]:bg-transparent sm:[&::-webkit-scrollbar-thumb]:rounded-full sm:[&::-webkit-scrollbar-thumb]:bg-[color-mix(in_srgb,var(--c)_35%,transparent)] sm:[&::-webkit-scrollbar-thumb:hover]:bg-[color-mix(in_srgb,var(--c)_55%,transparent)] supports-[not_selector(::-webkit-scrollbar)]:sm:[scrollbar-width:thin] supports-[not_selector(::-webkit-scrollbar)]:sm:[scrollbar-color:color-mix(in_srgb,var(--c)_40%,transparent)_transparent]'
+  'sm:max-h-[var(--card-h,min(62dvh,640px))] sm:overflow-y-auto sm:overscroll-contain sm:*:shrink-0 sm:[mask-image:linear-gradient(to_bottom,#000_calc(100%-var(--fade-bottom,0px)),transparent_100%)] sm:focus-visible:rounded-xl sm:focus-visible:outline-2 sm:focus-visible:-outline-offset-2 sm:focus-visible:outline-[color-mix(in_srgb,var(--c)_50%,transparent)] sm:[&::-webkit-scrollbar]:w-1.5 sm:[&::-webkit-scrollbar-track]:my-1.5 sm:[&::-webkit-scrollbar-track]:bg-transparent sm:[&::-webkit-scrollbar-thumb]:rounded-full sm:[&::-webkit-scrollbar-thumb]:bg-[color-mix(in_srgb,var(--c)_35%,transparent)] sm:[&::-webkit-scrollbar-thumb:hover]:bg-[color-mix(in_srgb,var(--c)_55%,transparent)] supports-[not_selector(::-webkit-scrollbar)]:sm:[scrollbar-width:thin] supports-[not_selector(::-webkit-scrollbar)]:sm:[scrollbar-color:color-mix(in_srgb,var(--c)_40%,transparent)_transparent]'
 
 /** A group and its links, tinted with the group's color. As tall as what is in it, up to a part of the screen. */
 export function GroupCard({ card, restoring, cardRef, dragStyle, placeholder, lifted, headProps, resizable }: GroupCardProps & CardDragProps) {
@@ -107,15 +108,32 @@ export function GroupCard({ card, restoring, cardRef, dragStyle, placeholder, li
     const below = [...node.querySelectorAll<HTMLElement>('[data-row]')].filter((child) => child.offsetTop - node.offsetTop + child.offsetHeight / 2 > end).length
     const next = { top: node.scrollTop > 2, bottom: end < node.scrollHeight - 2, below }
     setEdges((current) => (current.top === next.top && current.bottom === next.bottom && current.below === next.below ? current : next))
+    // Folder lines stuck at the top (their folder has scrolled past them): marked, so they cover
+    // what goes under them.
+    const bodyTop = node.getBoundingClientRect().top
+    for (const row of node.querySelectorAll<HTMLElement>('[data-folder-row]')) {
+      const top = row.getBoundingClientRect().top
+      const from = top - bodyTop
+      // Held at the top: at its place there, or being pushed out by the end of its folder (still
+      // in view), with its folder starting above it.
+      const held = from <= (parseFloat(row.style.top) || 0) + 1 && from + row.offsetHeight > 0
+      const isStuck = node.scrollTop > 0 && held && getComputedStyle(row).position === 'sticky' && (row.parentElement?.getBoundingClientRect().top ?? top) < top - 0.5
+      row.toggleAttribute('data-stuck', isStuck)
+    }
   }
+  // Measured again after every change (links moved into folders change neither the card's size
+  // nor its count), and whenever the card or any part of its list changes size (a folder opening
+  // or closing inside a card that has stopped growing).
+  const observer = useRef<ResizeObserver | null>(null)
   useLayoutEffect(() => {
     const node = body.current
     if (!node) return
     measureEdges()
-    const observer = new ResizeObserver(measureEdges)
-    observer.observe(node)
-    return () => observer.disconnect()
-  }, [rows.length, tree.folders.length])
+    observer.current ??= new ResizeObserver(() => measureEdges())
+    observer.current.observe(node)
+    for (const child of node.children) observer.current.observe(child)
+  })
+  useLayoutEffect(() => () => observer.current?.disconnect(), [])
 
   return (
     <section
@@ -152,7 +170,13 @@ export function GroupCard({ card, restoring, cardRef, dragStyle, placeholder, li
           body.current = node
           drop.setNodeRef(node)
         }}
-        className={cn(CARD_BODY, !lifted && CAPPED, edges.top && '[--fade-top:28px]', edges.bottom && '[--fade-bottom:72px]', 'rounded-b-2xl transition-[background-color,box-shadow] duration-150', drop.isOver && DROP_TARGET)}
+        data-card-list
+        className={cn(
+          CARD_BODY,
+          !lifted && CAPPED,
+          // A height someone set is the card's height, whatever is open in it (folders opening and
+          // closing don't move it). Pulled to the end of the list, it stays as tall as the list.
+          !lifted && height !== undefined && height < WHOLE_LIST && 'sm:h-[var(--card-h)]', edges.bottom && '[--fade-bottom:72px]', 'rounded-b-2xl transition-[background-color,box-shadow] duration-150', drop.isOver && DROP_TARGET)}
         style={height === undefined || lifted ? undefined : ({ [HEIGHT_VAR]: `${height}px` } as CSSProperties)}
         onScroll={measureEdges}
         tabIndex={edges.bottom || edges.top ? 0 : undefined}
@@ -265,7 +289,14 @@ function GroupMenu({ card }: { card: BoardCard }) {
           {isResized(group.id) && (
             <DropdownMenuItem onClick={() => resizeCard(group.id, undefined)}>
               <FoldVertical />
-              {arranging ? 'As tall as its links' : 'Use the space\'s height'}
+              Auto height
+            </DropdownMenuItem>
+          )}
+          {/* Your own order (as dragging links is); while editing, the space's order for everyone. */}
+          {card.links.length > 1 && (
+            <DropdownMenuItem onClick={() => sortLinksByName(group.id)}>
+              <ArrowDownAZ />
+              Sort links A to Z
             </DropdownMenuItem>
           )}
           {ownLinkOrder && (
@@ -277,12 +308,6 @@ function GroupMenu({ card }: { card: BoardCard }) {
           {admin && (
             <>
               <DropdownMenuSeparator />
-              {arranging && card.links.length > 1 && (
-                <DropdownMenuItem onClick={() => sortLinksByName(group.id)}>
-                  <ArrowDownAZ />
-                  Sort links A to Z
-                </DropdownMenuItem>
-              )}
               <DropdownMenuItem onClick={() => newFolder(group, null)}>
                 <FolderPlus />
                 New folder…

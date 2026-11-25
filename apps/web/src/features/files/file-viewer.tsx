@@ -436,7 +436,10 @@ function DocumentForm({ space, start, onClose }: { space: Space; start: { groupN
     return () => window.removeEventListener('beforeunload', ask)
   }, [started])
 
-  const shown = attempted ? errors : { title: title.trim() ? errors.title : null, group: null, text: null }
+  // After saving, the links are loaded again before the save counts as done and the page closes;
+  // the new document would then count as a name taken by itself. Nothing is said from pressing
+  // save until the page is gone.
+  const shown = saving || addLink.isSuccess ? { title: null, group: null, text: null } : attempted ? errors : { title: title.trim() ? errors.title : null, group: null, text: null }
 
   function changeFormat(next: DocumentFormat) {
     // Text with tags in it can't go into the formatted editor (markdown-safety.ts).

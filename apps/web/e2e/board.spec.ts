@@ -342,7 +342,7 @@ test.describe('your own changes to a space’s layout', () => {
     await expect(page.getByText('Only you see this change')).toBeVisible()
     await expect(layoutMenu(page).button).toHaveAccessibleName('Space layout: changed by you')
     await page.getByRole('button', { name: 'More for Web app' }).click()
-    await expect(page.getByRole('menuitem', { name: "Use the space's height" })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Auto height' })).toBeVisible()
   })
 
   test('an admin’s own changes are theirs too, with the way to the editor', async ({ page }) => {

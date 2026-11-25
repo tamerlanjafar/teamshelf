@@ -161,6 +161,8 @@ export interface BoardPrefs {
   recent_links: Record<string, string[]>
   /** The cards and columns they resized themselves, per space. The rest follows the space's sizes. */
   card_sizes: Record<string, CardSizes>
+  /** The folders they closed, on every device. The rest are open (a new folder too). */
+  closed_folders: string[]
 }
 
-export const NO_PREFS: BoardPrefs = { group_order: [], group_layout: {}, link_order: {}, hidden_groups: [], hidden_links: [], recent_links: {}, card_sizes: {} }
+export const NO_PREFS: BoardPrefs = { group_order: [], group_layout: {}, link_order: {}, hidden_groups: [], hidden_links: [], recent_links: {}, card_sizes: {}, closed_folders: [] }

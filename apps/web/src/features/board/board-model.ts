@@ -133,9 +133,9 @@ export function countHidden(groups: Group[], links: Link[], prefs: BoardPrefs): 
 
 /** A rough height for a card, enough to balance the columns before anything is measured. Long cards stop at about 16 lines and scroll (see CAPPED in group-card.tsx). */
 export const estimateCardHeight = (card: BoardCard, maxLines = 16) => {
-  // Folders start closed: a card shows a line per folder at its top, and its own links.
-  const tree = cardTree(card, true)
-  const lines = tree.folders.length + tree.links.length
+  // Folders are open unless someone closed them: a line per folder, and every link.
+  const folderLines = (nodes: FolderNode[]): number => nodes.reduce((sum, node) => sum + 1 + folderLines(node.folders), 0)
+  const lines = folderLines(cardTree(card, true).folders) + card.links.length
   return 62 + Math.min(Math.max(lines, 1), maxLines) * 37
 }
 

@@ -5,7 +5,7 @@ import { useSaveBoardPrefs } from '@/api/prefs'
 import { usePermissions } from '@/features/org/permissions'
 import { toastError } from '@/lib/errors'
 import { mergeOrder } from '@/lib/order'
-import type { BoardPrefs, CardSizes, Space } from '@/lib/types'
+import type { BoardPrefs, CardSizes, Link, Space } from '@/lib/types'
 import { orderedLinks } from './board-model'
 import { mergeLayout, type Layout } from './board-layout'
 import { useLayoutEditor } from './layout-editor'
@@ -25,8 +25,8 @@ interface BoardActions {
   arrangeGroups: (shown: Layout) => void
   /** Saves a new order of one group's links: the ids of its links on screen, as they now stand. */
   reorderLinks: (groupId: string, visibleIds: string[]) => void
-  /** Puts one group's links in alphabetical order. While editing the default layout only. */
-  sortLinksByName: (groupId: string) => void
+  /** Puts one group's links in alphabetical order, or only those right inside one of its folders (`folderId`, null for its top). While editing the default layout: for everyone; otherwise for this person only. */
+  sortLinksByName: (groupId: string, folderId?: string | null) => void
   /** Remembers that this person opened a link, for "Opened lately" in the search. */
   recordOpen: (linkId: string) => void
   setGroupHidden: (groupId: string, hidden: boolean) => void
@@ -132,9 +132,23 @@ export function BoardActionsProvider({ space, canReorder, children }: { space: S
         if (draft) change((current) => ({ ...current, linkOrder: { ...current.linkOrder, [groupId]: ids } }))
         else save({ link_order: { ...prefs.link_order, [groupId]: ids } })
       },
-      sortLinksByName: (groupId) => {
-        const sorted = links.filter((link) => link.group_id === groupId).sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base', numeric: true }))
-        change((current) => ({ ...current, linkOrder: { ...current.linkOrder, [groupId]: sorted.map((link) => link.id) } }))
+      sortLinksByName: (groupId, folderId) => {
+        const byName = (a: Link, b: Link) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base', numeric: true })
+        const ofGroup = links.filter((link) => link.group_id === groupId)
+        // One folder: its links take their own places among the group's in A to Z order; the rest stay.
+        const ids =
+          folderId === undefined
+            ? ofGroup.sort(byName).map((link) => link.id)
+            : mergeOrder(
+                allIds(groupId),
+                ofGroup
+                  .filter((link) => (link.folder_id ?? null) === folderId)
+                  .sort(byName)
+                  .map((link) => link.id),
+              )
+        // While editing: the space's order, for everyone. Otherwise: this person's own, as dragging is.
+        if (draft) change((current) => ({ ...current, linkOrder: { ...current.linkOrder, [groupId]: ids } }))
+        else save({ link_order: { ...prefs.link_order, [groupId]: ids } })
       },
       recordOpen: (linkId) => space && recordOpen({ id: linkId, space_id: space.id }),
       setGroupHidden: (groupId, hidden) => savePrefs.mutate({ hidden_groups: toggled(prefs.hidden_groups, groupId, hidden) }, { onError: toastError }),

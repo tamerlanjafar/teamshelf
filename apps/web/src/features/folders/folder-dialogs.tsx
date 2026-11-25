@@ -38,6 +38,10 @@ function NameForm({ request, folders, onDone }: { request: NameRequest; folders:
   // The same checks as the database (010_folders.sql), so the reason shows before saving.
   const taken = childrenOf(parentId, folders).some((folder) => folder.id !== renaming?.id && folder.name.toLowerCase() === name.trim().toLowerCase())
   const error = !name.trim() ? 'Give the folder a name.' : name.trim().length > 60 ? 'Keep the name to 60 characters.' : taken ? `${where} already has a folder called ${name.trim()}.` : null
+  // After saving, the folders are loaded again before the save counts as done and the dialog
+  // closes; the new one would then count as taken by itself. Nothing is said from pressing save
+  // until the dialog is gone.
+  const showError = !saving && !createFolder.isSuccess && !updateFolder.isSuccess && (attempted || taken)
 
   function submit(event: FormEvent) {
     event.preventDefault()
@@ -56,8 +60,8 @@ function NameForm({ request, folders, onDone }: { request: NameRequest; folders:
         <DialogTitle className={TITLE}>{renaming ? 'Rename folder' : 'New folder'}</DialogTitle>
         {!renaming && <p className="text-quiet m-0 text-[13.5px]">In {where}</p>}
       </DialogHeader>
-      <Field label="Name" error={attempted || taken ? (error ?? undefined) : undefined}>
-        <TextInput value={name} maxLength={70} autoFocus placeholder="Runbooks" aria-invalid={Boolean((attempted || taken) && error)} onChange={(event) => setName(event.target.value)} />
+      <Field label="Name" error={showError ? (error ?? undefined) : undefined}>
+        <TextInput value={name} maxLength={70} autoFocus placeholder="Runbooks" aria-invalid={Boolean(showError && error)} onChange={(event) => setName(event.target.value)} />
       </Field>
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onDone}>

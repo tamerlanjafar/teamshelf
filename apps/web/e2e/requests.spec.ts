@@ -26,7 +26,6 @@ test.describe('as a reviewer', () => {
     await expect(page.getByRole('article').filter({ hasText: 'Late data runbook' })).toHaveCount(0)
     await page.goto('/acme/data')
     const docs = page.getByRole('region', { name: 'Documentation' })
-    await docs.getByRole('button', { name: /^Runbooks\b/ }).click()
     await expect(docs.getByRole('group', { name: 'Runbooks' }).getByRole('link', { name: 'Late data runbook' })).toBeVisible()
   })
 

@@ -1,4 +1,4 @@
-import { MIN_COLUMN } from './resize'
+import { MIN_COLUMN, WHOLE_LIST } from './resize'
 import {
   closestCenter,
   closestCorners,
@@ -129,10 +129,13 @@ export function SortableBoard({ cards, restoring, footer }: { cards: BoardCard[]
   // A resized card is as tall as its header and the height it was given, at most.
   const heightOf = (card: BoardCard) => {
     const resized = cardHeight(card.group.id)
-    return resized === undefined ? estimateCardHeight(card) : Math.min(estimateCardHeight(card, Infinity), 62 + resized)
+    // A height someone set holds (see group-card.tsx), except "the whole list".
+    return resized === undefined ? estimateCardHeight(card) : resized >= WHOLE_LIST ? estimateCardHeight(card, Infinity) : 62 + resized
   }
+  // Which column a card goes in counts its own size, not a height someone set by hand: resizing
+  // a card never moves the others (moving cards is for the person to do, by dragging them).
   const arranged = arrangeColumns(
-    cards.map((card) => ({ id: card.group.id, height: heightOf(card) })),
+    cards.map((card) => ({ id: card.group.id, height: estimateCardHeight(card) })),
     layout,
     columnCount,
     COLUMN_GAP,

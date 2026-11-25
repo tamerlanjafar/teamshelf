@@ -110,7 +110,11 @@ function LinkForm({ request, onDone }: { request: Request; onDone: () => void })
   const siblings = boardLinks.filter((link) => group && link.group_id === group.id && (link.folder_id ?? null) === folderId && link.id !== editing?.id).map((link) => link.title)
   const memberIds = draft.memberIds ?? savedAccess.data ?? []
   const errors = validate(draft, memberIds, { siblings }, Boolean(editing))
-  const shown = attempted ? errors : { ...(nameTouched && draft.title.trim() ? { title: errors.title } : {}) }
+  // After saving, the links are loaded again before the save counts as done and the dialog
+  // closes; the new one would then count as a name taken by itself. Nothing is said from pressing
+  // save until the dialog is gone.
+  const saved = addLink.isPending || addLink.isSuccess || updateLink.isPending || updateLink.isSuccess
+  const shown = saved ? {} : attempted ? errors : { ...(nameTouched && draft.title.trim() ? { title: errors.title } : {}) }
 
   const formId = useId()
   const ids = { group: `${formId}-group`, folder: `${formId}-folder`, title: `${formId}-title`, url: `${formId}-url`, file: `${formId}-file` }
