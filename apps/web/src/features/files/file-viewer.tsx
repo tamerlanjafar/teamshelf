@@ -3,7 +3,7 @@ import { Copy, Download, FileQuestion, Pencil, RotateCw, TriangleAlert, X } from
 import { createContext, lazy, Suspense, useCallback, useContext, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import { toast } from '@/components/ui/toast'
 import { EVERYONE } from '@/api/access'
-import { downloadFile, fetchFileBytes, formatBytes, saveFileText, uploadText } from '@/api/files'
+import { downloadFile, fetchFileBytes, fileUrl, formatBytes, saveFileText, uploadText } from '@/api/files'
 import { foldersOf, useFoldersIfLoaded } from '@/api/folders'
 import { FolderSelect } from '@/features/folders/folder-select'
 import { groupsOf, useGroupsIfLoaded } from '@/api/groups'
@@ -122,10 +122,16 @@ const COLUMN = 'mx-auto w-full max-w-[820px] px-4 sm:px-6'
 
 // ---- A file of the board ----------------------------------------------------------------------
 
-/** What a file's bytes were read as: text (a document, notes, code), or something the browser shows itself. */
-type Loaded = { text: string } | { bytes: Blob }
+/**
+ * What a file was read as: text (a document, notes, code), bytes the browser shows itself (a
+ * picture, sound, video), or, for a PDF, the address storage shows it at.
+ */
+type Loaded = { text: string } | { bytes: Blob } | { frame: string }
 
 async function load(link: Link, kind: PreviewKind, signal: AbortSignal): Promise<Loaded> {
+  // A PDF is shown from storage itself, which names it: the reader's own download button then
+  // saves it under the file's name. From bytes held here it would be saved under a made-up one.
+  if (kind === 'pdf') return { frame: await fileUrl(link.file_key!, 'frame') }
   const bytes = await fetchFileBytes(link.file_key!, signal)
   if (kind === 'markdown' || kind === 'text') return { text: await bytes.text() }
   // Given to the browser as one of the harmless types its name stands for, whatever it was uploaded as.
@@ -137,6 +143,7 @@ const fileKey = (key: string | null) => ['file', key] as const
 /** Puts a file on the clipboard: its text, or a picture as a PNG, the one kind every browser takes. */
 async function copy(file: Loaded) {
   if ('text' in file) return navigator.clipboard.writeText(file.text)
+  if (!('bytes' in file)) throw new Error("This file can't be copied.")
   const picture = await createImageBitmap(file.bytes)
   const canvas = document.createElement('canvas')
   canvas.width = picture.width
@@ -319,6 +326,9 @@ function FileView({ link: opened, onClose }: { link: Link; onClose: () => void }
             <pre className="border-line bg-surface m-0 flex-1 rounded-xl border p-4 font-mono text-[13.5px] leading-relaxed break-words whitespace-pre-wrap">{text || <span className="text-quiet">This file is empty.</span>}</pre>
           )}
         </div>
+      ) : file.data && 'frame' in file.data ? (
+        // Storage's own address, which only ever sends a PDF there. It is told nothing of this page.
+        <iframe title={link.title} src={file.data.frame} referrerPolicy="no-referrer" className="block size-full border-0" />
       ) : file.data && 'bytes' in file.data ? (
         <Shown kind={kind} bytes={file.data.bytes} title={link.title} />
       ) : null}
@@ -326,7 +336,7 @@ function FileView({ link: opened, onClose }: { link: Link; onClose: () => void }
   )
 }
 
-/** A picture, a PDF, sound or video, shown by the browser from the file's bytes. */
+/** A picture, sound or video, shown by the browser from the file's bytes. */
 function Shown({ kind, bytes, title }: { kind: PreviewKind; bytes: Blob; title: string }) {
   // An address for the bytes, which lives as long as this is on screen.
   const [url, setUrl] = useState<string | null>(null)
@@ -339,7 +349,6 @@ function Shown({ kind, bytes, title }: { kind: PreviewKind; bytes: Blob; title: 
   }, [bytes])
   if (!url) return null
 
-  if (kind === 'pdf') return <iframe title={title} src={url} className="block size-full border-0" />
   return (
     <div className="grid min-h-full place-items-center p-4 sm:p-8">
       {kind === 'image' && <img src={url} alt={title} className="max-h-[calc(100dvh-140px)] max-w-full rounded-lg object-contain shadow-[0_1px_2px_hsl(var(--shadow)/0.1),0_18px_40px_-18px_hsl(var(--shadow)/0.4)]" />}

@@ -5,6 +5,7 @@ import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import { authProxyDevServer } from '@teamshelf/auth-proxy/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
+import { MADE_UP_PDF } from './src/mock/made-up-pdf.ts'
 
 /**
  * On Netlify, /api/icon is a function (netlify/functions/actions.mjs). This gives the dev server
@@ -18,6 +19,35 @@ const iconLookup = (): Plugin => ({
       const address = new URL(request.url ?? '', 'http://localhost').searchParams.get('url') ?? ''
       response.setHeader('content-type', 'application/json')
       response.end(JSON.stringify({ icon: await findIcon(address) }))
+    })
+  },
+})
+
+/**
+ * Mock mode's PDFs, for the viewer's frame (src/mock/files.ts): /__mock-pdf/<name>.pdf, sent the
+ * way storage sends a real one (netlify/lib/r2.mjs): as a PDF, shown in place, with its name.
+ * Only a name ending in .pdf is answered.
+ */
+const mockPdf = (): Plugin => ({
+  name: 'teamshelf-mock-pdf',
+  configureServer(server) {
+    server.middlewares.use('/__mock-pdf', (request, response) => {
+      let name = ''
+      try {
+        name = decodeURIComponent(new URL(request.url ?? '', 'http://localhost').pathname.slice(1))
+      } catch {
+        // Not an address: answered as not found, below.
+      }
+      if (!/^[^/\\]+\.pdf$/i.test(name)) {
+        response.statusCode = 404
+        response.end('not found')
+        return
+      }
+      const filename = encodeURIComponent(name).replace(/['()*]/g, (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`)
+      response.setHeader('content-type', 'application/pdf')
+      response.setHeader('content-disposition', `inline; filename*=UTF-8''${filename}`)
+      response.setHeader('x-content-type-options', 'nosniff')
+      response.end(MADE_UP_PDF)
     })
   },
 })
@@ -112,7 +142,7 @@ export default defineConfig(({ command, mode }) => {
       react(),
       tailwindcss(),
       // On Netlify /api/auth/* is a function (netlify/functions/api.mjs). The dev server runs the same code.
-      ...(mock ? [] : [iconLookup(), authProxyDevServer(env.VITE_NEON_AUTH_URL ?? '')]),
+      ...(mock ? [mockPdf()] : [iconLookup(), authProxyDevServer(env.VITE_NEON_AUTH_URL ?? '')]),
       appVersionFile(),
       robotsFile(siteUrl),
     ],

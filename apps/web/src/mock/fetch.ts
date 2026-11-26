@@ -3,7 +3,7 @@
 // account's organizations (the Data API's my_orgs), and the server functions for icons and files.
 
 import { myOrgs } from './backend'
-import { keyOfMockAddress, mockFileAddress, readMockFile, writeMockFile } from './files'
+import { keyOfMockAddress, mockFileAddress, mockPdfAddress, readMockFile, writeMockFile } from './files'
 import { getState, update, userOfSlot, userOfToken } from './store'
 
 const json = (body: unknown, status = 200, headers: Record<string, string> = {}) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', ...headers } })
@@ -68,6 +68,12 @@ async function answer(url: URL, init: RequestInit | undefined, real: typeof fetc
   if (url.pathname === '/api/files/url') {
     const key = url.searchParams.get('key') ?? ''
     if (url.searchParams.get('for') === 'show') return json({ url: mockFileAddress(key) })
+    // As netlify/lib/file-serving.mjs: a frame is for a file named .pdf, sent as a PDF, and refused to any other.
+    if (url.searchParams.get('for') === 'frame') {
+      const name = getState().db.links.find((one) => one.file_key === key)?.file_name
+      if (!/\.pdf$/i.test((name ?? '').trim())) return json({ error: "This file can't be shown in a frame. Download it instead." }, 400)
+      return json({ url: mockPdfAddress(name!) })
+    }
     return json({ url: URL.createObjectURL(await (await readMockFile(key, real)).blob()) })
   }
   if (url.pathname === '/api/files/upload') {

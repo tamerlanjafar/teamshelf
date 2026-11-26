@@ -1,6 +1,7 @@
 // The files of mock mode. There is no storage: a text file written or saved here is kept with the
 // mock data (store.ts), and every other file is made up from its name when it is asked for.
 
+import { MADE_UP_PDF } from './made-up-pdf'
 import { getState, update } from './store'
 
 const RUNBOOK = `# Deploy runbook
@@ -62,17 +63,6 @@ const PAGE = `<!doctype html>
 </html>
 `
 
-// The smallest PDF that says something: one page, one line.
-const PDF = `%PDF-1.4
-1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj
-2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj
-3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 400 200]/Contents 4 0 R/Resources<</Font<</F1 5 0 R>>>>>>endobj
-4 0 obj<</Length 44>>stream
-BT /F1 18 Tf 40 110 Td (A made-up PDF) Tj ET
-endstream endobj
-5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj
-trailer<</Root 1 0 R>>
-%%EOF`
 
 const MADE_UP: Record<string, string> = {
   'mock/runbook.md': RUNBOOK,
@@ -86,6 +76,13 @@ export const mockFileAddress = (key: string) => `/__mock-files/${encodeURICompon
 
 export const keyOfMockAddress = (pathname: string) => (pathname.startsWith('/__mock-files/') ? decodeURIComponent(pathname.slice('/__mock-files/'.length)) : null)
 
+/**
+ * Where a PDF of mock mode is shown from, in a frame. A frame can't be answered by fetch.ts, so
+ * this one address is the dev server's (vite.config.ts): like storage, it sends a PDF and names
+ * it, so the browser's PDF reader saves it under the file's name here too.
+ */
+export const mockPdfAddress = (name: string) => `/__mock-pdf/${encodeURIComponent(name)}`
+
 /** Keeps text under a key, as storage would. */
 export function writeMockFile(key: string, text: string) {
   update((draft) => {
@@ -98,7 +95,7 @@ export async function readMockFile(key: string, real: typeof fetch): Promise<Res
   const plain = { 'content-type': 'application/octet-stream' }
   const written = getState().files?.[key] ?? MADE_UP[key]
   if (written !== undefined) return new Response(written, { headers: plain })
-  if (/\.pdf$/i.test(key)) return new Response(PDF, { headers: plain })
+  if (/\.pdf$/i.test(key)) return new Response(MADE_UP_PDF, { headers: plain })
   // A picture: one that is really there, the app's own icon.
   if (/\.(png|jpe?g|gif|webp)$/i.test(key)) return new Response(await (await real('/icon-512.png')).blob(), { headers: plain })
   return new Response('not found', { status: 404 })

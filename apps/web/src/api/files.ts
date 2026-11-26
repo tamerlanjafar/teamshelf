@@ -116,9 +116,13 @@ export async function fetchFileBytes(key: string, signal?: AbortSignal): Promise
  */
 export const fileAddress = (key: string) => `${window.location.origin}/file?key=${encodeURIComponent(key)}`
 
-/** Where the file itself is, for a few minutes: to save it to disk, or to read its bytes and show it in the app. */
-export async function fileUrl(key: string, purpose: 'download' | 'show' = 'download'): Promise<string> {
-  // The purpose changes nothing on the server: it lets mock mode answer each in its own way.
+/**
+ * Where the file itself is, for a few minutes: to save it to disk ('download'), to read its bytes
+ * and show them in the app ('show'), or to give to a frame ('frame'). Only a PDF gets a frame:
+ * the server decides by the file's name and refuses any other (netlify/lib/file-serving.mjs).
+ * 'download' and 'show' are the same to the server; mock mode answers each in its own way.
+ */
+export async function fileUrl(key: string, purpose: 'download' | 'show' | 'frame' = 'download'): Promise<string> {
   const response = await fetch(`/api/files/url?${new URLSearchParams({ key, for: purpose })}`, { headers: await authorization() })
   if (!response.ok) throw await failure(response, "The file couldn't be opened.")
   return ((await response.json()) as { url: string }).url

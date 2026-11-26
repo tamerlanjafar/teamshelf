@@ -7,8 +7,10 @@
 //   POST /api/files/upload  { spaceId, name, size, type }  →  { key, uploadUrl }
 //   POST /api/files/save    { key, size, type }            →  { uploadUrl }: writes over a file (editing a text file)
 //   GET  /api/files/url?key=<key>                            →  { url }, which downloads the file
+//   GET  /api/files/url?key=<key>&for=frame                  →  { url }, which shows a PDF (and only a PDF) in a frame
 
 import { asCaller, DataApiError, json, verifiedToken } from './neon.mjs'
+import { serving } from './file-serving.mjs'
 import { downloadAddress, r2Configured, uploadAddress } from './r2.mjs'
 
 /** Keep in step with MAX_FILE_BYTES in src/api/files.ts and links.file_size in the database. */
@@ -90,7 +92,11 @@ async function address(request, token) {
   // Only a file on a link the caller can see. Row-level security leaves out every other.
   const links = await asCaller(token, `links?file_key=eq.${encodeURIComponent(key)}&select=file_name&limit=1`)
   if (links.length === 0) return json({ error: "This file isn't there, or you can't open it." }, 404)
-  return json({ url: await downloadAddress(key, { name: links[0].file_name }) })
+  // What the browser asks for is only a wish: the file's name, as the database has it, decides
+  // (file-serving.mjs). A frame is for a PDF, and nothing else is ever sent as anything but bytes to save.
+  const how = serving(links[0].file_name, query.get('for'))
+  if (how === 'refused') return json({ error: "This file can't be shown in a frame. Download it instead." }, 400)
+  return json({ url: await downloadAddress(key, { name: links[0].file_name, asPdf: how === 'pdf' }) })
 }
 
 export default async function files(request) {

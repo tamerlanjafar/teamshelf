@@ -12,9 +12,12 @@ back within a few days, and credit is given in the fix's notes unless you'd rath
   (`db/migrations`). The app's own checks only decide what to show, so a request made by hand
   gets no further than the app would.
 - **Limits** (uploads, suggestions, links, storage) are counted in the database too.
-- **Files** are only ever handed out as plain bytes to save. Inside the app a file is shown as
-  the harmless kind its name stands for, documents are never given HTML, and links in them go to
-  the web, to mail or to a database only.
+- **Files** are handed out as plain bytes to save. The one exception is a file named `.pdf`,
+  which storage also sends as a PDF (and as nothing else) for the viewer's frame: the server
+  decides that from the name the database holds, never from what the browser asks or the
+  uploader claimed, and the site frames nothing but file storage. Inside the app a file is shown
+  as the harmless kind its name stands for, documents are never given HTML, and links in them go
+  to the web, to mail or to a database only.
 - **The server functions** check the caller's token, ask the database as the caller, refuse
   addresses inside private networks (icon lookup), and are rate limited per address.
 

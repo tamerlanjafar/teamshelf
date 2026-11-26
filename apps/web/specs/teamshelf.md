@@ -81,7 +81,7 @@ Documentation in Data (screens `board-folders`, `board-folders-member`): folders
 
 ## Files (`files.spec.ts`)
 
-- Opening: a document shows with its formatting (headings, a checklist, a table), for reading until "Edit" is pressed; a text file as it is written; a picture; a PDF in a frame of its own; a file that can't be shown offers its download; Escape and the X close the viewer; a file's menu opens it too.
+- Opening: a document shows with its formatting (headings, a checklist, a table), for reading until "Edit" is pressed; a text file as it is written; a picture; a PDF in a frame of its own (the one kind of file a frame is given: a web page or a drawing asked for that way is refused); a file that can't be shown offers its download; Escape and the X close the viewer; a file's menu opens it too.
 - Taking a file out: a download is saved under the file's own name; text is copied as it is written; a picture can be copied, a file that can't be shown can't.
 - Nothing in a file runs: a document with tags and a `javascript:` link is shown as text (no script, frame or picture made from it); a web page is its source, not a page; editing such a document is editing its text.
 - Nothing in a document tells on its reader: a picture from another site is fetched only when asked for; a link opens in a new tab without saying where it came from; pasting a web page into a document keeps its words, not its scripts.

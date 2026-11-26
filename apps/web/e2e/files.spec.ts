@@ -45,7 +45,21 @@ test.describe('opening a file', () => {
   test('a PDF is shown in a frame of its own', async ({ page }) => {
     await openScreen(page, 'files')
     const viewer = await openFile(page, 'Architecture')
-    await expect(viewer.locator('iframe[title="Architecture"]')).toHaveAttribute('src', /^blob:/)
+    // From an address that ends in the file's name and sends it as a PDF with that name: the
+    // browser's PDF reader saves it as architecture.pdf, not under a made-up name.
+    const frame = viewer.locator('iframe[title="Architecture"]')
+    await expect(frame).toHaveAttribute('src', /\/architecture\.pdf$/)
+    const sent = await page.request.get((await frame.getAttribute('src'))!)
+    expect(sent.headers()['content-type']).toBe('application/pdf')
+    expect(sent.headers()['content-disposition']).toBe("inline; filename*=UTF-8''architecture.pdf")
+  })
+
+  test('a frame is given to a PDF only: a web page asked for that way is refused', async ({ page }) => {
+    await openScreen(page, 'files')
+    const ask = (key: string) => page.evaluate(async (path) => (await fetch(path)).status, `/api/files/url?${new URLSearchParams({ key, for: 'frame' })}`)
+    expect(await ask('mock/architecture.pdf')).toBe(200)
+    expect(await ask('mock/page.html')).toBe(400)
+    expect(await ask('mock/runbook.md')).toBe(400)
   })
 
   test('a file that can’t be shown offers its download', async ({ page }) => {
