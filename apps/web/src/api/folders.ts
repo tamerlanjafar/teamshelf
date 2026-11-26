@@ -5,7 +5,7 @@ import type { Folder } from '@/lib/types'
 import { isUniqueViolation, NONE, unwrap } from './db'
 
 export const foldersKey = (orgId: string) => [orgId, 'folders'] as const
-/** Deleting a folder moves its links up a level, so link lists are refreshed too. */
+/** Deleting a folder deletes its links with it, so link lists are refreshed too. */
 const linksKey = (orgId: string) => [orgId, 'links'] as const
 
 /** The folders of every space this person can see. */
@@ -49,7 +49,7 @@ export function useUpdateFolder() {
   )
 }
 
-/** Deletes a folder. What is in it moves up to where the folder was. */
+/** Deletes a folder, with the folders and links in it (016_folders_delete_contents.sql). */
 export function useDeleteFolder() {
   return useFoldersMutation((id: string) => unwrap(neon.from('folders').delete().eq('id', id)))
 }

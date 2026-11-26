@@ -779,7 +779,7 @@ function GroupRow({ group, count }: { group: Group; count: number }) {
           onClick={() =>
             confirm({
               title: `Delete ${group.name}?`,
-              description: count ? `The group and its ${count} ${count === 1 ? 'link' : 'links'} are removed for everyone.` : 'The group is removed.',
+              description: count ? `The group and its ${count} ${count === 1 ? 'link' : 'links'} will be removed for everyone.` : 'The group will be removed.',
               confirmLabel: 'Delete group',
               onConfirm: () => deleteGroup.mutate(group.id, { onError: toastError }),
             })
@@ -812,7 +812,7 @@ function DangerZone({ space }: { space: Space }) {
           onClick={() =>
             confirm({
               title: `Delete ${space.name}?`,
-              description: `Every group, link and file in ${space.name} is deleted for everyone. This can't be undone.`,
+              description: `Every group, link and file in ${space.name} will be deleted for everyone. This can't be undone.`,
               confirmLabel: `Delete ${space.name}`,
               onConfirm: () =>
                 deleteSpace.mutate(space.id, {

@@ -326,7 +326,7 @@ function GroupMenu({ card }: { card: BoardCard }) {
                 onClick={() =>
                   confirm({
                     title: `Delete ${group.name}?`,
-                    description: 'The group and every link in it are removed for everyone.',
+                    description: 'The group and every link in it will be removed for everyone.',
                     confirmLabel: 'Delete group',
                     onConfirm: () => deleteGroup.mutate(group.id, { onError: toastError }),
                   })

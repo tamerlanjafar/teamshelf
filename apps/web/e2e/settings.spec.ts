@@ -181,7 +181,7 @@ test.describe('space settings', () => {
     await openScreen(page, 'space-settings')
     await page.getByRole('button', { name: 'Delete space…' }).click()
     const dialog = page.getByRole('dialog', { name: 'Delete Development?' })
-    await expect(dialog).toContainText('Every group, link and file in Development is deleted for everyone.')
+    await expect(dialog).toContainText('Every group, link and file in Development will be deleted for everyone.')
     await dialog.getByRole('button', { name: 'Delete Development' }).click()
     await expect(page.locator('aside').getByRole('link', { name: 'Development' })).toHaveCount(0)
   })

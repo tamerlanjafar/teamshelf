@@ -308,15 +308,19 @@ export function runQuery(query: Query, user: User | null): Answer {
     }
 
     // delete, and what goes with it
-    // As the trigger keep_folder_contents: what is in a deleted folder moves up to where it was.
+    // As 016_folders_delete_contents.sql: the folders inside a deleted folder go with it, at any depth, and their links.
     if (table === 'folders') {
-      for (const folder of targets as unknown as Folder[]) {
-        for (const child of db.folders) if (child.parent_id === folder.id) child.parent_id = folder.parent_id
-        for (const link of db.links) if (link.folder_id === folder.id) link.folder_id = folder.parent_id
+      const inside = new Set((targets as unknown as Folder[]).map((folder) => folder.id))
+      for (let before = 0; before !== inside.size; ) {
+        before = inside.size
+        for (const folder of db.folders) if (folder.parent_id && inside.has(folder.parent_id)) inside.add(folder.id)
       }
+      db.folders = db.folders.filter((folder) => !inside.has(folder.id))
+      db.links = db.links.filter((link) => !link.folder_id || !inside.has(link.folder_id))
+    } else {
+      const gone = new Set(targets)
+      ;(db as unknown as Record<string, Row[]>)[table] = rows.filter((row) => !gone.has(row))
     }
-    const gone = new Set(targets)
-    ;(db as unknown as Record<string, Row[]>)[table] = rows.filter((row) => !gone.has(row))
     const ids = new Set(targets.map((row) => row.id))
     if (table === 'spaces') {
       db.groups = db.groups.filter((one) => !ids.has(one.space_id))

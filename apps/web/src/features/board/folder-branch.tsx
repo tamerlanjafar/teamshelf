@@ -12,7 +12,7 @@ import { MAX_FOLDER_DEPTH, type Folder, type Group } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useBoardActions } from './board-actions'
 import type { BoardCard, BoardLink, FolderNode } from './board-model'
-import { CARD_BUTTON, LinkRow, SortableLinkRow } from './link-row'
+import { CARD_BUTTON, LinkRow, ROW_FOCUS, SortableLinkRow } from './link-row'
 
 interface BranchProps {
   card: BoardCard
@@ -76,12 +76,14 @@ function FolderBranch({ card, node, restoring, lifted, depth }: { card: BoardCar
         data-folder-row
         className={cn(
           'group/row relative flex min-h-[34px] items-center gap-1.5 rounded-md pr-1 hover:bg-[color-mix(in_srgb,var(--c)_14%,transparent)] has-[:focus-visible]:bg-[color-mix(in_srgb,var(--c)_14%,transparent)]',
+          ROW_FOCUS,
           open && !lifted && STICKY,
         )}
         style={open && !lifted ? { top: (depth - 1) * FOLDER_LINE, zIndex: 10 + MAX_FOLDER_DEPTH - depth } : undefined}
       >
         <button
           type="button"
+          data-row-open
           aria-expanded={open}
           aria-controls={inside}
           onClick={(event) => {

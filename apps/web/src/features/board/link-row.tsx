@@ -49,11 +49,18 @@ const Restricted = ({ className }: { className?: string }) => <Lock className={c
 // Written out in full: Tailwind finds classes only as whole words in the source.
 const LIT_IN_USE = 'hover:bg-[color-mix(in_srgb,var(--c)_14%,transparent)] has-[:focus-visible]:bg-[color-mix(in_srgb,var(--c)_14%,transparent)]'
 
+/**
+ * Focus from the keyboard on what a line opens rings the whole line, inside its edge. A ring
+ * around the name alone stopped short of the line's menu, and the list (which scrolls, so it
+ * clips what goes past it) cut its top off on the first line.
+ */
+export const ROW_FOCUS = 'has-[[data-row-open]:focus-visible]:outline-2 has-[[data-row-open]:focus-visible]:-outline-offset-2 has-[[data-row-open]:focus-visible]:outline-(--brand)'
+
 /** A line of a card, also drawn by the board's skeleton. */
 export const ROW = 'relative flex min-h-[34px] items-start gap-1.5 rounded-md pr-1'
 
 /** What you click on a line: its icon and name. */
-export const ROW_OPEN = 'flex min-w-0 flex-1 items-start gap-2.5 rounded-md py-1.5 pr-1 pl-2.5'
+export const ROW_OPEN = 'flex min-w-0 flex-1 items-start gap-2.5 rounded-md py-1.5 pr-1 pl-2.5 outline-none'
 
 /** The name of a line. A long one wraps between words instead of being cut off. */
 const TITLE = 'min-w-0 flex-1 leading-[22px] wrap-break-word'
@@ -90,6 +97,7 @@ export function LinkRow({ row, restoring, rowRef, style, placeholder, lifted, dr
         'group/row',
         ROW,
         !placeholder && !lifted && LIT_IN_USE,
+        !placeholder && ROW_FOCUS,
         // A finger drags only after a press and hold (see sortable-board.tsx), so a swipe still
         // scrolls. Holding doesn't select text or open the phone's link menu instead.
         dragProps && 'touch-manipulation select-none [-webkit-touch-callout:none]',
@@ -101,6 +109,7 @@ export function LinkRow({ row, restoring, rowRef, style, placeholder, lifted, dr
       {link.kind === 'file' ? (
         <a
           className={ROW_OPEN}
+          data-row-open
           href={link.url}
           draggable={false}
           onClick={(event) => {
@@ -116,7 +125,7 @@ export function LinkRow({ row, restoring, rowRef, style, placeholder, lifted, dr
           {link.file_size !== null && <span className="text-quiet flex-none [font:500_12px/22px_var(--font-rounded)] tabular-nums">{formatBytes(link.file_size)}</span>}
         </a>
       ) : (
-        <a className={ROW_OPEN} href={link.url} target="_blank" rel="noreferrer" draggable={false} {...opened}>
+        <a className={ROW_OPEN} data-row-open href={link.url} target="_blank" rel="noreferrer" draggable={false} {...opened}>
           <Favicon url={link.url} iconUrl={link.icon_url} title={row.title} className="mt-[3px]" />
           <span className={TITLE}>{row.title}</span>
           {link.visibility !== 'everyone' && <Restricted className="mt-[5px]" />}
@@ -237,7 +246,7 @@ function LinkMenu({ link, hidden, label, className, children }: { link: Link; hi
               onClick={() =>
                 confirm({
                   title: `Delete ${link.title}?`,
-                  description: link.kind === 'file' ? 'The file is removed from the board and from storage, for everyone.' : 'The link is removed from the board for everyone.',
+                  description: link.kind === 'file' ? 'The file will be removed from the board and from storage, for everyone.' : 'The link will be removed from the board for everyone.',
                   confirmLabel: link.kind === 'file' ? 'Delete file' : 'Delete link',
                   onConfirm: () => deleteLink.mutate(link.id, { onError: toastError }),
                 })

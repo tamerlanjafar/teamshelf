@@ -218,15 +218,37 @@ test.describe('as an admin of the space', () => {
     await expect(inside(page, 'Metrics').getByRole('button', { name: /^Pipelines\b/ })).toBeVisible()
   })
 
-  test('deleting a folder asks first, and what was in it moves up a level', async ({ page }) => {
+  test('deleting a folder asks first, and what was in it goes with it', async ({ page }) => {
     await folderMenu(page, 'Pipelines', 'Delete folder…')
     const dialog = page.getByRole('dialog', { name: 'Delete Pipelines?' })
-    await expect(dialog).toContainText('Only the folder goes. What is in it (4 links and 2 folders) moves to the top of Documentation.')
+    await expect(dialog).toContainText('The folder and everything in it (4 links and 2 folders) will be removed for everyone.')
     await dialog.getByRole('button', { name: 'Delete folder' }).click()
     await expect(folder(page, 'Pipelines')).toHaveCount(0)
-    await expect(folder(page, 'Warehouse')).toBeVisible()
-    await expect(folder(page, 'Transform')).toBeVisible()
-    await expect(docs(page).getByRole('link', { name: 'Pipeline overview' })).toBeVisible()
+    // The folders inside it and their links are gone too, not moved up.
+    await expect(folder(page, 'Warehouse')).toHaveCount(0)
+    await expect(folder(page, 'Transform')).toHaveCount(0)
+    await expect(docs(page).getByRole('link', { name: 'Pipeline overview' })).toHaveCount(0)
+    // The rest of the group stays.
+    await expect(folder(page, 'Metrics')).toBeVisible()
+    await expect(docs(page).getByRole('link', { name: 'Glossary' })).toBeVisible()
+  })
+
+  test('cancelling the question keeps the folder and what is in it', async ({ page }) => {
+    await folderMenu(page, 'Pipelines', 'Delete folder…')
+    const dialog = page.getByRole('dialog', { name: 'Delete Pipelines?' })
+    await dialog.getByRole('button', { name: 'Cancel' }).click()
+    await expect(dialog).toHaveCount(0)
+    await expect(folder(page, 'Pipelines')).toContainText('4')
+    await expect(inside(page, 'Pipelines').getByRole('link', { name: 'Pipeline overview' })).toBeVisible()
+  })
+
+  test('an empty folder is deleted alone', async ({ page }) => {
+    await folderMenu(page, 'Archive', 'Delete folder…')
+    const dialog = page.getByRole('dialog', { name: 'Delete Archive?' })
+    await expect(dialog).toContainText('The folder is empty.')
+    await dialog.getByRole('button', { name: 'Delete folder' }).click()
+    await expect(folder(page, 'Archive')).toHaveCount(0)
+    await expect(folder(page, 'Pipelines')).toContainText('4')
   })
 
   test('a link dropped on a folder goes into it', async ({ page }) => {

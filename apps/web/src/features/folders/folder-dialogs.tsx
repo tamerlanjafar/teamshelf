@@ -142,7 +142,7 @@ interface FolderActions {
   newFolder: (group: Group, parentId: string | null) => void
   renameFolder: (folder: Folder, group: Group) => void
   move: (request: MoveRequest) => void
-  /** Asks first. What is in the folder moves up to where it was. */
+  /** Asks first, saying what goes with it: the folders and links inside, at any depth. */
   deleteFolder: (folder: Folder, group: Group) => void
 }
 
@@ -173,11 +173,10 @@ export function FolderActionsProvider({ children }: { children: ReactNode }) {
         const inside = descendantsOf(folder.id, folders)
         const ids = new Set([folder.id, ...inside.map((one) => one.id)])
         const links = boardLinks.filter((link) => link.folder_id && ids.has(link.folder_id)).length
-        const up = folder.parent_id ? pathLabel(folder.parent_id, folders) : `the top of ${group.name}`
         const contents = [links && `${links} ${links === 1 ? 'link' : 'links'}`, inside.length && `${inside.length} ${inside.length === 1 ? 'folder' : 'folders'}`].filter(Boolean).join(' and ')
         confirm({
           title: `Delete ${folder.name}?`,
-          description: contents ? `Only the folder goes. What is in it (${contents}) moves to ${up}.` : 'The folder is empty.',
+          description: contents ? `The folder and everything in it (${contents}) will be removed for everyone.` : 'The folder is empty.',
           confirmLabel: 'Delete folder',
           onConfirm: () => deleteFolder.mutate(folder.id, { onError: toastError }),
         })
